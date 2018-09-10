@@ -6,5 +6,7 @@ user = Blueprint("user", "metamix.views.user", "metamix.templates")
 mix = Blueprint("mix", "metamix.views.mix", "metamix.templates")
 #Song contains all routes which involve getting the result of an edit to song or information of a song
 song = Blueprint("song", "metamix.views.song", "metamix.templates")
+#Core contains all routes which do not come under the above blueprints - such as API information endpoints, support, uploads, landing page etc
+core = Blueprint("core", "metamix.views.core", "metamix.templates")
 
 all_blueprints = (user, mix, song)

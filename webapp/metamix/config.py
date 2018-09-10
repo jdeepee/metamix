@@ -20,7 +20,8 @@ class Production(Config):
 
 class Development(Config):
     """Development config expands on base config"""
-    SQLALCHEMY_DATABASE_URI = "postgres://dev:biglegal123!@localhost/big_legal_dev"
+    SQLALCHEMY_DATABASE_URI = "postgres://Josh:@localhost/metamix"
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
     PRESERVE_CONTEXT_ON_EXCEPTION = True
     DEBUG = True
     BASE_URL = 'http://127.0.0.1:5000'

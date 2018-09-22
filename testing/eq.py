@@ -56,7 +56,7 @@ def equalizer_cm(data, sample_rate, strength_curve, target, frequency, width_q=1
         length = float(len(data) / sample_rate) #Get length in seconds of input data
         #Calculate number of increments possible over data timespan (change currently happens per second as 100ms introduced quality issues)
         increments = np.linspace(0, length, length*5)
-        chunk_size = float(target/float(len(increments)))
+        chunk_size = float(target/float(len(increments)-2))
 
         if debug == True:
             print "Length of audio of given input: {}".format(length)
@@ -67,7 +67,8 @@ def equalizer_cm(data, sample_rate, strength_curve, target, frequency, width_q=1
             i = i[0]
             if i != len(increments) -1:
                 chunk = i * chunk_size
-                print "Current n: {} and next: {}. Current EQ gain size: {}".format(n, increments[i+1], chunk)
+                if debug == True:
+                    print "Current n: {} and next: {}. Current EQ gain size: {}".format(n, increments[i+1], chunk)
                 #data_frame = data[n*sample_rate:increments[i+1]*sample_rate]
 
                 fx = (
@@ -117,7 +118,7 @@ def equalizer(data, sample_rate, strength_curve, target, frequency, width_q=1.0,
         length = float(len(data) / sample_rate) #Get length in seconds of input data
         #Calculate number of increments possible over data timespan (change currently happens per second as 100ms introduced quality issues)
         increments = np.linspace(0, length, length)
-        chunk_size = float(target/float(len(increments)))
+        chunk_size = float(target/float(len(increments)-2))
 
         if debug == True:
             print "Length of audio of given input: {}".format(length)
@@ -129,9 +130,10 @@ def equalizer(data, sample_rate, strength_curve, target, frequency, width_q=1.0,
             if i != len(increments) -1:
                 chunk = i * chunk_size
                 data_frame = data[n*sample_rate:increments[i+1]*sample_rate]
-                print "Current n: {} and next: {}. Current EQ gain size: {}. Current data in: {} and out: {}".format(n, increments[i+1], chunk, 
-                                                                                                                        n*sample_rate, 
-                                                                                                                        increments[i+1]*sample_rate)
+                if debug == True:
+                    print "Current n: {} and next: {}. Current EQ gain size: {}. Current data in: {} and out: {}".format(n, increments[i+1], chunk, 
+                                                                                                                            n*sample_rate, 
+                                                                                                                            increments[i+1]*sample_rate)
 
                 fx = (
                     AudioEffectsChain()

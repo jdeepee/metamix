@@ -19,19 +19,19 @@ data = y[start*sr:end*sr]
 y_end = y[end*sr:]
 
 start = time.time()
-datal = equalizer(data, sr, "linear", target_change, 200)
+datal = equalizer(data, sr, "linear", target_change, 200, debug=False)
 end = time.time()
 
 print 'Time taken for linear EQ: {}'.format(end-start)
 
 start = time.time()
-datalcm = equalizer_cm(data, sr, "linear", target_change, 200)
+datalcm = equalizer_cm(data, sr, "linear", target_change, 200, debug=False)
 end = time.time()
 
 print 'Time taken for linear EQ CM: {}'.format(end-start)
 
 start = time.time()
-datac = equalizer(data, sr, "continuous", target_change, 200)
+datac = equalizer(data, sr, "continuous", target_change, 200, debug=False)
 end = time.time()
 
 print 'Time taken for continuous EQ: {}'.format(end-start)

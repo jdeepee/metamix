@@ -23,7 +23,7 @@ y_end = y[end*sr:]
 
 #HIGH PASS FILTER LINEAR
 start = time.time()
-data_high = high_pass_filter(data, sr, "linear", target_high)
+data_high = high_pass_filter(data, sr, "linear", target_high, debug=True)
 end = time.time()
 
 print 'Time taken for high pass filter: {}'.format(end-start)
@@ -31,7 +31,7 @@ print "\n"
 
 #LOW PASS FILTER LINEAR
 start = time.time()
-data_low = low_pass_filter(data, sr, "linear", target_low)
+data_low = low_pass_filter(data, sr, "linear", target_low, debug=True)
 end = time.time()
 
 print 'Time taken for low pass filter: {}'.format(end-start)
@@ -39,7 +39,7 @@ print "\n"
 
 #HIGH PASS FILTER CONT
 start = time.time()
-data_high_cont = high_pass_filter(data, sr, "continuous", target_high)
+data_high_cont = high_pass_filter(data, sr, "continuous", target_high, debug=False)
 end = time.time()
 
 print 'Time taken for cont high pass filter: {}'.format(end-start)
@@ -47,7 +47,7 @@ print "\n"
 
 #LOW PASS FILTER CONT
 start = time.time()
-data_low_cont = low_pass_filter(data, sr, "continuous", target_low)
+data_low_cont = low_pass_filter(data, sr, "continuous", target_low, debug=False)
 end = time.time()
 
 print 'Time taken for cont low pass filter: {}'.format(end-start)

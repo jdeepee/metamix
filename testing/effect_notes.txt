@@ -1,0 +1,43 @@
+Sample input data for mix functions
+
+algorithmix planning:
+
+creating list of data to be mixed and concatenated togethe
+
+{data: x, start: 0, end: 6}, 
+{data: z, start: 1, end: 8}, 
+{data: y, start 2, end 4}, 
+{data: t, start: 3, end: 9}
+
+for each audio clip we create an array which is the length of the array - length here is 9 
+[None, None, None, None, None, None, None, None, None]
+
+then with each array for each clip we insert at their given timestamps - relating in the following arrays
+
+n = None
+
+x = [x, x, x, x, x, x, n, n, n]
+z = [n, z, z, z, z, z, z, z, z]
+y = [n, y, y, y, n, n, n, n, n]
+t = [n, n, t, t, t, t, t, t, t]
+
+then we can iterate over the first array whilst checking that the other arrays are not None - if not None then this can be put into its own array
+if there is data in the other array(s) then we can add both of this data to its own array - so we would end up with the following
+data for x,z,y,t would have to be a dict containing: data, and id
+
+[[x], [x, y, z], [x, y, z, t], [x, y, z, t], [x, z, t], [x, z, t], [z, t], [z, t], [z, t]]
+we could then sort over this data and collapse arrays where there are consistencies so:
+[[x], [x, y, z], [x2, y2, z2, t2], [x2, z2, t2], [z3, t3]]
+
+2 would be current data segment + next data segment so where x would be current data segment + x amount of data segments
+
+breakdown of complexity of this:
+	creating x amount of arrays of length of mix where x is number of clips
+	iterating over x values where x is length of mix * sample_rate
+	slicing x arrays where x is number of clips
+	creating array of shape (x, ?, 2) where x is number of frames of mix, ? is number of data fragments per frame, 2 (id, data fragment)
+	sorting array by id of data segments so we have shape (x, ?) where x is number of frames in mix, ? is list of data elements
+	then have to create mp3 of each data segment which has multiple clips and do mix computation - then convert back to numpy and return
+
+^- Possible implementation - likely very slow
+

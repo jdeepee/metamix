@@ -1,0 +1,52 @@
+NOTES:
+
+Figure out how I can define/compute if a section of a mix has already been created or not
+Okay so we can speed up computation by querying the database and seeing if an clip/song with effect applied exists - if so then get data and insert into mix
+
+On the users/web application side of things - we should return some kind of data schema with request and return from worker which describes which parts of the mix have been newly processed and thus we will then we only need to return the parts of the mix which are new - front end already has the other parts - we then just need to piece them together
+
+JSON schema of mix:
+
+{
+	"id": id-of-mix,
+	"name": name,
+	"description": mix-description,
+	"songs": [
+		{
+			"id": id-of-song,
+			"start": timestamp-song-start,
+			"end": timestamp-song-end,
+			"mix_start": timestamp-song-start-mix,
+			"mix_end": timestamp-song-end-mix,
+			"effects": [
+				{
+					"id": id-of-effect,
+					"start": timestamp-of-start,
+					"end": timestamp-of-end,
+					"strength-curve": strength-curve,
+					"start": starting-effect-value, //might be multiple start and target values for different variable of effect if supported
+					"target": target-effect-value
+				}
+			]
+		}
+	],
+	"clips": [
+		{
+			"id": id-of-clip,
+			"start": timestamp-of-start,
+			"end": timestamp-of-end,
+			"mix_start": timestamp-song-start-mix,
+			"mix_end": timestamp-song-end-mix,
+			"effects": [
+				{
+					"id": id-of-effect,
+					"start": timestamp-of-start,
+					"end": timestamp-of-end,
+					"strength-curve": strength-curve,
+					"start": starting-effect-value, //might be multiple start and target values for different variable of effect if supported
+					"target": target-effect-value
+				}
+			]
+		}
+	]
+}

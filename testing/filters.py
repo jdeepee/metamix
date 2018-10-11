@@ -19,7 +19,7 @@ def high_pass_filter(data, sample_rate, strength_curve, target, upper_bound=1500
     if start is specified strength curve will alter filter frequency between start -> target
     """
     if target < lower_bound or target > upper_bound:
-        raise Exception("Target must be between upper and lower bounds")
+        raise ValueError("Target must be between upper and lower bounds")
 
     if strength_curve == "continuous":
         fx = (
@@ -45,6 +45,7 @@ def high_pass_filter(data, sample_rate, strength_curve, target, upper_bound=1500
         if debug == True:
             print "Length of audio of given input: {}".format(length)
             print "Number of gain increment increases possible over time span: {}".format(len(increments))
+            print "Timespan between each increment in seconds: {}".format(float(float(length) / float(len(increments))))
             print "Chunk size of gain increase/decrease: {}".format(chunk_size)  
             print "Going from: {} to: {}".format(floor, target)
             print "Calculated frequency change: {}".format(freq_change)
@@ -80,7 +81,7 @@ def low_pass_filter(data, sample_rate, strength_curve, target, upper_bound=20, l
     if start is specified strength curve will alter filter frequency between start -> target
     """
     if target > lower_bound or target < upper_bound:
-        raise Exception("Target must be between upper and lower bounds")
+        raise ValueError("Target must be between upper and lower bounds")
 
     if strength_curve == "continuous":
         fx = (
@@ -107,6 +108,7 @@ def low_pass_filter(data, sample_rate, strength_curve, target, upper_bound=20, l
         if debug == True:
             print "Length of audio of given input: {}".format(length)
             print "Number of gain increment increases possible over time span: {}".format(len(increments))
+            print "Timespan between each increment in seconds: {}".format(float(float(length) / float(len(increments))))
             print "Chunk size of gain increase/decrease: {}".format(chunk_size)
             print "Going from: {} to: {}".format(floor, target)
             print "Calculated frequency change: {}".format(freq_change)

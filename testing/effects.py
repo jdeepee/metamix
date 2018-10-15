@@ -67,7 +67,8 @@ def return_overlaping_times(current, checks):
 
 def mix_tracks(track1, track2, sample_rate):
     out = []
-
+    print 'Track 1 shape: {} and 2: {}'.format(track1.shape, track2.shape)
+    assert track2.shape == track1.shape
     for i, v in enumerate(track1):
         samplef1 = v / 32768.0
         samplef2 = track2[i] / 32768.0
@@ -92,7 +93,7 @@ def mix(data, sample_rate, debug=False):
     """Returns mixed version of input data - where songs are mixed according to time-stamps
     sample rate of all data in songs should be the same - otherwise it will sound fucked
     
-    data: list of dictionaries containing following keys: data, start, end where data is numpy array of data as timepoint floating series
+    data: list of dictionaries containing following keys: data, start, end and id where data is numpy array of data as timepoint floating series
     returns: array containing floating timepoint series of all input data mixed together
     """
     out = []
@@ -168,7 +169,7 @@ def mix(data, sample_rate, debug=False):
             start_list = sorted([x for x in eval_data[i] if x["start"] > ending_value and x["type"] != "parent"], key=lambda x: x["start"])
             end_list = sorted([x for x in eval_data[i] if x["end"] > ending_value and x["type"] != "parent"], key=lambda x: x["end"])
             print "master iteration, next_start_list: {}, end list: {}".format(start_list, end_list)
-            i2 = 0
+
             while len(start_list) != 0 or len(end_list) != 0:
                 starting_value = ending_value
                 if len(start_list) > 0:
@@ -230,17 +231,21 @@ def mix(data, sample_rate, debug=False):
         end = mix_section[1]
         tracks = mix_section[2]
 
+        #Figure out issue with slicing where slicing with same length between values produces array of different size
         for track in tracks:
             print 'Computing slices for track: {}'.format(track)
             track_start = (item["start"] for item in time_copy if item["id"] == track).next()
-            track_start_slice = (start - track_start) * sample_rate
-            track_end_slice = (end - track_start) * sample_rate
+            track_start_slice = float((start - track_start)) * sample_rate
+            track_end_slice = float((end - track_start)) * sample_rate
             print 'Mix section start value: {}, end: {}'.format(start, end)
-            print "Track starting value: {}".format(track_start)
-            print "Starting slice: {} and ending slice: {}".format(track_start_slice, track_end_slice)
-            print "In seconds, start: {} and end: {}\n".format(track_start_slice/sample_rate, track_end_slice/sample_rate)
-
-            mix_section_data.append(data_id[track][track_start_slice:track_end_slice])
+            print "Starting slice: {} and ending slice: {}, total: {}".format(track_start_slice, track_end_slice, track_end_slice-track_start_slice)
+            print "In seconds, start: {} and end: {}".format(track_start_slice/sample_rate, track_end_slice/sample_rate)
+            sd = data_id[track][int(track_start_slice):int(track_end_slice)]
+            if sd.shape[0] != track_end_slice-track_start_slice:
+                sd = data_id[track][int(track_start_slice):int(track_end_slice)+1]
+                
+            print "Length of section data: {}\n".format(sd.shape)
+            mix_section_data.append(sd)
 
         print "Computed mix section length: {}\n".format(len(mix_section_data))
         if len(mix_section_data) > 1:
@@ -248,7 +253,7 @@ def mix(data, sample_rate, debug=False):
 
             while i != len(mix_section_data):
                 mixed = mix_tracks(mix_section_data[i-1], mix_section_data[i], sample_rate)
-                print "Length of mixed tracks: {}, {}\n".format(len(mixed), len(mixed)/sample_rate)
+                print "Length of mixed tracks: {}, {}\n".format(float(len(mixed)), float(len(mixed))/sample_rate)
                 out.append(mixed)
                 i += 1
 
@@ -257,7 +262,7 @@ def mix(data, sample_rate, debug=False):
             out.append(mix_section_data[0])
 
     out = np.array(list(itertools.chain.from_iterable(out)))
-    print "Shape of output data: {}".format(out.shape)
+    print "Shape of output data: {}, length: {}".format(out.shape, float(out.shape[0])/sample_rate)
     enablePrint()
     return out
 
@@ -294,7 +299,7 @@ def echo(data, sample_rate, strength_curve_decay, strength_curve_delay, decay_ta
 def phaser():
     pass
 
-def reverb(data, sample_rate, strength_curve_reverberance, strength_curve_size, target_reverberance, target_strength, 
+def reverb(data, sample_rate, strength_curve_reverberance, strength_curve_size, target_reverberance, target_size, 
             start_reverberance=None, start_size=None, debug=True):
     """Returns np.array of data with reverberance effect applied
 

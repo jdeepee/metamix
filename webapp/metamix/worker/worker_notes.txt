@@ -3,7 +3,9 @@ NOTES:
 Figure out how I can define/compute if a section of a mix has already been created or not
 Okay so we can speed up computation by querying the database and seeing if an clip/song with effect applied exists - if so then get data and insert into mix
 
-On the users/web application side of things - we should return some kind of data schema with request and return from worker which describes which parts of the mix have been newly processed and thus we will then we only need to return the parts of the mix which are new - front end already has the other parts - we then just need to piece them together
+On the users/web application side of things - we should return some kind of data schema with request and return from worker which describes which parts of the mix have been newly processed and thus we will then we only need to return the parts of the mix which are new - front end already has the other parts - we then just need to piece them together - approach to scale around network bottlenecks - figure out how we can mainatain a desciption of what was computed in worker
+
+On the backend - for future optimization rather than running the mix function everytime we get all appropriate clips with effects - we can figure out how many clips have already been mixed together - bethen only mix the next/changed stages of the mix - final optimization to be made - might not even be worth it - worth checking time taken to mix together usual 1hr mix
 
 JSON schema of mix:
 
@@ -23,9 +25,15 @@ JSON schema of mix:
 					"id": id-of-effect,
 					"start": timestamp-of-start,
 					"end": timestamp-of-end,
-					"strength-curve": strength-curve,
-					"start": starting-effect-value, //might be multiple start and target values for different variable of effect if supported
-					"target": target-effect-value
+					"type": type-of-effect,
+					"params": {
+						"strength_curve": strength-curve,
+						"start": starting-effect-value, //might be multiple start and target values for different variable of effect if supported
+						"target": target-effect-value,
+						"strength_curve_2": strength-curve,
+						"start_2": starting-effect-value, //might be multiple start and target values for different variable of effect if supported
+						"target_2": target-effect-value
+					}
 				}
 			]
 		}
@@ -42,9 +50,15 @@ JSON schema of mix:
 					"id": id-of-effect,
 					"start": timestamp-of-start,
 					"end": timestamp-of-end,
-					"strength-curve": strength-curve,
-					"start": starting-effect-value, //might be multiple start and target values for different variable of effect if supported
-					"target": target-effect-value
+					"type": type-of-effect,
+					"params": {
+						"strength_curve": strength-curve,
+						"start": starting-effect-value, //might be multiple start and target values for different variable of effect if supported
+						"target": target-effect-value,
+						"strength_curve_2": strength-curve,
+						"start_2": starting-effect-value, //might be multiple start and target values for different variable of effect if supported
+						"target_2": target-effect-value
+					}
 				}
 			]
 		}

@@ -16,11 +16,30 @@ class Mix(db.Model):
 
     songs = db.relationship("MixSongs", backref="songs", lazy="dynamic")
 
-    def get_mix(self, id):
+    @classmethod
+    def get_mix(id):
         """Returns mix object given supplied id"""
-        mix = self.query.filter(self.id == id).first()
+        mix = Mix.query.filter(Mix.id == id).first()
 
         return mix
+
+class MixClip (db.Model):
+    """MixClip database object"""
+    __tablename__ = "mix_clip"
+
+    id = db.Column("id", UUID(as_uuid=True), primary_key=True)
+    mix_id = db.Column("mix_id", UUID(as_uuid=True), db.ForeignKey('mix.id', ondelete='CASCADE'))
+    name = db.Column("name", db.String(50))
+    s3_uri = db.Column("s3_uri", db.String(50)) #S3 URI to wav of file 
+    clip_start = db.Column("song_start", db.Float) #Float of song start timestamp in seconds
+    clip_end = db.Column("song_end", db.Float) #Float of song end timestamp in seconds
+
+    clip_id = db.Column("clip_id", UUID(as_uuid=True), db.ForeignKey('clip.id', ondelete='CASCADE'))
+    effects = db.relationship("Effects", backref="effects", lazy="dynamic")
+
+    @classmethod
+    def get_mix_clip(clip_id, clip_start, clip_end, target_effects):
+        pass
 
 class MixSong(db.Model):
     """MixSong database object"""
@@ -34,23 +53,39 @@ class MixSong(db.Model):
     song_end = db.Column("song_end", db.Float) #Float of song end timestamp in seconds
 
     song_id = db.Column("song_id", UUID(as_uuid=True), db.ForeignKey('song.id', ondelete='CASCADE'))
-    effects = db.relationship("SongEffects", backref="effects", lazy="dynamic")
+    effects = db.relationship("Effects", backref="effects", lazy="dynamic")
 
-    def get_mix_song(self, song_id, effect_type, effect_song_start, effect_song_end, 
-        effect_strength_curve, effect_start, effect_target, effect_frequency, effect_q_width):
-        """Returns song with given effects on it - if exists"""
-        if effect_strength_curve == "linear":
-            song = self.query.filter(self.song_id == song_id, self.effects.type == effect_type, 
-                                        self.effects.start == effect_song_start, self.effects.end == effect_song_end,
-                                        self.effects.strength_curve == effect_strength_curve, self.effects.effect_start == effect_start,
-                                        self.effects.effect_target == effect_target, self.effects.frequency == effect_frequency,
-                                        self.effects.q_width == effect_q_width).first()
+    #How can we query MixSong effectivly? Need to filter by song_id, song_start, song_end and then exact effect matches
+    @classmethod
+    def get_mix_song(song_id, song_start, song_end, target_effects):
+        """Returns song with given effects on it - if exists
+        Note this returns exact audio/effect matches for given mix - useful for retrieving previously computed data for this mix
+        not useful for looking at all created audio clips for a given user as a result of their mixing
+        """
+        #Most likely this wont work - as we are quering as if a MixSong audio clip will only have one applied effect - likely effects table
+        #will have multiple effects applied
+        songs = MixSong.query.filter(MixSong.song_id == song_id, MixSong.song_start == song_start, MixSong.song_end == song_end).all()
+        out = []
 
-        elif effect_strength_curve == "continuous":
-            #Effect start/end values do not have to match they target values should just be inside previous as effect would be continous across audio
-            song = self.query.filter(self.song_id == song_id, self.effects.type == effect_type, 
-                                        self.effects.start <= effect_song_start, self.effects.end >= effect_song_end,
-                                        self.effects.strength_curve == effect_strength_curve, self.effects.effect_start == effect_start,
-                                        self.effects.effect_target == effect_target, self.effects.frequency == effect_frequency,
-                                        self.effects.q_width == effect_q_width).first()
-        return song
+        for song in songs:
+            #Create list of dictionaries which is the same as input effect data shape
+            song_effects = [{"type": effect.type, "start": effect.start, "end": effect.end, 
+                            "strength_curve": effect.strength_curve, "effect_start": effect.effect_start,
+                            "effect_target": effect.effect_target, "strength_curve_2": effect.strength_curve_2,
+                            "effect_start_2": effect.effect_start_2, "effect_target_2": effect.effect_target_2,
+                            "frequency": effect.frequency, "q_width": effect.q_width,
+                            "upper_bound": effect.upper_bound, "lower_bound": effect.lower_bound} for effect in song.effects]
+            match = True
+
+            for effect in target_effects:
+                if effect not in song_effects:
+                    match = True
+
+            if match == True:
+                out.append(song)
+
+        if len(out) > 0:
+            return out[0]
+
+        else:
+            return None

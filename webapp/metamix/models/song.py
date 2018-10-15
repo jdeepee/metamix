@@ -15,21 +15,31 @@ class Song(db.Model):
     genre = db.Column("genre", db.String(50))
 
     mixes = db.relationship("MixSong", backref="mixes", lazy="dynamic") #Mixes which the song is contained in
-    effects = db.relationship("SongEffect", backref="effects", lazy="dynamic") #relationship to effects which have been applied to the song
+    effects = db.relationship("Effect", backref="effects", lazy="dynamic") #relationship to effects which have been applied to the song
 
-class SongEffect(db.Model):
-    """SongEffect database object
-    Describes effects applied to given songs in MixSong database object
+    @classmethod
+    def get_song(id):
+        return Song.query.filter(Song.id == id).first()
+
+class Effect(db.Model):
+    """Effect database object
+    Describes effects applied to given audio clip
     """
-    __tablename__ = "SongEffects"
+    __tablename__ = "effect"
 
     id = db.Column("id", UUID(as_uuid=True), primary_key=True)
     type = db.Column("type", db.String())
     start = db.Column("start", db.Float) #Start timestamp of effect in song recorded in seconds
     end = db.Column("end", db.Float) #End timestamp of effect in song recorded in seconds
+
     strength_curve = db.Column("effect_curve", db.String())
-    effect_start = db.Column("start", db.String()) #Starting value for effect
-    effect_target = db.Column("target", db.String()) #Ending value for effect 
+    effect_start = db.Column("effect_start", db.String()) #Starting value for effect
+    effect_target = db.Column("effect_target", db.String()) #Ending value for effect 
+    #Defining two strength curve/effect start/target values as some algorithms have two 
+    strength_curve_2 = db.Column("strength_curve_2", db.String())
+    effect_start_2 = db.Column("effect_start_2", db.String()) #Starting value for effect
+    effect_target_2 = db.Column("effect_target_2", db.String()) #Ending value for effect 
+
     frequency = db.Column("frequency", db.String()) #Frequency of EQ
     q_width = db.Column("q_width", db.String()) #Q Width of EQ
     upper_bound = db.Column("upper_bound", db.Integer) #Upperbound of filter 
@@ -37,3 +47,4 @@ class SongEffect(db.Model):
 
     mix_song_id = db.Column("mix_song_id", UUID(as_uuid=True), db.ForeignKey('mix_song.id', ondelete='CASCADE'))
     song_id = db.Column("song_id", UUID(as_uuid=True), db.ForeignKey('song.id', ondelete='CASCADE'))
+    clip_id = db.Column("clip_id", UUID(as_uuid=True), db.ForeignKey("clip.id", ondelete="CASCADE"))

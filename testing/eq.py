@@ -23,6 +23,7 @@ We can perhaps increase the effeciency of this by using the same methods as the 
 or for the whole data segment - we can add 5 seconds of padding data around the section we care about and then extract the section we want from
 the result of this segment
 """
+#Might want to use ratio to decimal incrementation method used for volume effect function?
 def equalizer(data, sample_rate, strength_curve, target, start, frequency, width_q=1.0, debug=True):
     """Adds EQ to input data. 
     From frequency to width_q, with gain of target, strength curve can also be applied to manipulate onset of gain until target reach

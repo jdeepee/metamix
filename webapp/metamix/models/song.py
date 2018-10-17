@@ -1,5 +1,6 @@
 from metamix.extensions import db
 from sqlalchemy.dialects.postgresql import UUID
+import uuid
 
 class Song(db.Model):
     """Song database object"""
@@ -7,7 +8,7 @@ class Song(db.Model):
 
     id = db.Column("id", UUID(as_uuid=True), primary_key=True)
     name = db.Column("name", db.String(50))
-    s3_uri = db.Column("s3_uri", db.String(50))
+    s3_key = db.Column("s3_key", db.String(50))
     bpm = db.Column("bpm", db.Integer)
     pitch = db.Column("pitch", db.String(50))
     description = db.Column("description", db.String())
@@ -45,6 +46,16 @@ class Effect(db.Model):
     upper_bound = db.Column("upper_bound", db.Integer) #Upperbound of filter 
     lower_bound = db.Column("lower_bound", db.Integer) #Lowerbound of filter
 
-    mix_song_id = db.Column("mix_song_id", UUID(as_uuid=True), db.ForeignKey('mix_song.id', ondelete='CASCADE'))
+    mix_audio_id = db.Column("mix_audio_id", UUID(as_uuid=True), db.ForeignKey('mix_audio.id', ondelete='CASCADE'))
     song_id = db.Column("song_id", UUID(as_uuid=True), db.ForeignKey('song.id', ondelete='CASCADE'))
     clip_id = db.Column("clip_id", UUID(as_uuid=True), db.ForeignKey("clip.id", ondelete="CASCADE"))
+
+    @classmethod
+    def insert_audio_effect(data):
+        """Inserts audio effect into Effect table - accepts data which should contain all fields required by table"""
+        # for c in Effect.__table__.columns:
+        data["id"] = uuid.uuid4()
+        
+        effect = Effect(**data)
+        db.session.add(effect)
+        db.session.add()

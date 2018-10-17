@@ -1,8 +1,9 @@
 from metamix.extensions import db, rq
 from metamix.blueprints import all_blueprints
-from metamix.models.mix import Mix, MixSongs
-from metamix.models.song import Song, SongEffects
+from metamix.models.mix import Mix, MixAudio
+from metamix.models.song import Song, Effect
 from metamix.models.user import User
+from metamix.models.clip import Clip
 from flask import Flask, jsonify
 from importlib import import_module
 import os

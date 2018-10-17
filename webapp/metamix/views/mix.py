@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from metamix.blueprints import mix
-from metamix.models.mix import Mix, MixSongs
-from metamix.models.song import Song, SongEffects
+from metamix.models.mix import Mix, MixAudio
+from metamix.models.song import Song, Effect
 from metamix.extensions import db
 from flask import current_app
 

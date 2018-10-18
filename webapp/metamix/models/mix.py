@@ -16,7 +16,27 @@ class Mix(db.Model):
     json_description = db.Column("json_description", db.JSON)
     processing_status = db.Column("processing_status", db.String())
 
+    #owner_id = db.Column("owner_id", UUID(as_uuid=True), db.ForeignKey('user.id', ondelete='CASCADE'))
     audio = db.relationship("MixAudio", backref="audio", lazy="dynamic")
+
+    def update_mix_data(self, data):
+        data = {"name": json_description["name"], "length": json_description["length"], "description": json_description["length"], 
+                "genre": json_description["genre"], "json_description": json_description}
+
+        for key, value in data.items():
+            if value != getattr(self, key):
+                setattr(self, key, value)
+
+        db.session.commit()
+
+    @classmethod
+    def insert_mix(name, description, genre, json_description):
+        """Method used upon mix creation - adds core mix structure to database"""
+        mix = Mix(id=uuid.uuid4(), name=name, description=description, genre=genre, json_description=json_description, processing_status="Processing")
+        db.session.add(mix)
+        db.session.commit()
+
+        return mix
 
     @classmethod
     def get_mix(id):
@@ -35,15 +55,18 @@ class MixAudio(db.Model):
     s3_key = db.Column("s3_key", db.String(50)) #S3 URI to wav of file 
     start = db.Column("start", db.Float) #Float of song start timestamp in seconds
     end = db.Column("end", db.Float) #Float of song end timestamp in seconds
+    mix_start = db.Column("mix_start", db.Float)
+    mix_end = db.Column("mix_end", db.Float)
 
     clip_id = db.Column("clip_id", UUID(as_uuid=True), db.ForeignKey('clip.id', ondelete='CASCADE'))
     song_id = db.Column("song_id", UUID(as_uuid=True), db.ForeignKey('song.id', ondelete='CASCADE'))
     effects = db.relationship("Effects", backref="effects", lazy="dynamic")
 
     @classmethod
-    def save_audio(mix_id, name, s3_key, start, end, audio_id, type, effects):
+    def save_audio(mix_id, name, s3_key, start, end, mix_start, mix_end, audio_id, type, effects):
         if type == "song":
-            audio = MixAudio(id=uuid.uuid4(), mix_id=mix_id, name=name, s3_key=s3_key, start=start, end=end, song_id=audio_id)
+            audio = MixAudio(id=uuid.uuid4(), mix_id=mix_id, name=name, s3_key=s3_key, start=start, end=end, 
+                             mix_start=mix_start, mix_end=mix_end, song_id=audio_id)
             db.session.add(audio)
             db.sesson.commit()
 
@@ -57,7 +80,8 @@ class MixAudio(db.Model):
                 Effect.insert_audio_effect(**effect_data)
 
         elif type == "clip":
-            audio = MixAudio(id=uuid.uuid4(), mix_id=mix_id, name=name, s3_key=s3_key, start=start, end=end, clip_id=audio_id)
+            audio = MixAudio(id=uuid.uuid4(), mix_id=mix_id, name=name, s3_key=s3_key, start=start, end=end, 
+                             mix_start=mix_start, mix_end=mix_end,clip_id=audio_id)
             db.session.add(audio)
             db.sesson.commit()
 

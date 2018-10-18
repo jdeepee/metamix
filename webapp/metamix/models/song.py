@@ -9,18 +9,32 @@ class Song(db.Model):
     id = db.Column("id", UUID(as_uuid=True), primary_key=True)
     name = db.Column("name", db.String(50))
     s3_key = db.Column("s3_key", db.String(50))
-    bpm = db.Column("bpm", db.Integer)
+    bpm = db.Column("bpm", db.Float())
     pitch = db.Column("pitch", db.String(50))
     description = db.Column("description", db.String())
-    length = db.Column("length", db.Integer) #Song length in seconds 
+    length = db.Column("length", db.Float()) #Song length in seconds 
     genre = db.Column("genre", db.String(50))
 
-    mixes = db.relationship("MixSong", backref="mixes", lazy="dynamic") #Mixes which the song is contained in
+    mixes = db.relationship("MixAudio", backref="mixes", lazy="dynamic") #Mixes which the song is contained in
     effects = db.relationship("Effect", backref="effects", lazy="dynamic") #relationship to effects which have been applied to the song
 
     @classmethod
     def get_song(id):
         return Song.query.filter(Song.id == id).first()
+
+    @staticmethod
+    def insert_song(data):
+        data["id"] = uuid.uuid4()
+
+        song = Song(**data)
+        db.session.add(song)
+        db.session.commit()
+
+    def update_data(self, data):
+        for key, value in data.items():
+            setattr(self, key, value)
+
+        db.session.commit()
 
 class Effect(db.Model):
     """Effect database object

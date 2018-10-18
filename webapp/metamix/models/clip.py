@@ -10,11 +10,28 @@ class Clip(db.Model):
     id = db.Column("id", UUID(as_uuid=True), primary_key=True)
     name = db.Column("name", db.String(50))
     s3_key = db.Column("s3_key", db.String(50))
-    bpm = db.Column("bpm", db.Integer)
+    bpm = db.Column("bpm", db.Float())
     pitch = db.Column("pitch", db.String(50))
     description = db.Column("description", db.String())
-    length = db.Column("length", db.Integer)
+    length = db.Column("length", db.Float())
+
+    mixes = db.relationship("MixAudio", backref="mixes", lazy="dynamic") #Mixes which the song is contained in
+    effects = db.relationship("Effect", backref="effects", lazy="dynamic") #relationship to effects which have been applied to the song
 
     @classmethod
     def get_clip(id):
         return Clip.query.filter(Clip.id == id).first()
+
+    @staticmethod
+    def insert_clip(data):
+        data["id"] = uuid.uuid4()
+
+        clip = Clip(**data)
+        db.session.add(clip)
+        db.session.commit()
+
+    def update_data(self, data):
+        for key, value in data.items():
+            setattr(self, key, value)
+
+        db.session.commit()

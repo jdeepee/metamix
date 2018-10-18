@@ -13,6 +13,8 @@ JSON schema of mix:
 	"id": id-of-mix,
 	"name": name,
 	"description": mix-description,
+	"length": length-of-mix,
+	"genre": genre-of-mix,
 	"songs": [
 		{
 			"id": id-of-song,
@@ -22,11 +24,10 @@ JSON schema of mix:
 			"mix_end": timestamp-song-end-mix,
 			"effects": [
 				{
-					"id": id-of-effect,
 					"start": timestamp-of-start,
 					"end": timestamp-of-end,
 					"type": type-of-effect,
-					"params": {
+					"params": { //might be an idea to ommit this params object completely and have the values in the effects object 
 						"strength_curve": strength-curve,
 						"start": starting-effect-value, //might be multiple start and target values for different variable of effect if supported
 						"target": target-effect-value,
@@ -47,7 +48,6 @@ JSON schema of mix:
 			"mix_end": timestamp-song-end-mix,
 			"effects": [
 				{
-					"id": id-of-effect,
 					"start": timestamp-of-start,
 					"end": timestamp-of-end,
 					"type": type-of-effect,

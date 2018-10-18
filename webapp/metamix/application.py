@@ -4,9 +4,11 @@ from metamix.models.mix import Mix, MixAudio
 from metamix.models.song import Song, Effect
 from metamix.models.user import User
 from metamix.models.clip import Clip
+from metamix.errors import MetaMixException
 from flask import Flask, jsonify
 from importlib import import_module
 import os
+import logging
 
 class SubClassFlask(Flask):
     """ subclassing because need to override js cache 
@@ -39,8 +41,13 @@ def create_app(config):
         # Register error handlers for each blueprint
         # for error in [400, 401, 403, 404, 500]:
         #     app.register_error_handler(error,
-        #         error_handlers.page_not_found)
-            
+        #         MetaMixException)
+    
+    @app.errorhandler(MetaMixException)
+    def handle_invalid_usage(error):
+        response = jsonify(error.to_dict())
+        response.status_code = error.status_code
+        return response
 
     if app.config["ADMIN"] is True:
         from flask_admin import Admin

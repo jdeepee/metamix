@@ -713,8 +713,7 @@ class MetaModulate():
     def flanger(self):
         raise NotImplementedError
 
-    def echo(self, data, sample_rate, strength_curve_decay, strength_curve_delay, decay_target, delay_target, 
-                start_decay=None, start_delay=None):
+    def echo(self, data, sample_rate, strength_curve, strength_curve_2, target, target_2, start, start_2):
         """Returns np.array of data with echo effect applied
 
         data: input data array: np.array
@@ -729,13 +728,18 @@ class MetaModulate():
         If strength_curve is continous for either effect then targets for each effect will be used as parameters for effect
         If strength curve is supplied then parameters will vary between start and target with gradient of strength curve
         """
+        strength_curve_decay = strength_curve
+        strength_curve_delay = strength_curve_2
+        decay_target = target
+        delay_target = target_2
+        start_decay = start
+        start_delay = start_2
         raise NotImplementedError
 
     def phaser(self):
         raise NotImplementedError
 
-    def reverb(self, data, sample_rate, strength_curve_reverberance, strength_curve_size, target_reverberance, target_size, 
-                start_reverberance=None, start_size=None):
+    def reverb(self, data, sample_rate, strength_curve, strength_curve_2, target, target_2, start, start_2): 
         """Returns np.array of data with reverberance effect applied
 
         data: input data array: np.array
@@ -750,4 +754,10 @@ class MetaModulate():
         If strength_curve is continous for either effect then targets for each effect will be used as parameters for effect
         If strength curve is supplied then parameters will vary between start and target with gradient of strength curve
         """
+        strength_curve_reverberance = strength_curve
+        strength_curve_size = strength_curve_2
+        target_reverberance = target
+        target_size = target_2
+        start_reverberance = start
+        start_size
         raise NotImplementedError

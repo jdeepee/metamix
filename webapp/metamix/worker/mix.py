@@ -20,9 +20,9 @@ class Mix():
         self.debug_level = debug_level
 
     @classmethod
-    def mix(cls, id):
+    def mix(cls, id, testing, debug_level):
         '''method intended to be called on the class, not an instance'''
-        return cls(id)
+        return cls(id, testing, debug_level)
 
     #Core mix methods
     def create_mix_data(self):
@@ -70,7 +70,7 @@ class Mix():
 
                     #Save audio with effects applied into database for retrieval later on future computations
                     self.upload_s3(data, sample_rate)
-                    MixAudio.save_audio(self.mix_id, song_obj.name, song_obj.s3_key, song_start, song_end, song_id, "song", effects)
+                    MixAudio.save_audio(self.mix_id, song_obj.name, song_obj.s3_key, song_start, song_end, mix_start, mix_end, song_id, "song", effects)
 
             else:
                 #No effects applied on this song - just grab song and slice accordingly - then append data to out
@@ -113,7 +113,7 @@ class Mix():
                     out.append({"id": clip_id, "start": mix_start, "end": mix_end, "data": data})
 
                     self.upload_s3(data, sample_rate)
-                    MixAudio.save_audio(self.mix_id, clip_obj.name, clip_obj.s3_key, clip_start, clip_end, clip_id, "clip", effects)
+                    MixAudio.save_audio(self.mix_id, clip_obj.name, clip_obj.s3_key, clip_start, clip_end, mix_start, mix_end, clip_id, "clip", effects)
 
             else:
                 print "No effects applied on this clip - fetching slicing and appending to output"

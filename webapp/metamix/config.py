@@ -3,12 +3,12 @@ import os
 
 class Config(object):
     """Base config object"""
-    AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
-    AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
-    S3_BUCKET = os.environ.get("S3_BUCKET")
-    S3_URL = "s3.eu-west-2.amazonaws.com"
+    S3_BUCKET = "metamix"
+    S3_URL = "s3.eu-west-1.amazonaws.com"
     REDIS_IP = os.environ.get("REDIS_IP")
     REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD")
+    ALLOWED_EXTENSIONS = set(["mp3", "MP3", "flac", "FLAC", "wav", "WAV"])
+    METAMIX_TEMP_SAVE = "/var/tmp/metamix/"
 
 class Production(Config):
     """Production config expands on base config"""
@@ -29,7 +29,7 @@ class Development(Config):
     REDIS_IP = ""
     REDIS_PASSWORD = ""
     RQ_REDIS_URL = 'redis://:0c2fbe953260497603907b8f20a6d4f255fe57d1e4eba5ce47e169e670fcb22c@52.16.190.51:6379'
-    S3_URL = "s3.eu-west-2.amazonaws.com"
+    S3_URL = "s3.eu-west-1.amazonaws.com"
 
 class Test(Config):
     """Test config expands on base config"""

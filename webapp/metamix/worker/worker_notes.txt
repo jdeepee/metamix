@@ -22,6 +22,7 @@ JSON schema of mix:
 			"end": timestamp-song-end,
 			"mix_start": timestamp-song-start-mix,
 			"mix_end": timestamp-song-end-mix,
+			"track_number": track-number-within-timeline-rows,
 			"effects": [
 				{
 					"start": timestamp-of-start,

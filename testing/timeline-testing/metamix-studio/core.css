@@ -1,0 +1,25 @@
+#top-toolbar{
+	position: fixed;
+	width: 100%;
+	height: 15%;
+	color: black;
+}
+
+#timeline{
+
+}
+
+#left-column{
+	position: fixed;
+	width: 20%;
+	height: 100%;
+	color: yellow;
+}
+
+#bottom-toolbar{
+
+}
+
+body {
+	margin: 0;
+}

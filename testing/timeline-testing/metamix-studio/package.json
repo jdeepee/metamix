@@ -1,0 +1,15 @@
+{
+  "name": "MetamixStudio",
+  "version": "0.0.1",
+  "description": "simple js animation timeline library",
+  "main": "timeliner.js",
+  "scripts": {
+    "build": "browserify src/studio.js --full-paths=false -t package-json-versionify -o studio.js"
+  },
+  "author": "Joshua Parkin",
+  "devDependencies": {
+    "do.js": "^1.0.0",
+    "package-json-versionify": "^1.0.2",
+    "uglifyify": "^2.6.0"
+  }
+}

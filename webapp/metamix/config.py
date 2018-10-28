@@ -3,7 +3,9 @@ import os
 
 class Config(object):
     """Base config object"""
-    S3_BUCKET = "metamix"
+    AWS_ACCESS_KEY_ID = "AKIAJ33WTJMARBGTUXZA"
+    AWS_SECRET_ACCESS_KEY = "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"
+    S3_BUCKET = "metamix-development"
     S3_URL = "s3.eu-west-1.amazonaws.com"
     REDIS_IP = os.environ.get("REDIS_IP")
     REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD")

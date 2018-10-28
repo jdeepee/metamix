@@ -4,6 +4,8 @@ from flask import *
 import librosa
 import uuid
 import boto3
+import boto
+import os
 
 def enqueue_mix(mix_id, testing, debug_level):
     """Uploads mix to redis queue for effect modulation and audio mixing"""
@@ -21,21 +23,46 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1] in current_app.config["ALLOWED_EXTENSIONS"]
 
-def upload_s3(temp_filepath, return_length=False):
+def upload_s3(temp_filepath, return_length=False, delete=True):
     temp_filename = current_app.config["METAMIX_TEMP_SAVE"] + str(uuid.uuid4()) + ".wav"
     key = str(uuid.uuid4()) + ".wav"
 
     data, sr = librosa.load(temp_filepath, sr=44100)
     librosa.output.write_wav(temp_filename, data, sr)
 
-    session = boto3.session.Session(region_name='eu-west-1')
-    s3 = session.client('s3', config=boto3.session.Config(signature_version='s3v4'))
-    s3.upload_file(temp_filename, current_app.config["S3_BUCKET"], key)
-    os.remove(temp_filename)
+    """Uploads text document to s3 bucket"""
+    os.environ['S3_USE_SIGV4'] = 'True'
+
+    connect = boto.connect_s3(
+        current_app.config["AWS_ACCESS_KEY_ID"],
+        current_app.config["AWS_SECRET_ACCESS_KEY"],
+        host=current_app.config["S3_URL"])
+    b = connect.get_bucket(current_app.config["S3_BUCKET"])
+
+    k = b.new_key(b)
+    k.key = key
+    # file contents to be added
+    k.set_contents_from_filename(temp_filename)
+    k.set_acl('private')
+    print "Upload complete"
+
+    if delete == True:
+        os.remove(temp_filename)
+
     os.remove(temp_filepath)
 
-    if return_length == False:
-        return key
+    if delete == True:
+        if return_length == False:
+            return key
+
+        else:
+            return key, float(len(data)) / float(sr)
 
     else:
-        return key, float(len(data)) / float(sample_rate)
+        if return_length == False:
+            return key, temp_filename
+
+        else:
+            return key, float(len(data)) / float(sr), temp_filename
+
+

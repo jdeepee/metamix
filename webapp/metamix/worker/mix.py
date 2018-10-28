@@ -1,5 +1,5 @@
 from metamix.models.mix import Mix, MixAudio
-from metamix.models.song import Song, SongEffects
+from metamix.models.song import Song
 from metamix.models.user import User
 from metamix.models.clip import Clip
 from metamix.worker.meta_modulate import MetaModulate
@@ -124,6 +124,10 @@ class Mix():
 
         self.modulated_objects = out
         mix_data = self.make_mix()
+        length = float(mix_data.shape[0]) / float(sample_rate)
+        self.json_decription["length"] = length
+
+        self.mix_object.update_mix_data({"length": length, "json_decription": self.json_decription})
         self.upload_s3(mix_data, sample_rate)
 
     def make_mix(self):

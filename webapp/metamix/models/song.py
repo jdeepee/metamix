@@ -10,15 +10,27 @@ class Song(db.Model):
     name = db.Column("name", db.String(50))
     s3_key = db.Column("s3_key", db.String(50))
     bpm = db.Column("bpm", db.Float())
-    pitch = db.Column("pitch", db.String(50))
+    beat_positions = db.Column(db.JSON())
+    key = db.Column("key", db.String(50))
     description = db.Column("description", db.String())
     length = db.Column("length", db.Float()) #Song length in seconds 
     genre = db.Column("genre", db.String(50))
+    processing_start = db.Column("processing_status", db.String())
 
-    mixes = db.relationship("MixAudio", backref="mixes", lazy="dynamic") #Mixes which the song is contained in
-    effects = db.relationship("Effect", backref="effects", lazy="dynamic") #relationship to effects which have been applied to the song
+    mixes = db.relationship("MixAudio", backref="song_mixes", lazy="dynamic") #Mixes which the song is contained in
+    effects = db.relationship("Effect", backref="song_effects", lazy="dynamic") #relationship to effects which have been applied to the song
 
-    @classmethod
+    @staticmethod
+    def exists(id):
+        query = Song.query.filter(Song.id == id).first()
+
+        if query is None:
+            return False
+
+        else:
+            return True
+            
+    @staticmethod
     def get_song(id):
         return Song.query.filter(Song.id == id).first()
 
@@ -64,7 +76,7 @@ class Effect(db.Model):
     song_id = db.Column("song_id", UUID(as_uuid=True), db.ForeignKey('song.id', ondelete='CASCADE'))
     clip_id = db.Column("clip_id", UUID(as_uuid=True), db.ForeignKey("clip.id", ondelete="CASCADE"))
 
-    @classmethod
+    @staticmethod
     def insert_audio_effect(data):
         """Inserts audio effect into Effect table - accepts data which should contain all fields required by table"""
         # for c in Effect.__table__.columns:

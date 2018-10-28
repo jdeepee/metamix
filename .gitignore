@@ -1,2 +1,3 @@
 ./testing/audio_out/*
 *.pyc
+./webapp/metamix/static/node_modules

@@ -53,10 +53,12 @@ def create_app(config):
         from flask_admin import Admin
         from flask_admin.contrib.sqla import ModelView
         admin = Admin(app, name='MetaMix Backend', template_mode='bootstrap3')
-        models = []
+        #Creating dict which maps endpoint names to models - to avoid blueprint/model object collisions
+        models = {"Mix_endpoint": Mix, "MixAudio_endpoint": MixAudio, "Song_endpoint": Song, 
+                  "Clip_endpoint": Clip, "User_endpoint": User, "Effect_endpoint": Effect}
 
-        for model in models:
-            admin.add_view(ModelView(model, db.session))
+        for endpoint, model in models.iteritems():
+            admin.add_view(ModelView(model, db.session, endpoint=endpoint))
 
     if not app.debug:
         # In production mode, add log handler to sys.stderr.

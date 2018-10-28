@@ -1,5 +1,7 @@
 from metamix.extensions import db
-from metamix.models.song import Effect
+from metamix.models.song import Song, Effect
+from metamix.models.clip import Clip
+from metamix.errors import MetaMixException
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
 
@@ -11,7 +13,7 @@ class Mix(db.Model):
     name = db.Column("name", db.String(50))
     s3_key = db.Column("s3_key", db.String(50))
     length = db.Column("length", db.Integer()) #Mix length in seconds
-    description = db.Column("name", db.String(50))
+    description = db.Column("description", db.String(50))
     genre = db.Column("genre", db.String(50))
     json_description = db.Column("json_description", db.JSON)
     processing_status = db.Column("processing_status", db.String())
@@ -20,8 +22,10 @@ class Mix(db.Model):
     audio = db.relationship("MixAudio", backref="audio", lazy="dynamic")
 
     def update_mix_data(self, data):
-        data = {"name": json_description["name"], "length": json_description["length"], "description": json_description["length"], 
-                "genre": json_description["genre"], "json_description": json_description}
+        self.validate_mix_audio(data)
+
+        data = {"name": data["name"], "description": data["description"], 
+                "genre": data["genre"], "json_description": data}
 
         for key, value in data.items():
             if value != getattr(self, key):
@@ -29,16 +33,30 @@ class Mix(db.Model):
 
         db.session.commit()
 
-    @classmethod
+    @staticmethod
     def insert_mix(name, description, genre, json_description):
         """Method used upon mix creation - adds core mix structure to database"""
-        mix = Mix(id=uuid.uuid4(), name=name, description=description, genre=genre, json_description=json_description, processing_status="Processing")
+        Mix.validate_mix_audio(json_description)
+        id = uuid.uuid4()
+        json_description["id"] = id
+
+        mix = Mix(id=id, name=name, description=description, genre=genre, json_description=json_description, processing_status="Processing", length=0)
         db.session.add(mix)
         db.session.commit()
 
         return mix
 
-    @classmethod
+    @staticmethod
+    def validate_mix_audio(json_description):
+        for song in json_description["songs"]:
+            if Song.exists(song["id"]) != True:
+                raise MetaMixException(message="Song with ID: " + str(song["id"]) + "does not exist")
+
+        for clip in json_description["clips"]:
+            if Clip.exists(clip["id"]) != True:
+                raise MetaMixException(message="Clip with ID: " + str(Clip["id"]) + "does not exist")
+
+    @staticmethod
     def get_mix(id):
         """Returns mix object given supplied id"""
         mix = Mix.query.filter(Mix.id == id).first()
@@ -60,9 +78,9 @@ class MixAudio(db.Model):
 
     clip_id = db.Column("clip_id", UUID(as_uuid=True), db.ForeignKey('clip.id', ondelete='CASCADE'))
     song_id = db.Column("song_id", UUID(as_uuid=True), db.ForeignKey('song.id', ondelete='CASCADE'))
-    effects = db.relationship("Effects", backref="effects", lazy="dynamic")
+    effects = db.relationship("Effect", backref="effect", lazy="dynamic")
 
-    @classmethod
+    @staticmethod
     def save_audio(mix_id, name, s3_key, start, end, mix_start, mix_end, audio_id, type, effects):
         if type == "song":
             audio = MixAudio(id=uuid.uuid4(), mix_id=mix_id, name=name, s3_key=s3_key, start=start, end=end, 
@@ -96,7 +114,7 @@ class MixAudio(db.Model):
 
         return audio
 
-    @classmethod
+    @staticmethod
     def get_mix_song(song_id, song_start, song_end, target_effects):
         """Returns song with given effects on it - if exists
         Note this returns exact audio/effect matches for given mix - useful for retrieving previously computed data for this mix
@@ -130,7 +148,7 @@ class MixAudio(db.Model):
         else:
             return None
 
-    @classmethod
+    @staticmethod
     def get_mix_clip(clip_id, clip_start, clip_end, target_effects):
         """Returns song with given effects on it - if exists
         Note this returns exact audio/effect matches for given mix - useful for retrieving previously computed data for this mix

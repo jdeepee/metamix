@@ -5,7 +5,7 @@ from metamix.models.song import Song, Effect
 from metamix.utils.upload import enqueue_mix
 from metamix.errors import MetaMixException
 from metamix.serialization.mix import MixSchema
-from flask import current_app
+from flask import *
 
 @mix.route("/meta/mix", methods=["GET"])
 def dashboard():
@@ -19,16 +19,20 @@ def create_mix():
 	if "id" in json_description:
 		#Old mix - either re-compute mix if necassary or just return mix
 		mix = Mix.get_mix(json_description["id"])
-		if mix.json_description["clips"] == json_description["clips"] and mix.json_description["songs"] == json_description["songs"]:
-			#Mix need no more computation - description has not changed
-			mix.update_mix(json_description)
-			return jsonify({"message": "Mix is up to date", "data": {"redirect": "/meta/mix/"+mix.id+"/download"}})
+		if mix is not None:
+			if mix.json_description["clips"] == json_description["clips"] and mix.json_description["songs"] == json_description["songs"]:
+				#Mix need no more computation - description has not changed
+				mix.update_mix_data(json_description)
+				return jsonify({"message": "Mix is up to date", "data": {"redirect": "/meta/mix/"+str(mix.id)+"/download"}})
+
+			else:
+				#Mix description has changed - recomputation is needed
+				mix.update_mix_data(json_description)
+				#enqueue_mix(mix.id)
+				return jsonify({"message": "Mix is being processed"})
 
 		else:
-			#Mix description has changed - recomputation is needed
-			mix.update_mix(json_description)
-			enqueue_mix(mix.id)
-			return jsonify({"message": "Mix is being processed"})
+			raise MetaMixException(message="Mix with given ID does not exist")
 
 	else:
 		#New mix
@@ -37,17 +41,21 @@ def create_mix():
 		genre = json_description["genre"]
 
 		mix = Mix.insert_mix(name, description, genre, json_description)
-		enqueue_mix(mix.id)
+		#enqueue_mix(mix.id)
 
-		return jsonify({"message": "New mix has been created"})
+		return jsonify({"message": "New mix has been created", "data": {"id": str(mix.id)}})
 
 @mix.route("/meta/mix/<id>", methods=["GET"])
 def get_mix(id):
 	"""Get mix meta information"""
 	mix = Mix.get_mix(id)
-	schema = MixSchema(many=False)
-	
-	return jsonify(schema.dump(mix.json_description).data)
+	if mix is not None:
+		schema = MixSchema(many=False)
+		
+		return jsonify(schema.dump(mix).data)
+
+	else:
+		raise MetaMixException(message='That mix does not exist')
 
 @mix.route("/meta/mix/<id>/download", methods=["GET"])
 def download_mix(id):

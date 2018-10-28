@@ -15,10 +15,20 @@ class Clip(db.Model):
     description = db.Column("description", db.String())
     length = db.Column("length", db.Float())
 
-    mixes = db.relationship("MixAudio", backref="mixes", lazy="dynamic") #Mixes which the song is contained in
-    effects = db.relationship("Effect", backref="effects", lazy="dynamic") #relationship to effects which have been applied to the song
+    mixes = db.relationship("MixAudio", backref="clip_mixes", lazy="dynamic") #Mixes which the song is contained in
+    effects = db.relationship("Effect", backref="clip_effects", lazy="dynamic") #relationship to effects which have been applied to the song
 
-    @classmethod
+    @staticmethod
+    def exists(id):
+        query = Clip.query.filter(Clip.id == id).first()
+
+        if query is None:
+            return False
+
+        else:
+            return True
+            
+    @staticmethod
     def get_clip(id):
         return Clip.query.filter(Clip.id == id).first()
 

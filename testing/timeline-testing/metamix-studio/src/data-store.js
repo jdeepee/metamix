@@ -21,7 +21,8 @@ function DataStore() {
 			timeScale: Settings.time_scale,
 			tracks: tracks,
 			trackTimelineOffset: Settings.trackTimelineOffset, //Offset between top of studio timeline and start of track items
-			lineHeight: lineHeight //Size of track items
+			lineHeight: lineHeight, //Size of track items
+			xScrollTime: 0
 		};
 	}
 

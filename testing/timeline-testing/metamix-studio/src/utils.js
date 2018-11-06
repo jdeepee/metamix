@@ -38,6 +38,52 @@ function format_friendly_seconds(s, type) {
 	return str;	
 }
 
+function proxy_ctx(ctx) {
+	// Creates a proxy 2d context wrapper which 
+	// allows the fluent / chaining API.
+	var wrapper = {};
+
+	function proxy_function(c) {
+		return function() {
+			// Warning: this doesn't return value of function call
+			ctx[c].apply(ctx, arguments);
+			return wrapper;
+		};
+	}
+
+	function proxy_property(c) {
+		return function(v) {
+			ctx[c] = v;
+			return wrapper;
+		};
+	}
+
+	wrapper.run = function(args) {
+		args(wrapper);
+		return wrapper;
+	};
+
+	for (var c in ctx) {
+		// if (!ctx.hasOwnProperty(c)) continue;
+		// console.log(c, typeof(ctx[c]), ctx.hasOwnProperty(c));
+		// string, number, boolean, function, object
+
+		var type = typeof(ctx[c]);
+		switch(type) {
+			case 'object':
+				break;
+			case 'function':
+				wrapper[c] = proxy_function(c);
+				break;
+			default:
+				wrapper[c] = proxy_property(c);
+				break;
+		}
+	}
+
+	return wrapper;
+}
+
 function handleDrag(element, ondown, onmove, onup, down_criteria) {
 	var pointer = null;
 	var bounds = element.getBoundingClientRect();
@@ -148,5 +194,6 @@ module.exports = {
 	style: style,
 	format_friendly_seconds: format_friendly_seconds,
 	handleDrag: handleDrag,
-	getDivSize: getDivSize
+	getDivSize: getDivSize,
+	proxy_ctx: proxy_ctx
 };

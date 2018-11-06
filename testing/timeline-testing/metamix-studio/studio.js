@@ -44,7 +44,8 @@ function DataStore() {
 			timeScale: Settings.time_scale,
 			tracks: tracks,
 			trackTimelineOffset: Settings.trackTimelineOffset, //Offset between top of studio timeline and start of track items
-			lineHeight: lineHeight //Size of track items
+			lineHeight: lineHeight, //Size of track items
+			xScrollTime: 0
 		};
 	}
 
@@ -197,11 +198,10 @@ function Studio(audio){
 
 	//Setting dispatcher functions
 	dispatcher.on('time.update', function(v) {
-		console.log('Time.update ran');
 		v = Math.max(0, v);
 		data.updateUi("currentTime", v);
 
-		if (start_play) start_play = performance.now() - v * 1000;
+		// if (start_play) start_play = performance.now() - v * 1000;
 		// repaintAll();
 		// layer_panel.repaint(s);
 	});	
@@ -209,6 +209,10 @@ function Studio(audio){
 		v = Math.max(0, v);
 		data.updateUi("scrollTime", v);
 		// repaintAll();
+	});
+	dispatcher.on('update.scale', function(v) {
+		console.log('range', v);
+		data.updateUi("timeScale", v);
 	});
 
 	//Registering event listeners
@@ -238,9 +242,11 @@ module.exports = {
 	b: '#535353',
 	c: '#b8b8b8',
 	d: '#d6d6d6',
+	audioElement: '#4286f4'
 };
 },{}],8:[function(require,module,exports){
 var Settings = require("./settings");
+	utils = require("./utils");
 
 function Rect() {
 	
@@ -275,12 +281,61 @@ Rect.prototype.contains = function(x, y) {
 	 && x <= this.x + this.w && y <= this.y + this.h;
 };
 
+function zoom(dataStore, dispatcher){
+	var div = document.getElementById("zoomColumn");
+	console.log(div.offsetWidth);
+
+	this.resize = function () {
+		var range = document.getElementById("rangeSlider");
+		utils.style(range, {
+			width: (div.offsetWidth-20).toString() + "px",
+		});
+	}
+
+	function changeRange() {
+		console.log("Change range")
+		dispatcher.fire('update.scale', range.value );
+	}
+
+	var range = document.createElement('input');
+	range.setAttribute("id", "rangeSlider");
+	range.type = "range";
+	range.value = Settings.time_scale;
+	range.min = 1;
+	range.max = 100;
+	range.step = 0.5;
+
+	utils.style(range, {
+		width: (div.offsetWidth-20).toString() + "px"
+	});
+
+	var draggingRange = 0;
+
+	range.addEventListener('mousedown', function() {
+		draggingRange = 1;
+	});
+
+	range.addEventListener('mouseup', function() {
+		draggingRange = 0;
+		changeRange();
+	});
+
+	range.addEventListener('mousemove', function() {
+		if (!draggingRange) return;
+		changeRange();
+	});
+
+	div.appendChild(range)
+
+}
+
 function trackCanvas(dataStore, dispatcher){
 	var canvas = document.getElementById("left-column-canvas");
 	var width = canvas.width;
 	var height = canvas.height;
 	var dpr = window.devicePixelRatio; 
 	var ctx = canvas.getContext('2d');
+	var zoomBar = new zoom(dataStore, dispatcher);
 
 	this.resize = function() {
 		parentDiv = document.getElementById("left-column")
@@ -288,6 +343,7 @@ function trackCanvas(dataStore, dispatcher){
 		canvas.height = parentDiv.offsetHeight;
 		height = canvas.height;
 		width = canvas.width;
+		zoomBar.resize();
 	}
 
 	this.paint = function() {
@@ -295,19 +351,23 @@ function trackCanvas(dataStore, dispatcher){
 		var lineHeight = dataStore.getData("ui", "lineHeight"); //TODO line height should be updated as more track layers are added - if track layers extend view
 		var offset = dataStore.getData("ui", "trackTimelineOffset");
 
-		ctx.fillStyle = "#343434";
+		ctx.fillStyle = Theme.a;
 		ctx.fillRect(0, 0, width, height);
 		ctx.save();
 		ctx.scale(dpr, dpr);
 
 		for (var i = 0; i <= trackLayers; i++){
-			ctx.strokeStyle = "#535353";
+			ctx.strokeStyle = Theme.b;
 			ctx.beginPath();
-			console.log("Y exterior");
-			console.log((offset + i*lineHeight)/dpr);
 			ctx.moveTo(0, (offset + i*lineHeight)/dpr);
 			ctx.lineTo(width, (offset + i*lineHeight)/dpr);
 			ctx.stroke();
+
+			if (i != 0){
+				ctx.fillStyle = Theme.d;
+				ctx.textAlign = 'center';
+				ctx.fillText(i.toString(), width/4, ((offset + i*lineHeight)/dpr)-(lineHeight/4));
+			}
 		}
 		ctx.restore();
 	}
@@ -316,20 +376,76 @@ function trackCanvas(dataStore, dispatcher){
 module.exports = {
 	trackCanvas: trackCanvas
 };
-},{"./settings":5}],9:[function(require,module,exports){
+},{"./settings":5,"./utils":12}],9:[function(require,module,exports){
 var Settings = require("./settings");
 	utils = require("./utils");
+	proxy_ctx = utils.proxy_ctx,
 	Theme = require("./theme");
 	timelineScroll = require("./ui-scroll");
 	uiExterior = require("./ui-exterior");
+//Import settings/functions from other files
 
-var time_scale = Settings.time_scale;
-time_scale = 60;
 var tickMark1;
 var tickMark2;
 var tickMark3;
+var frame_start;
 
-function time_scaled() {
+//AudioItem class? which is used to draw each audio item + x/y containing operations 
+function AudioItem() {
+	
+}
+
+//Set variables for audio item
+AudioItem.prototype.set = function(x, y, x2, y2, color, audioName, id) {
+	this.x = x;
+	this.y = y;
+	this.x2 = x2;
+	this.y2 = y2;
+	this.color = color;
+	this.audioName = audioName;
+	this.id = id;
+};
+
+//Paint audio item in canvas
+AudioItem.prototype.paint = function(ctx) {
+	ctx.fillStyle = this.color;
+	ctx.beginPath();
+	ctx.rect(this.x, this.y, this.x2-this.x, this.y2);
+	ctx.fill();
+	ctx.strokeStyle = "black";
+	ctx.stroke();
+	ctx.fillStyle = "black";
+	txtWidth = ctx.measureText(this.audioName).width;
+	ctx.fillText(this.audioName, this.x+txtWidth, this.y+10);
+};
+
+//Check if mouse at x/y is contained in audio
+AudioItem.prototype.contains = function(x, y, time_scale, frame_start) {
+	// console.log("X", this.x, "Y", this.y, "X2", this.x2, "y2", this.y2)
+	// console.log("Comparison", x ," >= ", (this.x + (frame_start * time_scale)), y, " >= ", this.y, x, " <= ", (this.x2 + (frame_start * time_scale)), y, "<= ", this.y + this.y2, this.id)
+	//X & X2 values of audio item are normalized in accordance with the timescale and framestart so we can effectively care againsy mouse position no matter where the scroll wheel is
+	return x >= (this.x + (frame_start * time_scale)) && y >= this.y  && x <= (this.x2 + (frame_start * time_scale)) && y <= this.y + this.y2;
+};
+
+AudioItem.prototype.mouseover = function() {
+	canvas.style.cursor = 'pointer';
+}
+
+AudioItem.prototype.mouseout = function(){
+	canvas.stye.cursor = 'default';
+}
+
+// AudioItem.prototype.mousedrag = function(){
+// 	var t1 = x_to_time(x1 + e.dx);
+// 	t1 = Math.max(0, t1);
+// 	// TODO limit moving to neighbours
+// 	start = t1;
+
+// 	var t2 = x_to_time(x2 + e.dx);
+// 	t2 = Math.max(0, t2);
+// 	frame2.time = t2;
+// }
+function time_scaled(time_scale) {
 	/*
 	 * Subdivison LOD
 	 * time_scale refers to number of pixels per unit
@@ -343,14 +459,14 @@ function time_scaled() {
 
 }
 
-time_scaled();
-
 function timeline(dataStore, dispatcher) {
 	var canvas = document.getElementById("timeline-canvas");
 	var ctx = canvas.getContext('2d');
 	var dpr = window.devicePixelRatio; 
 	var scroll_canvas = new timelineScroll.timelineScroll(dataStore, dispatcher);
 	var track_canvas = new uiExterior.trackCanvas(dataStore, dispatcher);
+	var time_scale;
+	var renderItems;
 
 	function resize() {
 		parentDiv = document.getElementById("timeline")
@@ -361,30 +477,23 @@ function timeline(dataStore, dispatcher) {
 		track_canvas.resize();
 	}
 
-	function setTimeScale() {
-		var v = dataStore.getData("ui", "timeScale");
-		if (time_scale !== v) {
-			time_scale = v;
-			time_scaled();
-		}
-	}
-
 	function paint() {
 		scroll_canvas.paint();
 		track_canvas.paint();
 
-		time_scaled();
-		currentTime = dataStore.getData("ui", "currentTime");
-		frame_start =  dataStore.getData("ui", "scrollTime");
+		var time_scale = dataStore.getData("ui", "timeScale");
+		time_scaled(time_scale);
+		currentTime = dataStore.getData("ui", "currentTime"); //Current time of marker
+		frame_start = dataStore.getData("ui", "scrollTime"); //Starting time value of timeline view
 
 		var units = time_scale / tickMark1; //For now timescale is taken from settings - this should be updated later as user zooms into timeline
-		var count = canvas.width / tickMark1;
 		var offsetUnits = (frame_start * time_scale) % units;
+		var count = (canvas.width + offsetUnits) / tickMark1;
 		var width = canvas.width;
 		var height = canvas.height;
 
 		//TODO: Lines and text size should scale relative to size of canvas
-		ctx.fillStyle = "#343434";
+		ctx.fillStyle = Theme.a;
 		ctx.fillRect(0, 0, width, height);
 		ctx.save();
 		ctx.scale(dpr, dpr);
@@ -392,10 +501,10 @@ function timeline(dataStore, dispatcher) {
 		ctx.lineWidth = 1;
 
 		for (i = 0; i < count; i++) {
-			x = i * units - offsetUnits;x
+			x = (i * units) - offsetUnits;
 
 			// vertical lines
-			ctx.strokeStyle = "#535353";
+			ctx.strokeStyle = Theme.b;
 			ctx.beginPath();
 			ctx.moveTo(x, 5);
 			ctx.lineTo(x, height);
@@ -404,14 +513,14 @@ function timeline(dataStore, dispatcher) {
 			ctx.fillStyle = Theme.d;
 			ctx.textAlign = 'center';
 
-			var t = (i * units) / time_scale + frame_start;
+			var t = (i * units - offsetUnits) / time_scale + frame_start;
 			if (t != 0){
 				t = utils.format_friendly_seconds(t);
 				ctx.fillText(t, x, 15);
 			}
 		}
 		units = time_scale / tickMark2;
-		count = (width) / units;
+		count = (width + offsetUnits) / units;
 
 		// marker lines - main
 		for (i = 0; i < count; i++) {
@@ -438,47 +547,147 @@ function timeline(dataStore, dispatcher) {
 			ctx.stroke();
 		}
 
-		var trackLayers = dataStore.getData("ui", "tracks");
-		var lineHeight = dataStore.getData("ui", "lineHeight"); //TODO line height should be updated as more track layers are added - if track layers extend view
-		var offset = dataStore.getData("ui", "trackTimelineOffset");
+		drawAudioElements();
+		ctx.restore();
 
-		for (var i = 0; i <= trackLayers; i++){
-			console.log("Y main");
-			console.log((offset + i*lineHeight)/dpr);
-			ctx.strokeStyle = "#535353";
-			ctx.beginPath();
-			ctx.moveTo(0, (offset + i*lineHeight)/dpr);
-			ctx.lineTo(width, (offset + i*lineHeight)/dpr);
-			ctx.stroke();
-		}
+		var lineHeight = dataStore.getData("ui", "lineHeight");
+		ctx.strokeStyle = 'red'; // Theme.c
+		x = ((currentTime - (frame_start)) * time_scale)*dpr;
 
-		ctx.restore()
+		var txt = utils.format_friendly_seconds(currentTime);
+		var textWidth = ctx.measureText(txt).width;
+
+		var base_line = (lineHeight, half_rect = textWidth / dpr);
+
+		ctx.beginPath();
+		ctx.moveTo(x, base_line);
+		ctx.lineTo(x, height);
+		ctx.stroke();
+
+		ctx.fillStyle = 'red'; // black
+		ctx.textAlign = 'center';
+		ctx.beginPath();
+		ctx.moveTo(x, base_line + 5);
+		ctx.lineTo(x + 5, base_line);
+		ctx.lineTo(x + half_rect, base_line);
+		ctx.lineTo(x + half_rect, base_line - 14);
+		ctx.lineTo(x - half_rect, base_line - 14);
+		ctx.lineTo(x - half_rect, base_line);
+		ctx.lineTo(x - 5, base_line);
+		ctx.closePath();
+		ctx.fill();
+
+		ctx.fillStyle = 'white';
+		ctx.fillText(txt, x, base_line - 4);
+
+		ctx.restore();
+
+		needsRepaint = false;
 
 	}
 
-	// document.addEventListener('mousemove', onMouseMove);
+	function drawAudioElements() {
+		renderItems = [];
 
-	// function onMouseMove(e) {
-	// 	canvasBounds = canvas.getBoundingClientRect();
-	// 	var mx = e.clientX - canvasBounds.left , my = e.clientY - canvasBounds.top;
-	// 	onPointerMove(mx, my);
-	// }
+		var trackLayers = dataStore.getData("ui", "tracks");
+		var lineHeight = dataStore.getData("ui", "lineHeight"); //TODO line height should be updated as more track layers are added - if track layers extend view
+		var offset = dataStore.getData("ui", "trackTimelineOffset");
+		var audioData = dataStore.getData("data", "data");
+		var time_scale = dataStore.getData("ui", "timeScale");
+		var width = canvas.width;
+		var height = canvas.height;
+		var layerBounds = [];
+		var y;
 
-	// var pointerdidMoved = false;
-	// var pointer = null;
+		for (var i = 0; i <= trackLayers; i++){
+			y = (offset + i*lineHeight)/dpr;
+			ctx.strokeStyle = Theme.b;
+			ctx.beginPath();
+			ctx.moveTo(0, y);
+			ctx.lineTo(width, y);
+			ctx.stroke();
+			layerBounds.push(y);
+		}
 
-	// function onPointerMove(x, y) {
-	// 	if (mousedownItem) return;
-	// 	pointerdidMoved = true;
-	// 	pointer = {x: x, y: y};
-	// }
+		for (var i = 0; i < audioData.length; i++){
+			audioItem = audioData[i];
+			track = audioItem.track;
+			track = track-1;
+			start = audioItem.start;
+			end = audioItem.end;
+			effects = audioItem.effects;
+			beatMarkers = audioItem.beatMarkers;
+			name = audioItem.name;
+			id = audioItem.id;
 
-	// canvas.addEventListener('mouseout', function() {
-	// 	pointer = null;
-	// });
+			x = time_to_x(start, time_scale); //Starting x value for audio item
+			x2 = time_to_x(end, time_scale); //Ending x value for audio item
+
+			var y1 = (offset + track * lineHeight)/dpr; //Starting y value for audio item
+			var y2 = (lineHeight)/dpr; //Ending y value for audio item
+			// console.log("Computed values", "Track", track, "x (start x)", x, "x2 (width)", x2, "y1 (starting y)", y1, "y2 (height)", y2, 
+			// 			"x2-x1", x2-x, "starting time", start, "ending time", end);
+			AudioRect = new AudioItem();
+			AudioRect.set(x, y1, x2, y2, Theme.audioElement, name, id);
+			AudioRect.paint(ctx);
+			renderItems.push(AudioRect);
+		}
+	}
+
+	function time_to_x(s, time_scale) {
+		var ds = s - frame_start;
+		ds = ds * time_scale;
+		return ds;
+	}
 
 	this.paint = paint;
 	this.resize = resize;
+
+	var draggingx = null;
+	canvas.addEventListener("mousemove", function(e){
+		//Item.contains working as expected - problem lies with the cursor x/y position - the x/y of the audio items go past the maximum for the screen
+		//Whilst the cursor location will always stay within the screen - we must figure out a way to get append previous x values to the screen
+		bounds = canvas.getBoundingClientRect();
+		var w = canvas.width;
+		var time_scale = dataStore.getData("ui", "timeScale");
+		frame_start = dataStore.getData("ui", "scrollTime");
+
+		for (var i = 0; i < renderItems.length; i++){
+			item = renderItems[i];
+			if (item.contains(((e.clientX - bounds.left)/dpr + (frame_start * time_scale)), (e.clientY - bounds.top)/dpr, time_scale, frame_start)) {
+				item.mouseover;
+				return;
+			}
+		}
+		canvas.style.cursor = 'default';
+	})
+
+	utils.handleDrag(canvas,
+		function down(e){
+			console.log("DOWN RAN");
+			for (var i = 0; i < renderItems.length; i++){
+				item = renderItems[i];
+				console.log("Ran down");
+				console.log(e.offsetx);
+				console.log(e.offsety);
+				// console.log(item.x);
+				if (item.contains(e.offsetx, e.offsety)) {
+					console.log("Contains on item", item)
+					draggingx = item.x;
+					canvas.style.cursor = 'grabbing';
+					console.log("Dragging x")
+					console.log(draggingx);
+					return;
+				}
+			}
+		},
+		function move(e){
+			console.log("MOVE");
+		},
+		function up(e){
+			console.log("UP")
+			draggingx = null;
+		});
 }
 
 module.exports = {
@@ -524,7 +733,7 @@ Rect.prototype.contains = function(x, y) {
 function timelineScroll(dataStore, dispatcher){
 	var canvas = document.getElementById("top-timeline-canvas");
 	var ctx = canvas.getContext('2d');
-
+	var dpr = window.devicePixelRatio; 
 	var scrollTop = 0, scrollLeft = 0, SCROLL_HEIGHT;
 	var layers = dataStore.getData("ui", "layers");
 
@@ -539,16 +748,16 @@ function timelineScroll(dataStore, dispatcher){
 
 	var scrollRect = new Rect();
 	var height = canvas.height;
-	var width = canvas.width - 10;
+	var width = canvas.width;
 
 	this.repaint = function(){
 		paint(ctx);
 	}
 
 	this.scrollTo = function(s, y) {
-		// console.log('Scroll to function called arguments are below ')
-		// console.log(s)
-		// console.log(y)
+		console.log('Scroll to function called arguments are below ')
+		console.log(s)
+		console.log(y)
 		scrollTop = s * Math.max(layers.length * LINE_HEIGHT - SCROLL_HEIGHT, 0);
 		repaint();
 	};
@@ -557,8 +766,8 @@ function timelineScroll(dataStore, dispatcher){
 		parentDiv = document.getElementById("top-timeline")
 		canvas.width = parentDiv.offsetWidth;
 		canvas.height = parentDiv.offsetHeight;
-		height = canvas.height - 10;
-		width = canvas.width - 10;
+		height = canvas.height;
+		width = canvas.width;
 	}
 
 	this.paint = function() {
@@ -570,39 +779,36 @@ function timelineScroll(dataStore, dispatcher){
 
 		ctx.save();
 
-		var w = width - 2 * MARGINS;
+		var w = width;
 		var h = 16; // TOP_SCROLL_TRACK;
 		var h2 = h;
 
-		ctx.clearRect(0, 0, width, height);
+		ctx.fillStyle = Theme.a;
+		ctx.fillRect(0, 0, width, height);
 		ctx.translate(MARGINS, 5);
 
 		// outline scroller
 		ctx.beginPath();
 		ctx.strokeStyle = Theme.b;
-		ctx.rect(0, 0, w, h);
+		ctx.rect(0, height/4, w, height/3);
 		ctx.stroke();
 		
 		var totalTimePixels = totalTime * pixels_per_second;
 		var k = w / totalTimePixels;
 		scroller.k = k;
 
-		var grip_length = w * k;
+		var grip_length = (w * k)/dpr;
 
 		scroller.grip_length = grip_length;
 
 		scroller.left = scrollTime / totalTime * w;
-
-		if (scroller.left+grip_length > w) {
-			scroller.left = w
-		}
 		
-		scrollRect.set(scroller.left, 0, scroller.grip_length, h);
+		scrollRect.set(scroller.left, height/4, scroller.grip_length, height/3);
 		scrollRect.paint(ctx);
 
 		var r = currentTime / totalTime * w;		
 
-		ctx.fillStyle =  Theme.c;
+		ctx.fillStyle = Theme.c;
 		ctx.lineWidth = 2;
 		
 		ctx.beginPath();
@@ -611,10 +817,11 @@ function timelineScroll(dataStore, dispatcher){
 		// ctx.arc(r, h2 / 2, h2 / 1.5, 0, Math.PI * 2);
 
 		// line
-		ctx.rect(r, 0, 2, h + 5);
+		ctx.rect(r, height/4, 2, height/3);
 		ctx.fill()
 
 		ctx.restore();
+
 	}
 
 	/** Handles dragging for scroll bar **/
@@ -623,19 +830,20 @@ function timelineScroll(dataStore, dispatcher){
 
 	utils.handleDrag(canvas,
 		function down(e) {
-			// console.log('ondown', e);
-
-			if (scrollRect.contains(e.offsetx - MARGINS, e.offsety -5)) {
+			console.log("DOWN")
+			if (scrollRect.contains(e.offsetx, e.offsety)) {
 				draggingx = scroller.left;
+				console.log("Dragging x")
+				console.log(draggingx);
 				return;
 			}
 			
 			var totalTime = dataStore.getData("ui", "totalTime")
-			var pixels_per_second = data.getData("ui", "timeScale")
-			var w = width - 2 * MARGINS;
+			var pixels_per_second = dataStore.getData("ui", "timeScale")
+			var frame_start = dataStore.getData("ui", "scrollTime")
+			var w = width;
 
-			var t = (e.offsetx - MARGINS) / w * totalTime;
-			// t = Math.max(0, t);
+			var t = (e.offsetx) / w * totalTime;
 
 			// data.get('ui:currentTime').value = t;
 			dispatcher.fire('time.update', t);
@@ -643,14 +851,30 @@ function timelineScroll(dataStore, dispatcher){
 		},
 		function move (e) {
 			if (draggingx != null) {
+				console.log("Move");
 				var totalTime = dataStore.getData("ui", "totalTime")
-				var w = width - 2 * MARGINS;
-				
-				dispatcher.fire('update.scrollTime', 
-					(draggingx + e.dx)  / w * totalTime);
+				var w = width;
+
+				if ((e.offsetx) < w){ //Check currently does not work - this should check if scroller.start + scroller.length < total width of slider
+					dispatcher.fire('update.scrollTime', (draggingx + e.dx)  / w * totalTime);
+				}
 
 			} else {
-				this.onDown(e);	
+				console.log("DOWN")
+				if (scrollRect.contains(e.offsetx, e.offsety)) {
+					draggingx = scroller.left;
+					console.log("Dragging x")
+					console.log(draggingx);
+					return;
+				}
+				
+				var totalTime = dataStore.getData("ui", "totalTime")
+				var pixels_per_second = dataStore.getData("ui", "timeScale")
+				var frame_start = dataStore.getData("ui", "scrollTime")
+				var w = width;
+
+				var t = (e.offsetx) / w * totalTime;
+				dispatcher.fire('time.update', t);	
 			}
 		},
 		function up(e){
@@ -661,6 +885,11 @@ function timelineScroll(dataStore, dispatcher){
 		// }
 	);
 
+	canvas.addEventListener("mousedown", function (e){
+		bounds = canvas.getBoundingClientRect();
+		var currentx = e.clientX - bounds.left, currenty = e.clientY;
+	})
+
 	/*** End handling for scrollbar ***/
 }
 
@@ -669,17 +898,18 @@ module.exports = {
 };
 },{"./theme":7,"./utils":12}],11:[function(require,module,exports){
 var utils = require("./utils");
+	Theme = require("./theme")
 
 function initCanvas () {
 	console.log("Running canvas init");
 	topToolbar = document.createElement('div');
 	topToolbar.setAttribute("id", "top-toolbar");
-	utils.style(topToolbar, {position: "fixed", width: "100%", height: "10%", color: "black"});
+	utils.style(topToolbar, {position: "fixed", width: "100%", height: "10%"});
 	document.body.appendChild(topToolbar);
 
 	topToolbar = document.createElement('div');
 	topToolbar.setAttribute("id", "top-timeline");
-	utils.style(topToolbar, {position: "fixed", width: "90%", left: "10%", height: "5%", top: "10%", color: "black"});
+	utils.style(topToolbar, {position: "fixed", width: "90%", left: "10%", height: "5%", top: "10%"});
 	document.body.appendChild(topToolbar);
 
 	canvas = document.createElement('canvas');
@@ -692,7 +922,7 @@ function initCanvas () {
 
 	timeline = document.createElement('div');
 	timeline.setAttribute("id", "timeline");
-	utils.style(timeline, {position: "fixed", left: "10%", top: "15%", width: "90%", height: "85%", color: "black"});
+	utils.style(timeline, {position: "fixed", left: "10%", top: "15%", width: "90%", height: "85%"});
 	document.body.appendChild(timeline);
 
 	canvas = document.createElement('canvas');
@@ -705,7 +935,7 @@ function initCanvas () {
 
 	leftColumn = document.createElement('div');
 	leftColumn.setAttribute("id", "left-column");
-	utils.style(leftColumn, {position: "fixed", width: "10%", top: "15%", height: "85%", color: "black"});
+	utils.style(leftColumn, {position: "fixed", width: "10%", top: "15%", height: "85%"});
 	document.body.appendChild(leftColumn);
 
 	canvas = document.createElement('canvas');
@@ -715,6 +945,11 @@ function initCanvas () {
 	canvas.width = leftColumn.offsetWidth;
 	canvas.height = leftColumn.offsetHeight;
 	leftColumn.appendChild(canvas);
+
+	zoomColumn = document.createElement('div');
+	zoomColumn.setAttribute("id", "zoomColumn");
+	utils.style(zoomColumn, {position: "fixed", top: "10%", width: "10%", height: "5%", backgroundColor: Theme.a});
+	document.body.appendChild(zoomColumn);
 }
 
 function paintTrackColumn() {
@@ -725,7 +960,7 @@ module.exports = {
 	initCanvas: initCanvas,
 	paintTrackColumn: paintTrackColumn
 };
-},{"./utils":12}],12:[function(require,module,exports){
+},{"./theme":7,"./utils":12}],12:[function(require,module,exports){
 function getDivSize(id){
 	parentDiv = document.getElementById(id);
 	return parentDiv.offsetWidth, parentDiv.offsetHeight;
@@ -764,6 +999,52 @@ function format_friendly_seconds(s, type) {
 		// else str = secs_micro + 's'; /// .toFixed(2)
 	}
 	return str;	
+}
+
+function proxy_ctx(ctx) {
+	// Creates a proxy 2d context wrapper which 
+	// allows the fluent / chaining API.
+	var wrapper = {};
+
+	function proxy_function(c) {
+		return function() {
+			// Warning: this doesn't return value of function call
+			ctx[c].apply(ctx, arguments);
+			return wrapper;
+		};
+	}
+
+	function proxy_property(c) {
+		return function(v) {
+			ctx[c] = v;
+			return wrapper;
+		};
+	}
+
+	wrapper.run = function(args) {
+		args(wrapper);
+		return wrapper;
+	};
+
+	for (var c in ctx) {
+		// if (!ctx.hasOwnProperty(c)) continue;
+		// console.log(c, typeof(ctx[c]), ctx.hasOwnProperty(c));
+		// string, number, boolean, function, object
+
+		var type = typeof(ctx[c]);
+		switch(type) {
+			case 'object':
+				break;
+			case 'function':
+				wrapper[c] = proxy_function(c);
+				break;
+			default:
+				wrapper[c] = proxy_property(c);
+				break;
+		}
+	}
+
+	return wrapper;
 }
 
 function handleDrag(element, ondown, onmove, onup, down_criteria) {
@@ -876,6 +1157,7 @@ module.exports = {
 	style: style,
 	format_friendly_seconds: format_friendly_seconds,
 	handleDrag: handleDrag,
-	getDivSize: getDivSize
+	getDivSize: getDivSize,
+	proxy_ctx: proxy_ctx
 };
 },{}]},{},[6]);

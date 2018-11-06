@@ -23,6 +23,7 @@ JSON schema of mix:
 			"mix_start": timestamp-song-start-mix,
 			"mix_end": timestamp-song-end-mix,
 			"track_number": track-number-within-timeline-rows,
+			"beat_markers": [array of each beat of song (array of timestamps (seconds))],
 			"effects": [
 				{
 					"start": timestamp-of-start,
@@ -47,6 +48,8 @@ JSON schema of mix:
 			"end": timestamp-of-end,
 			"mix_start": timestamp-song-start-mix,
 			"mix_end": timestamp-song-end-mix,
+			"track_number": track-number-within-timeline-rows,
+			"beat_markers": [array of each beat of song (array of timestamps (seconds))],
 			"effects": [
 				{
 					"start": timestamp-of-start,

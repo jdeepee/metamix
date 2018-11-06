@@ -4,4 +4,5 @@ module.exports = {
 	b: '#535353',
 	c: '#b8b8b8',
 	d: '#d6d6d6',
+	audioElement: '#4286f4'
 };

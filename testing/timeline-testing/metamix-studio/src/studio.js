@@ -21,11 +21,10 @@ function Studio(audio){
 
 	//Setting dispatcher functions
 	dispatcher.on('time.update', function(v) {
-		console.log('Time.update ran');
 		v = Math.max(0, v);
 		data.updateUi("currentTime", v);
 
-		if (start_play) start_play = performance.now() - v * 1000;
+		// if (start_play) start_play = performance.now() - v * 1000;
 		// repaintAll();
 		// layer_panel.repaint(s);
 	});	
@@ -33,6 +32,10 @@ function Studio(audio){
 		v = Math.max(0, v);
 		data.updateUi("scrollTime", v);
 		// repaintAll();
+	});
+	dispatcher.on('update.scale', function(v) {
+		console.log('range', v);
+		data.updateUi("timeScale", v);
 	});
 
 	//Registering event listeners

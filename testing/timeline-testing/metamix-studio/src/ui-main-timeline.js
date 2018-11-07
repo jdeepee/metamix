@@ -17,7 +17,7 @@ function AudioItem() {
 }
 
 //Set variables for audio item
-AudioItem.prototype.set = function(x, y, x2, y2, color, audioName, id, track) {
+AudioItem.prototype.set = function(x, y, x2, y2, color, audioName, id, track, time_scale, frame_start) {
 	this.x = x;
 	this.y = y;
 	this.x2 = x2;
@@ -26,6 +26,8 @@ AudioItem.prototype.set = function(x, y, x2, y2, color, audioName, id, track) {
 	this.audioName = audioName;
 	this.id = id;
 	this.track = track;
+	this.xNormalized = x + (frame_start * time_scale);
+	this.x2Normalized = x2 + (frame_start * time_scale);
 };
 
 //Paint audio item in canvas
@@ -48,7 +50,7 @@ AudioItem.prototype.contains = function(x, y, time_scale, frame_start) {
 	// console.log("X", this.x, "Y", this.y, "X2", this.x2, "y2", this.y2)
 	// console.log("Comparison", x ," >= ", (this.x + (frame_start * time_scale)), y, " >= ", this.y, x, " <= ", (this.x2 + (frame_start * time_scale)), y, "<= ", this.y + this.y2, this.id)
 	//X & X2 values of audio item are normalized in accordance with the timescale and framestart so we can effectively care againsy mouse position no matter where the scroll wheel is
-	return x >= (this.x + (frame_start * time_scale)) && y >= this.y  && x <= (this.x2 + (frame_start * time_scale)) && y <= this.y + this.y2;
+	return x >= this.xNormalized && y >= this.y  && x <= this.x2Normalized && y <= this.y + this.y2;
 };
 
 //Change outline to red to notify user that they cannot slide audio over item in same track
@@ -260,7 +262,7 @@ function timeline(dataStore, dispatcher) {
 			// console.log("Computed values", "Track", track, "x (start x)", x, "x2 (width)", x2, "y1 (starting y)", y1, "y2 (height)", y2, 
 			// 			"x2-x1", x2-x, "starting time", start, "ending time", end);
 			AudioRect = new AudioItem();
-			AudioRect.set(x, y1, x2, y2, Theme.audioElement, name, id, track);
+			AudioRect.set(x, y1, x2, y2, Theme.audioElement, name, id, track, time_scale, frame_start);
 			AudioRect.paint(ctx, Theme.audioElement);
 			renderItems.push(AudioRect); //Add audio item to renderItems so we can process mousemove/clicks later
 		}
@@ -277,11 +279,6 @@ function timeline(dataStore, dispatcher) {
 	function x_to_time(x, time_scale) {
 		return frame_start + (x) / time_scale
 	}
-
-	function normalize_x(x, time_scale, frame_start){
-		return x + (frame_start * time_scale);
-	}
-
 
 	this.paint = paint;
 	this.resize = resize;
@@ -324,8 +321,6 @@ function timeline(dataStore, dispatcher) {
 				if (item.contains(((e.offsetx)/dpr + (frame_start * time_scale)), (e.offsety)/dpr, time_scale, frame_start)) {
 					draggingx = item.x + frame_start * time_scale
 					currentDragging = item;
-					currentDragging.originalX = item.x;
-					currentDragging.originalY = item.y;
 					canvas.style.cursor = 'grabbing';
 					// console.log("Dragging x")
 					// console.log(draggingx);
@@ -343,38 +338,51 @@ function timeline(dataStore, dispatcher) {
 				canvas.style.cursor = 'grabbing';
 				startX = (draggingx + e.dx/dpr);
 				start = startX / time_scale;
-				endX = (startX + normalize_x(currentDragging.x2, time_scale, frame_start) - normalize_x(currentDragging.x, time_scale, frame_start))
+				endX = (startX + currentDragging.x2Normalized - currentDragging.xNormalized)
 				end = endX / time_scale
+				//console.log(e);
 
 				//Still need to handle X snapping & Y movement
 				//Also still need to ensure that item can move past blocking item if cursor moves past blocking item
+				//We should also have this snapping functionality if items in other tracks are algined
+				//renderItems x/x2/y/y2 values should be normalized inside of set function call to avoid contantly doing it here
 				for (var i = 0; i < renderItems.length; i++){
 					item = renderItems[i];
 					if (item.track == currentDragging.track && item.id != currentDragging.id){
-						if (normalize_x(item.x, time_scale, frame_start) >= currentDragging.originalX){
-							if (endX >= normalize_x(item.x, time_scale, frame_start)){
-								console.log("Computed block ran");
-								console.log("Betwee items", item, currentDragging)
-								diff = endX - startX;
-								endX = normalize_x(item.x, time_scale, frame_start);
-								startX = endX - diff;
-								start = startX / time_scale;
-								end = endX /time_scale;
+						if (item.xNormalized >= currentDragging.x){
+							console.log('Compariosn', endX, item.xNormalized)
+							if (endX >= item.xNormalized){
+								if (e.offsetx/dpr <= item.x2){
+									diff = endX - startX;
+									endX = item.xNormalized;
+									startX = endX - diff;
+									start = startX / time_scale;
+									end = endX /time_scale;
 
-								console.log("New values", startX, endX, start, end)
+								} else {
+									diff = endX - startX;
+									startX = item.x2Normalized;
+									endX = startX + diff;
+									start = startX / time_scale;
+									end = endX /time_scale;
+								}
 							}
-						} else if (normalize_x(item.x2, time_scale, frame_start) <= currentDragging.originalX){
-							console.log("ifelse");
-							if (startX <= normalize_x(item.x2, time_scale, frame_start)){
-								console.log("Computed block ran upper");
-								console.log("Betwee items", item, currentDragging)
-								diff = endX - startX;
-								startX = normalize_x(item.x2, time_scale, frame_start);
-								endX = startX + diff;
-								start = startX / time_scale;
-								end = endX /time_scale;
+						} else if (item.x2Normalized <= currentDragging.x){
+							if (startX <= item.x2Normalized){
+								if (e.offsetx/dpr >= item.x){
+									diff = endX - startX;
+									startX = item.x2Normalized;
+									endX = startX + diff;
+									start = startX / time_scale;
+									end = endX /time_scale;
 
-								console.log("New values", startX, endX, start, end)
+								} else {
+									diff = endX - startX;
+									endX = item.xNormalized;
+									startX = endX - diff;
+									start = startX / time_scale;
+									end = endX /time_scale;
+								}
 							}
 						}
 					}

@@ -38,6 +38,11 @@ function Studio(audio){
 		data.updateUi("timeScale", v);
 	});
 
+	dispatcher.on("update.audioTime", function(id, start, end){
+		data.updateData(id, "start", start);
+		data.updateData(id, "end", end);
+	})
+
 	//Registering event listeners
 	window.addEventListener('resize', function() {
 		needsResize = true;

@@ -52,7 +52,7 @@ function DataStore() {
 	this.updateData = function updateData(audioId, key, value) {
 		for (var i in this.data) {
 			if (this.data[i].id == audioId) {
-				this.data[i][key] = vale;
+				this.data[i][key] = value;
 				break;
 			}
 		}
@@ -214,6 +214,11 @@ function Studio(audio){
 		console.log('range', v);
 		data.updateUi("timeScale", v);
 	});
+
+	dispatcher.on("update.audioTime", function(id, start, end){
+		data.updateData(id, "start", start);
+		data.updateData(id, "end", end);
+	})
 
 	//Registering event listeners
 	window.addEventListener('resize', function() {
@@ -396,7 +401,7 @@ function AudioItem() {
 }
 
 //Set variables for audio item
-AudioItem.prototype.set = function(x, y, x2, y2, color, audioName, id) {
+AudioItem.prototype.set = function(x, y, x2, y2, color, audioName, id, track) {
 	this.x = x;
 	this.y = y;
 	this.x2 = x2;
@@ -404,11 +409,12 @@ AudioItem.prototype.set = function(x, y, x2, y2, color, audioName, id) {
 	this.color = color;
 	this.audioName = audioName;
 	this.id = id;
+	this.track = track;
 };
 
 //Paint audio item in canvas
-AudioItem.prototype.paint = function(ctx) {
-	ctx.fillStyle = this.color;
+AudioItem.prototype.paint = function(ctx, outlineColor) {
+	ctx.fillStyle = outlineColor;
 	ctx.beginPath();
 	ctx.rect(this.x, this.y, this.x2-this.x, this.y2);
 	ctx.fill();
@@ -416,7 +422,9 @@ AudioItem.prototype.paint = function(ctx) {
 	ctx.stroke();
 	ctx.fillStyle = "black";
 	txtWidth = ctx.measureText(this.audioName).width;
-	ctx.fillText(this.audioName, this.x+txtWidth, this.y+10);
+	if (txtWidth < this.x2-this.x){
+		ctx.fillText(this.audioName, this.x+txtWidth, this.y+10);
+	}
 };
 
 //Check if mouse at x/y is contained in audio
@@ -427,12 +435,9 @@ AudioItem.prototype.contains = function(x, y, time_scale, frame_start) {
 	return x >= (this.x + (frame_start * time_scale)) && y >= this.y  && x <= (this.x2 + (frame_start * time_scale)) && y <= this.y + this.y2;
 };
 
-AudioItem.prototype.mouseover = function() {
-	canvas.style.cursor = 'pointer';
-}
-
-AudioItem.prototype.mouseout = function(){
-	canvas.stye.cursor = 'default';
+//Change outline to red to notify user that they cannot slide audio over item in same track
+AudioItem.prototype.alert = function(ctx, outlineColor){
+	this.paint(ctx, outlineColor);
 }
 
 // AudioItem.prototype.mousedrag = function(){
@@ -445,6 +450,8 @@ AudioItem.prototype.mouseout = function(){
 // 	t2 = Math.max(0, t2);
 // 	frame2.time = t2;
 // }
+
+//Gets the timescale values for each tick
 function time_scaled(time_scale) {
 	/*
 	 * Subdivison LOD
@@ -463,32 +470,35 @@ function timeline(dataStore, dispatcher) {
 	var canvas = document.getElementById("timeline-canvas");
 	var ctx = canvas.getContext('2d');
 	var dpr = window.devicePixelRatio; 
-	var scroll_canvas = new timelineScroll.timelineScroll(dataStore, dispatcher);
-	var track_canvas = new uiExterior.trackCanvas(dataStore, dispatcher);
+	var scroll_canvas = new timelineScroll.timelineScroll(dataStore, dispatcher); //Creates timeline scroll and gets object of timeline scroll
+	var track_canvas = new uiExterior.trackCanvas(dataStore, dispatcher); //Creates exterior track canvas and gets object
 	var time_scale;
 	var renderItems;
 
+	//Resize function called upon window resize - will resize canvas so that future paint operations can be correctly painted according to resize
 	function resize() {
 		parentDiv = document.getElementById("timeline")
 		canvas.width = parentDiv.offsetWidth;
 		canvas.height = parentDiv.offsetHeight;
-		dataStore.updateUi("lineHeight", canvas.height*Settings.lineHeightProportion)
+		dataStore.updateUi("lineHeight", canvas.height*Settings.lineHeightProportion); //Update lineHeight in accordance to window height + proportion of track to window
 		scroll_canvas.resize();
 		track_canvas.resize();
 	}
 
+	//Core paint routine for studio view
 	function paint() {
+		//Paint other canvas items
 		scroll_canvas.paint();
 		track_canvas.paint();
 
 		var time_scale = dataStore.getData("ui", "timeScale");
 		time_scaled(time_scale);
-		currentTime = dataStore.getData("ui", "currentTime"); //Current time of marker
+		currentTime = dataStore.getData("ui", "currentTime"); // of marker
 		frame_start = dataStore.getData("ui", "scrollTime"); //Starting time value of timeline view
 
 		var units = time_scale / tickMark1; //For now timescale is taken from settings - this should be updated later as user zooms into timeline
 		var offsetUnits = (frame_start * time_scale) % units;
-		var count = (canvas.width + offsetUnits) / tickMark1;
+		var count = (canvas.width + offsetUnits) / tickMark1; //Amount of possible main tick markers across window width
 		var width = canvas.width;
 		var height = canvas.height;
 
@@ -500,6 +510,7 @@ function timeline(dataStore, dispatcher) {
 
 		ctx.lineWidth = 1;
 
+		//Iterate over count and draw main tick markers along with second(s) timestamp related to this
 		for (i = 0; i < count; i++) {
 			x = (i * units) - offsetUnits;
 
@@ -513,6 +524,7 @@ function timeline(dataStore, dispatcher) {
 			ctx.fillStyle = Theme.d;
 			ctx.textAlign = 'center';
 
+			//Get time at current tick with accordance to timescale and scroll wheel position
 			var t = (i * units - offsetUnits) / time_scale + frame_start;
 			if (t != 0){
 				t = utils.format_friendly_seconds(t);
@@ -547,23 +559,27 @@ function timeline(dataStore, dispatcher) {
 			ctx.stroke();
 		}
 
-		drawAudioElements();
+		drawAudioElements(); //Draw audio elements
 		ctx.restore();
 
+		//Begin drawing marker
 		var lineHeight = dataStore.getData("ui", "lineHeight");
 		ctx.strokeStyle = 'red'; // Theme.c
 		x = ((currentTime - (frame_start)) * time_scale)*dpr;
 
+		//Get currentTime to input into marker
 		var txt = utils.format_friendly_seconds(currentTime);
 		var textWidth = ctx.measureText(txt).width;
 
 		var base_line = (lineHeight, half_rect = textWidth / dpr);
 
+		//Draw main line 
 		ctx.beginPath();
 		ctx.moveTo(x, base_line);
 		ctx.lineTo(x, height);
 		ctx.stroke();
 
+		//Draw main marker body
 		ctx.fillStyle = 'red'; // black
 		ctx.textAlign = 'center';
 		ctx.beginPath();
@@ -596,9 +612,9 @@ function timeline(dataStore, dispatcher) {
 		var time_scale = dataStore.getData("ui", "timeScale");
 		var width = canvas.width;
 		var height = canvas.height;
-		var layerBounds = [];
 		var y;
 
+		//Draw track lines
 		for (var i = 0; i <= trackLayers; i++){
 			y = (offset + i*lineHeight)/dpr;
 			ctx.strokeStyle = Theme.b;
@@ -606,9 +622,9 @@ function timeline(dataStore, dispatcher) {
 			ctx.moveTo(0, y);
 			ctx.lineTo(width, y);
 			ctx.stroke();
-			layerBounds.push(y);
 		}
 
+		//Iterate over audioData and paint componenets on timeline - along will all effects associated on them
 		for (var i = 0; i < audioData.length; i++){
 			audioItem = audioData[i];
 			track = audioItem.track;
@@ -628,25 +644,34 @@ function timeline(dataStore, dispatcher) {
 			// console.log("Computed values", "Track", track, "x (start x)", x, "x2 (width)", x2, "y1 (starting y)", y1, "y2 (height)", y2, 
 			// 			"x2-x1", x2-x, "starting time", start, "ending time", end);
 			AudioRect = new AudioItem();
-			AudioRect.set(x, y1, x2, y2, Theme.audioElement, name, id);
-			AudioRect.paint(ctx);
-			renderItems.push(AudioRect);
+			AudioRect.set(x, y1, x2, y2, Theme.audioElement, name, id, track);
+			AudioRect.paint(ctx, Theme.audioElement);
+			renderItems.push(AudioRect); //Add audio item to renderItems so we can process mousemove/clicks later
 		}
 	}
 
+	//Convert time in seconds to x value given a timescale
 	function time_to_x(s, time_scale) {
 		var ds = s - frame_start;
 		ds = ds * time_scale;
 		return ds;
 	}
 
+	//Convert x to time given frame start and current time scale
+	function x_to_time(x, time_scale) {
+		return frame_start + (x) / time_scale
+	}
+
+	function normalize_x(x, time_scale, frame_start){
+		return x + (frame_start * time_scale);
+	}
+
+
 	this.paint = paint;
 	this.resize = resize;
 
-	var draggingx = null;
+	//mousemove eventListener to handle cursor changing to pointer upon hovering over a draggable item
 	canvas.addEventListener("mousemove", function(e){
-		//Item.contains working as expected - problem lies with the cursor x/y position - the x/y of the audio items go past the maximum for the screen
-		//Whilst the cursor location will always stay within the screen - we must figure out a way to get append previous x values to the screen
 		bounds = canvas.getBoundingClientRect();
 		var w = canvas.width;
 		var time_scale = dataStore.getData("ui", "timeScale");
@@ -655,38 +680,115 @@ function timeline(dataStore, dispatcher) {
 		for (var i = 0; i < renderItems.length; i++){
 			item = renderItems[i];
 			if (item.contains(((e.clientX - bounds.left)/dpr + (frame_start * time_scale)), (e.clientY - bounds.top)/dpr, time_scale, frame_start)) {
-				item.mouseover;
+				canvas.style.cursor = 'pointer';
 				return;
 			}
 		}
 		canvas.style.cursor = 'default';
 	})
 
+	//Handles "wheel" zoom events - trackpad zoom or scroll wheel zoom - also includes scroll left and right
+	//Handle scroll left and right - moves timeline left and right - scroll up and down zooms into/out of timeline - then two finger 
+	canvas.addEventListener("wheel", function(e){
+		console.log("Wheel", e);
+	})
+
+	var draggingx = null;
+	var currentDragging = null;
+
+	//Handles dragging of movable items
 	utils.handleDrag(canvas,
 		function down(e){
 			console.log("DOWN RAN");
+			var time_scale = dataStore.getData("ui", "timeScale");
+			frame_start = dataStore.getData("ui", "scrollTime");
+
 			for (var i = 0; i < renderItems.length; i++){
 				item = renderItems[i];
-				console.log("Ran down");
-				console.log(e.offsetx);
-				console.log(e.offsety);
-				// console.log(item.x);
-				if (item.contains(e.offsetx, e.offsety)) {
-					console.log("Contains on item", item)
-					draggingx = item.x;
+				if (item.contains(((e.offsetx)/dpr + (frame_start * time_scale)), (e.offsety)/dpr, time_scale, frame_start)) {
+					draggingx = item.x + frame_start * time_scale
+					currentDragging = item;
+					currentDragging.originalX = item.x;
+					currentDragging.originalY = item.y;
 					canvas.style.cursor = 'grabbing';
-					console.log("Dragging x")
-					console.log(draggingx);
+					// console.log("Dragging x")
+					// console.log(draggingx);
 					return;
 				}
 			}
+			dispatcher.fire('time.update', x_to_time((e.offsetx)/dpr, time_scale));
 		},
 		function move(e){
 			console.log("MOVE");
+			var time_scale = dataStore.getData("ui", "timeScale");
+			frame_start = dataStore.getData("ui", "scrollTime");
+
+			if (draggingx != null) {
+				canvas.style.cursor = 'grabbing';
+				startX = (draggingx + e.dx/dpr);
+				start = startX / time_scale;
+				endX = (startX + normalize_x(currentDragging.x2, time_scale, frame_start) - normalize_x(currentDragging.x, time_scale, frame_start))
+				end = endX / time_scale
+
+				//Still need to handle X snapping & Y movement
+				for (var i = 0; i < renderItems.length; i++){
+					item = renderItems[i];
+					if (item.track == currentDragging.track && item.id != currentDragging.id){
+						if (normalize_x(item.x, time_scale, frame_start) >= currentDragging.originalX){
+							if (endX >= normalize_x(item.x, time_scale, frame_start)){
+								console.log("Computed block ran");
+								console.log("Betwee items", item, currentDragging)
+								diff = endX - startX;
+								endX = normalize_x(item.x, time_scale, frame_start);
+								startX = endX - diff;
+								start = startX / time_scale;
+								end = endX /time_scale;
+
+								console.log("New values", startX, endX, start, end)
+							}
+						} else if (normalize_x(item.x2, time_scale, frame_start) <= currentDragging.originalX){
+							console.log("ifelse");
+							if (startX <= normalize_x(item.x2, time_scale, frame_start)){
+								console.log("Computed block ran upper");
+								console.log("Betwee items", item, currentDragging)
+								diff = endX - startX;
+								startX = normalize_x(item.x2, time_scale, frame_start);
+								endX = startX + diff;
+								start = startX / time_scale;
+								end = endX /time_scale;
+
+								console.log("New values", startX, endX, start, end)
+							}
+						}
+					}
+				}
+				// console.log("startx", startX, "start", start, "endX", endX, "end", end);
+
+				//Mouse should not be able to go past 0 - thus if mouse go pasts 0 starts will be updated to 0 and end values will be increased by negative start value to ensure we dont loose length of audio
+				if (startX < 0){
+					end = end - start;
+					endX = endX - startX;
+					startX = 0;
+					start = 0;
+					console.log("X block ran");
+				}
+
+				currentDragging.x = startX
+				currentDragging.x2 = endX
+
+				dispatcher.fire('update.audioTime', currentDragging.id, start, end);
+				// var audioData = dataStore.getData("data", "data");
+				// console.log(audioData);
+
+			} else {
+				dispatcher.fire('time.update', x_to_time((e.offsetx)/dpr, time_scale));
+			}
 		},
 		function up(e){
-			console.log("UP")
+			console.log("UP");
 			draggingx = null;
+			currentDragging = null;
+			canvas.style.cursor = 'pointer';
 		});
 }
 

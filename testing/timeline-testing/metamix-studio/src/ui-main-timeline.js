@@ -17,7 +17,7 @@ function AudioItem() {
 }
 
 //Set variables for audio item
-AudioItem.prototype.set = function(x, y, x2, y2, color, audioName, id) {
+AudioItem.prototype.set = function(x, y, x2, y2, color, audioName, id, track) {
 	this.x = x;
 	this.y = y;
 	this.x2 = x2;
@@ -25,11 +25,12 @@ AudioItem.prototype.set = function(x, y, x2, y2, color, audioName, id) {
 	this.color = color;
 	this.audioName = audioName;
 	this.id = id;
+	this.track = track;
 };
 
 //Paint audio item in canvas
-AudioItem.prototype.paint = function(ctx) {
-	ctx.fillStyle = this.color;
+AudioItem.prototype.paint = function(ctx, outlineColor) {
+	ctx.fillStyle = outlineColor;
 	ctx.beginPath();
 	ctx.rect(this.x, this.y, this.x2-this.x, this.y2);
 	ctx.fill();
@@ -37,7 +38,9 @@ AudioItem.prototype.paint = function(ctx) {
 	ctx.stroke();
 	ctx.fillStyle = "black";
 	txtWidth = ctx.measureText(this.audioName).width;
-	ctx.fillText(this.audioName, this.x+txtWidth, this.y+10);
+	if (txtWidth < this.x2-this.x){
+		ctx.fillText(this.audioName, this.x+txtWidth, this.y+10);
+	}
 };
 
 //Check if mouse at x/y is contained in audio
@@ -47,6 +50,11 @@ AudioItem.prototype.contains = function(x, y, time_scale, frame_start) {
 	//X & X2 values of audio item are normalized in accordance with the timescale and framestart so we can effectively care againsy mouse position no matter where the scroll wheel is
 	return x >= (this.x + (frame_start * time_scale)) && y >= this.y  && x <= (this.x2 + (frame_start * time_scale)) && y <= this.y + this.y2;
 };
+
+//Change outline to red to notify user that they cannot slide audio over item in same track
+AudioItem.prototype.alert = function(ctx, outlineColor){
+	this.paint(ctx, outlineColor);
+}
 
 // AudioItem.prototype.mousedrag = function(){
 // 	var t1 = x_to_time(x1 + e.dx);
@@ -101,7 +109,7 @@ function timeline(dataStore, dispatcher) {
 
 		var time_scale = dataStore.getData("ui", "timeScale");
 		time_scaled(time_scale);
-		currentTime = dataStore.getData("ui", "currentTime"); //Current time of marker
+		currentTime = dataStore.getData("ui", "currentTime"); // of marker
 		frame_start = dataStore.getData("ui", "scrollTime"); //Starting time value of timeline view
 
 		var units = time_scale / tickMark1; //For now timescale is taken from settings - this should be updated later as user zooms into timeline
@@ -252,8 +260,8 @@ function timeline(dataStore, dispatcher) {
 			// console.log("Computed values", "Track", track, "x (start x)", x, "x2 (width)", x2, "y1 (starting y)", y1, "y2 (height)", y2, 
 			// 			"x2-x1", x2-x, "starting time", start, "ending time", end);
 			AudioRect = new AudioItem();
-			AudioRect.set(x, y1, x2, y2, Theme.audioElement, name, id);
-			AudioRect.paint(ctx);
+			AudioRect.set(x, y1, x2, y2, Theme.audioElement, name, id, track);
+			AudioRect.paint(ctx, Theme.audioElement);
 			renderItems.push(AudioRect); //Add audio item to renderItems so we can process mousemove/clicks later
 		}
 	}
@@ -265,10 +273,18 @@ function timeline(dataStore, dispatcher) {
 		return ds;
 	}
 
+	//Convert x to time given frame start and current time scale
+	function x_to_time(x, time_scale) {
+		return frame_start + (x) / time_scale
+	}
+
+	function normalize_x(x, time_scale, frame_start){
+		return x + (frame_start * time_scale);
+	}
+
+
 	this.paint = paint;
 	this.resize = resize;
-
-	var draggingx = null;
 
 	//mousemove eventListener to handle cursor changing to pointer upon hovering over a draggable item
 	canvas.addEventListener("mousemove", function(e){
@@ -287,17 +303,109 @@ function timeline(dataStore, dispatcher) {
 		canvas.style.cursor = 'default';
 	})
 
+	//Handles "wheel" zoom events - trackpad zoom or scroll wheel zoom - also includes scroll left and right
+	//Handle scroll left and right - moves timeline left and right - scroll up and down zooms into/out of timeline - then two finger 
+	canvas.addEventListener("wheel", function(e){
+		console.log("Wheel", e);
+	})
+
+	var draggingx = null;
+	var currentDragging = null;
+
 	//Handles dragging of movable items
 	utils.handleDrag(canvas,
 		function down(e){
 			console.log("DOWN RAN");
+			var time_scale = dataStore.getData("ui", "timeScale");
+			frame_start = dataStore.getData("ui", "scrollTime");
+
+			for (var i = 0; i < renderItems.length; i++){
+				item = renderItems[i];
+				if (item.contains(((e.offsetx)/dpr + (frame_start * time_scale)), (e.offsety)/dpr, time_scale, frame_start)) {
+					draggingx = item.x + frame_start * time_scale
+					currentDragging = item;
+					currentDragging.originalX = item.x;
+					currentDragging.originalY = item.y;
+					canvas.style.cursor = 'grabbing';
+					// console.log("Dragging x")
+					// console.log(draggingx);
+					return;
+				}
+			}
+			dispatcher.fire('time.update', x_to_time((e.offsetx)/dpr, time_scale));
 		},
 		function move(e){
 			console.log("MOVE");
+			var time_scale = dataStore.getData("ui", "timeScale");
+			frame_start = dataStore.getData("ui", "scrollTime");
+
+			if (draggingx != null) {
+				canvas.style.cursor = 'grabbing';
+				startX = (draggingx + e.dx/dpr);
+				start = startX / time_scale;
+				endX = (startX + normalize_x(currentDragging.x2, time_scale, frame_start) - normalize_x(currentDragging.x, time_scale, frame_start))
+				end = endX / time_scale
+
+				//Still need to handle X snapping & Y movement
+				//Also still need to ensure that item can move past blocking item if cursor moves past blocking item
+				for (var i = 0; i < renderItems.length; i++){
+					item = renderItems[i];
+					if (item.track == currentDragging.track && item.id != currentDragging.id){
+						if (normalize_x(item.x, time_scale, frame_start) >= currentDragging.originalX){
+							if (endX >= normalize_x(item.x, time_scale, frame_start)){
+								console.log("Computed block ran");
+								console.log("Betwee items", item, currentDragging)
+								diff = endX - startX;
+								endX = normalize_x(item.x, time_scale, frame_start);
+								startX = endX - diff;
+								start = startX / time_scale;
+								end = endX /time_scale;
+
+								console.log("New values", startX, endX, start, end)
+							}
+						} else if (normalize_x(item.x2, time_scale, frame_start) <= currentDragging.originalX){
+							console.log("ifelse");
+							if (startX <= normalize_x(item.x2, time_scale, frame_start)){
+								console.log("Computed block ran upper");
+								console.log("Betwee items", item, currentDragging)
+								diff = endX - startX;
+								startX = normalize_x(item.x2, time_scale, frame_start);
+								endX = startX + diff;
+								start = startX / time_scale;
+								end = endX /time_scale;
+
+								console.log("New values", startX, endX, start, end)
+							}
+						}
+					}
+				}
+				// console.log("startx", startX, "start", start, "endX", endX, "end", end);
+
+				//Mouse should not be able to go past 0 - thus if mouse go pasts 0 starts will be updated to 0 and end values will be increased by negative start value to ensure we dont loose length of audio
+				if (startX < 0){
+					end = end - start;
+					endX = endX - startX;
+					startX = 0;
+					start = 0;
+					console.log("X block ran");
+				}
+
+				currentDragging.x = startX
+				currentDragging.x2 = endX
+
+				dispatcher.fire('update.audioTime', currentDragging.id, start, end);
+				// var audioData = dataStore.getData("data", "data");
+				// console.log(audioData);
+
+			} else {
+				dispatcher.fire('time.update', x_to_time((e.offsetx)/dpr, time_scale));
+			}
 		},
 		function up(e){
-			console.log("UP")
+			console.log("UP");
 			draggingx = null;
+			currentDragging = null;
+			canvas.style.cursor = 'pointer';
 		});
 }
 

@@ -29,7 +29,7 @@ function DataStore() {
 	this.updateData = function updateData(audioId, key, value) {
 		for (var i in this.data) {
 			if (this.data[i].id == audioId) {
-				this.data[i][key] = vale;
+				this.data[i][key] = value;
 				break;
 			}
 		}

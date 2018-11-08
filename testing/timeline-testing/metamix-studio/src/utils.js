@@ -1,3 +1,9 @@
+function round(value, step) {
+	step || (step = 1.0);
+	var inv = 1.0 / step;
+	return Math.round(value * inv) / inv;
+}
+
 function getDivSize(id){
 	parentDiv = document.getElementById(id);
 	return parentDiv.offsetWidth, parentDiv.offsetHeight;
@@ -195,5 +201,6 @@ module.exports = {
 	format_friendly_seconds: format_friendly_seconds,
 	handleDrag: handleDrag,
 	getDivSize: getDivSize,
-	proxy_ctx: proxy_ctx
+	proxy_ctx: proxy_ctx,
+	round: round
 };

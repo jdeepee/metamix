@@ -28,6 +28,15 @@ AudioItem.prototype.set = function(x, y, x2, y2, color, audioName, id, track, ti
 	this.track = track;
 	this.xNormalized = x + (frame_start * time_scale);
 	this.x2Normalized = x2 + (frame_start * time_scale);
+
+	this.rounded1X = utils.round(this.xNormalized, 0.25);
+	this.rounded1X2 = utils.round(this.x2Normalized, 0.25);
+
+	this.rounded2X = utils.round(this.xNormalized, 0.5);
+	this.rounded2X2 = utils.round(this.x2Normalized, 0.5);
+
+	this.rounded3X = utils.round(this.xNormalized, 1);
+	this.rounded3X2 = utils.round(this.x2Normalized, 1);
 };
 
 //Paint audio item in canvas
@@ -92,6 +101,7 @@ function timeline(dataStore, dispatcher) {
 	var track_canvas = new uiExterior.trackCanvas(dataStore, dispatcher); //Creates exterior track canvas and gets object
 	var time_scale;
 	var renderItems;
+	var drawSnapMarker = 0;
 
 	//Resize function called upon window resize - will resize canvas so that future paint operations can be correctly painted according to resize
 	function resize() {
@@ -266,6 +276,15 @@ function timeline(dataStore, dispatcher) {
 			AudioRect.paint(ctx, Theme.audioElement);
 			renderItems.push(AudioRect); //Add audio item to renderItems so we can process mousemove/clicks later
 		}
+
+		if (drawSnapMarker != 0){
+			console.log(drawSnapMarker);
+			ctx.strokeStyle = "red";
+			ctx.beginPath();
+			ctx.moveTo(drawSnapMarker - frame_start * time_scale, 0);
+			ctx.lineTo(drawSnapMarker - frame_start * time_scale, height);
+			ctx.stroke();
+		}
 	}
 
 	//Convert time in seconds to x value given a timescale
@@ -308,11 +327,15 @@ function timeline(dataStore, dispatcher) {
 
 	var draggingx = null;
 	var currentDragging = null;
+	var holdTick = 0; //Handles snapping of items on y axis to assist with moving tracks together
+	var tickOffset = 0;
+	var block = false;
+	var hasBlocked = false;
+	var lastX = 0;
 
 	//Handles dragging of movable items
 	utils.handleDrag(canvas,
 		function down(e){
-			console.log("DOWN RAN");
 			var time_scale = dataStore.getData("ui", "timeScale");
 			frame_start = dataStore.getData("ui", "scrollTime");
 
@@ -322,6 +345,7 @@ function timeline(dataStore, dispatcher) {
 					draggingx = item.x + frame_start * time_scale
 					currentDragging = item;
 					canvas.style.cursor = 'grabbing';
+					holdTick = 0;
 					// console.log("Dragging x")
 					// console.log(draggingx);
 					return;
@@ -330,90 +354,146 @@ function timeline(dataStore, dispatcher) {
 			dispatcher.fire('time.update', x_to_time((e.offsetx)/dpr, time_scale));
 		},
 		function move(e){
-			console.log("MOVE");
 			var time_scale = dataStore.getData("ui", "timeScale");
+			var height = canvas.height;
 			frame_start = dataStore.getData("ui", "scrollTime");
 
 			if (draggingx != null) {
-				canvas.style.cursor = 'grabbing';
-				startX = (draggingx + e.dx/dpr);
-				start = startX / time_scale;
-				endX = (startX + currentDragging.x2Normalized - currentDragging.xNormalized)
-				end = endX / time_scale
-				//console.log(e);
+				if (block == false){
+					canvas.style.cursor = 'grabbing';
+					startX = (draggingx + e.dx/dpr); //tickOffset must be calculated based on diffence between current x value and last x value
+					//If we a snap has occured and the use has moved past it then the offset of the distance moved when user was moving mouse during snap should be accounted for
+					//If item is moving left offset must be added - if it is going right it must be subtracted
 
-				//Still need to handle X snapping & Y movement
-				//Also still need to ensure that item can move past blocking item if cursor moves past blocking item
-				//We should also have this snapping functionality if items in other tracks are algined
-				//renderItems x/x2/y/y2 values should be normalized inside of set function call to avoid contantly doing it here
-				for (var i = 0; i < renderItems.length; i++){
-					item = renderItems[i];
-					if (item.track == currentDragging.track && item.id != currentDragging.id){
-						if (item.xNormalized >= currentDragging.x){
-							console.log('Compariosn', endX, item.xNormalized)
-							if (endX >= item.xNormalized){
-								if (e.offsetx/dpr <= item.x2){
-									diff = endX - startX;
-									endX = item.xNormalized;
-									startX = endX - diff;
-									start = startX / time_scale;
-									end = endX /time_scale;
+					//console.log("New start", startX, "tickOffset", tickOffset, "holdTick", holdTick, "lastx", lastX, 'off', off);
+					endX = (startX + currentDragging.x2Normalized - currentDragging.xNormalized)
+					diff = endX - startX;
+					rendX = utils.round(endX, 0.5);
+					rstartX = utils.round(startX, 0.5);
 
-								} else {
-									diff = endX - startX;
-									startX = item.x2Normalized;
-									endX = startX + diff;
-									start = startX / time_scale;
-									end = endX /time_scale;
+					//Y movement still needs to be built
+					for (var i = 0; i < renderItems.length; i++){
+						item = renderItems[i];
+						if (item.track == currentDragging.track && item.id != currentDragging.id){ //If to check if comparison items are on same track 
+							if (item.xNormalized >= currentDragging.x){ //If start of current comparison audio is before dragging audio start
+								if (endX >= item.xNormalized){ //Check that computed end is greater than comparison audio start 
+									if (e.offsetx/dpr <= item.x2){
+										diff = endX - startX;
+										endX = item.xNormalized;
+										startX = endX - diff;
+
+									} else {
+										diff = endX - startX;
+										startX = item.x2Normalized;
+										endX = startX + diff;
+									}
+								}
+							} else if (item.x2Normalized <= currentDragging.x){
+								if (startX <= item.x2Normalized){
+									if (e.offsetx/dpr >= item.x){
+										diff = endX - startX;
+										startX = item.x2Normalized;
+										endX = startX + diff;
+
+									} else {
+										diff = endX - startX;
+										endX = item.xNormalized;
+										startX = endX - diff;
+									}
 								}
 							}
-						} else if (item.x2Normalized <= currentDragging.x){
-							if (startX <= item.x2Normalized){
-								if (e.offsetx/dpr >= item.x){
-									diff = endX - startX;
-									startX = item.x2Normalized;
-									endX = startX + diff;
-									start = startX / time_scale;
-									end = endX /time_scale;
+						} else if (item.id != currentDragging.id && lastX != 0) { //Run Y aligment - will hold currently dragged audio item at snapped location for x movement ticks
+							// console.log("comparing", item, currentDragging)
+							//All rounding operations for comparison item can be done when they are saved to comparison item - this should avoid us constantly have to recompute for each comparison element
+							//Rounding values should change based on time_scale value - when we are far zoomed out 0.5 is too small each scroll steps much larger than 0.5
+							console.log("Comparing", rstartX, rendX, "With", item.rounded2X, 
+								item.rounded2X2, "ID", item.id, "and", currentDragging.id,
+								"original values", startX, endX, item.xNormalized, item.x2Normalized)
+							
+							if (rendX == item.rounded2X){ //end2start
+								block = true;
+								hasBlocked = true;
+								tickOffset = item.xNormalized - diff;
+								startX = tickOffset;
+								endX = item.xNormalized;
+								drawSnapMarker = item.xNormalized;
+								break;
 
-								} else {
-									diff = endX - startX;
-									endX = item.xNormalized;
-									startX = endX - diff;
-									start = startX / time_scale;
-									end = endX /time_scale;
-								}
+							} else if (rendX == item.rounded2X2) { //end2end
+								block = true;
+								hasBlocked = true;
+								drawSnapMarker = item.x2Normalized;
+								tickOffset = item.x2Normalized - diff;
+								startX = tickOffset;
+								endX = item.x2Normalized;
+								console.log("new start end", startX, endX)
+								break;
+
+							} else if (rstartX == item.rounded2X) { //start2/start
+								block = true;
+								hasBlocked = true;
+								tickOffset = item.xNormalized;
+								startX = tickOffset;
+								endX = tickOffset + diff;
+								drawSnapMarker = item.xNormalized;
+								break;
+
+							} else if (rstartX == item.rounded2X2) { //start2end
+								block = true;
+								hasBlocked = true;
+								tickOffset = item.x2Normalized;
+								startX = tickOffset;
+								endX = tickOffset + diff;
+								drawSnapMarker = item.x2Normalized;
+								break;
 							}
 						}
 					}
+
+					//Mouse should not be able to go past 0 - thus if mouse go pasts 0 starts will be updated to 0 and end values will be increased by negative start value to ensure we dont loose length of audio
+					if (startX < 0){
+						end = end - start;
+						endX = endX - startX;
+						startX = 0;
+						start = 0;
+						console.log("X block ran");
+					}
+
+					//Update x/x2 value of current dragging item so we can use for future compuations
+					currentDragging.x = startX;
+					currentDragging.x2 = endX;
+					start = +((startX / time_scale).toFixed(2));
+					end = +((endX / time_scale).toFixed(2));
+					lastX = startX;
+					dispatcher.fire('update.audioTime', currentDragging.id, start, end);
+					console.log(dataStore.getData("data"));
+
+				} else {
+					console.log("Blocking code ran");
+					if (holdTick == 20){
+						block = false;
+						holdTick = 0;
+						drawSnapMarker = 0;
+
+					} else {
+						holdTick += 1;
+					}
 				}
-				// console.log("startx", startX, "start", start, "endX", endX, "end", end);
-
-				//Mouse should not be able to go past 0 - thus if mouse go pasts 0 starts will be updated to 0 and end values will be increased by negative start value to ensure we dont loose length of audio
-				if (startX < 0){
-					end = end - start;
-					endX = endX - startX;
-					startX = 0;
-					start = 0;
-					console.log("X block ran");
-				}
-
-				currentDragging.x = startX
-				currentDragging.x2 = endX
-
-				dispatcher.fire('update.audioTime', currentDragging.id, start, end);
-				// var audioData = dataStore.getData("data", "data");
-				// console.log(audioData);
 
 			} else {
 				dispatcher.fire('time.update', x_to_time((e.offsetx)/dpr, time_scale));
 			}
 		},
 		function up(e){
-			console.log("UP");
+			//Reset drag related variables
 			draggingx = null;
 			currentDragging = null;
 			canvas.style.cursor = 'pointer';
+			holdTick = 0;
+			tickOffset = 0;
+			block = false;
+			hasBlocked = false;
+			drawSnapMarker = false;
 		});
 }
 

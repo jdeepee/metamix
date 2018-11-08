@@ -46,8 +46,7 @@ function zoom(dataStore, dispatcher){
 	}
 
 	function changeRange() {
-		console.log("Change range")
-		dispatcher.fire('update.scale', range.value );
+		dispatcher.fire('update.scale', range.value);
 	}
 
 	var range = document.createElement('input');

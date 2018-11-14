@@ -1,3 +1,26 @@
+//Convert time in seconds to x value given a timescale
+function time_to_x(s, time_scale, frame_start) {
+	var ds = s - frame_start;
+	ds = ds * time_scale;
+	return ds;
+}
+
+function sortByKey(array, key) {
+    return array.sort(function(a, b) {
+        var x = a[key]; var y = b[key];
+        return ((x < y) ? -1 : ((x > y) ? 1 : 0));
+    });
+}
+
+function removeFromArrayById(array, id) {
+	for (var i=0; i<array.length; i++) {
+		if (array[i].id == id) {
+			array.splice(i,1);
+		}
+	}
+	return array;
+}
+
 function round(value, step) {
 	step || (step = 1.0);
 	var inv = 1.0 / step;
@@ -202,5 +225,8 @@ module.exports = {
 	handleDrag: handleDrag,
 	getDivSize: getDivSize,
 	proxy_ctx: proxy_ctx,
-	round: round
+	round: round,
+	sortByKey: sortByKey,
+	removeFromArrayById: removeFromArrayById,
+	time_to_x: time_to_x
 };

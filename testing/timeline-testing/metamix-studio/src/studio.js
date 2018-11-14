@@ -11,7 +11,7 @@ function Studio(audio){
 
 	//Create event listeners here to update various variables so that when paint() is called the items are painted dynamically according to what 
 	//the user is doing? 
-	var tracks = Math.max.apply(Math, audio.map(function(o) { return o.track; })); //Maximum number of tracks which audio occupies
+	var tracks = Math.max.apply(Math, audio.map(function(o) { return o.track; }))+1; //Maximum number of tracks which audio occupies +1 to account for starting at 0
 	var needsResize = false;
 	var data = new dataStore();
 	data.initData(audio, tracks);
@@ -41,6 +41,10 @@ function Studio(audio){
 	dispatcher.on("update.audioTime", function(id, start, end){
 		data.updateData(id, "start", start);
 		data.updateData(id, "end", end);
+	});
+
+	dispatcher.on("update.audioTrack", function(id, track){
+		data.updateData(id, "track", track);
 	})
 
 	//Registering event listeners

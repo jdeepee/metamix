@@ -36,8 +36,7 @@ Rect.prototype.contains = function(x, y) {
 
 function zoom(dataStore, dispatcher){
 	var div = document.getElementById("zoomColumn");
-	console.log(div.offsetWidth);
-
+	
 	this.resize = function () {
 		var range = document.getElementById("rangeSlider");
 		utils.style(range, {

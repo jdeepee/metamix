@@ -431,6 +431,18 @@ AudioItem.prototype.set = function(x, y, x2, y2, color, audioName, id, track, ti
 	this.rounded3X2 = utils.round(this.x2Normalized, 1);
 };
 
+AudioItem.prototype.updateBars = function(startX, draggingx){
+	this.barMarkersX, this.barMarkersXRounded = utils.increaseArray(this.barMarkersX, (startX-draggingx), true);
+	// this.createBarDiff();
+}
+
+AudioItem.prototype.createBarDiff = function(){
+	this.barMarkerDiff = {};
+	for (var i=0; i<this.barMarkersX.length; i++){
+		this.barMarkerDiff[this.barMarkersX[i]] = [this.barMarkersX[i]-this.xNormalized, this.x2Normalized-this.barMarkersX[i]];
+	}
+}
+
 AudioItem.prototype.paintEffects = function(ctx) {
 
 }
@@ -443,7 +455,7 @@ AudioItem.prototype.paintBarMarkers = function(ctx) {
 	for (var i=0; i<this.barMarkers.length; i++){
 		if (i % 4 == 0){ ctx.lineWidth = 2; } else { ctx.lineWidth = 1;}
 
-		time = utils.time_to_x(this.barMarkers[i], this.time_scale, this.frame_start);
+		time = utils.time_to_x(this.barMarkers[i], this.time_scale, this.frame_start) + this.xNormalized;
 		this.barMarkersX.push(time);
 		this.barMarkersXRounded.push(utils.round(time, 0.5));
 		ctx.beginPath();
@@ -452,6 +464,8 @@ AudioItem.prototype.paintBarMarkers = function(ctx) {
 		ctx.stroke();
 		ctx.fillText(i+1, time+5, this.y+this.y2-1);
 	}
+	this.createBarDiff();
+	ctx.lineWidth = 1.0;
 }
 
 //Paint audio item in canvas
@@ -709,8 +723,6 @@ function timeline(dataStore, dispatcher) {
 		}
 
 		if (drawSnapMarker != false){
-			console.log("drawing snap marker at", drawSnapMarker)
-			console.log(drawSnapMarker);
 			ctx.strokeStyle = "red";
 			ctx.beginPath();
 			ctx.moveTo(drawSnapMarker - frame_start * time_scale, 0);
@@ -722,116 +734,6 @@ function timeline(dataStore, dispatcher) {
 	//Convert x to time given frame start and current time scale
 	function x_to_time(x, time_scale) {
 		return frame_start + (x) / time_scale
-	}
-
-	function bumpAudio(audio, startX, bumpValue){
-		for (var i=0; i<audio.length; i++){
-			if (audio[i].xNormalized >= startX){
-				audio[i].xNormalized = audio[i].xNormalized + bumpValue;
-				audio[i].x2Normalized = audio[i].x2Normalized + bumpValue;
-			}
-		}
-
-		return audio;
-	}
-
-	function updateAudioItems(updates){
-		console.log("Audio update ran ")
-		for (var i=0; i<updates.length; i++){
-			currentUpdate = updates[i];
-
-			if (currentUpdate.id == currentDragging.id){
-				currentDragging.x = startX;
-				currentDragging.x2 = endX;
-			}
-
-			start = +((currentUpdate.x / time_scale).toFixed(2));
-			end = +((currentUpdate.x2 / time_scale).toFixed(2));
-			dispatcher.fire('update.audioTime', currentUpdate.id, start, end);
-			dispatcher.fire('update.audioTrack', currentUpdate.id, track);	
-		}
-	}
-
-	//Reconfigures X/X2 values on a given track timeline to ensure overlap of items does not occur - usually called after Y drag?
-	function reconfigure_x(renderItems, currentDragging){
-		renderItemsTracks = {};
-
-		for (var i=0; i<renderItems.length; i++){
-			currentItem = renderItems[i];
-
-			if (renderItemsTracks.hasOwnProperty(currentItem.track)){
-				renderItemsTracks[currentItem.track].push(currentItem);
-
-			} else {
-				renderItemsTracks[currentItem.track] = [currentItem];
-			}
-		}
-		
-		trackComparisonArray = utils.sortByKey(renderItemsTracks[currentDragging.track], start);
-		console.log('Running x reconfiguration on', trackComparisonArray);
-
-		trackComparisonArray = utils.removeFromArrayById(trackComparisonArray, currentDragging.id);
-
-		for (var i=0; i<trackComparisonArray.length; i++){
-			currentItem = trackComparisonArray[i];
-			//Using xPosition to match is not good - we should use start/end of the currentDragging item and check if there is any overlap with any audio items
-			//We need to be sure very small overlaps created by snapping are not happening - this function should solve that
-			//it should be able to see if an audio item is partally inside another and then snap it to the correct side
-			//should also be able to handle total coverage and snap to correct side using the comparison of the two x middle values for audio items in question
-
-			if (currentDragging.xNormalized < currentItem.x2Normalized && currentDragging.x2Normalized > currentItem.x2Normalized){
-				//Is partial inside of object before currentDragging - left side of current dragging inside right side of currentItem
-				console.log("Match on left currentDragging - right currentItem");
-				//Snap to right side of currentItem
-				currentDragging.x = currentItem.x2Normalized;
-				currentDragging.x2 = currentDragging.x + currentDragging.size;
-				//currentItem should be updated using the new x2Normalized value and then the bumpSize computed from distance moved by currentItem
-				out = bumpAudio(trackComparisonArray, currentDragging.xNormalized, currentDragging.size);
-				out.push(currentDragging);
-				return out;
-
-			} else if (currentDragging.xNormalized > currentItem.xNormalized && currentDragging.x2Normalized < currentItem.x2Normalized){
-				//Current dragging is completely covered by currentItem
-				console.log("Complete match");
-				//Make middleX comparison and then snap on decided side
-				if (currentDragging.xMiddle > currentItem.xMiddle){
-					//Snap right side
-					currentDragging.x = currentItem.x2Normalized;
-					currentDragging.x2 = currentDragging.xNormalized + currentDragging.size;
-					out = bumpAudio(trackComparisonArray, currentDragging.x, currentDragging.size);
-					out.push(currentDragging);
-					return out;
-
-				} else {
-					//Snap left side
-					currentDragging.x2 = currentItem.xNormalized;
-					currentDragging.x = currentDragging.x2Normalized - currentDragging.size;
-
-					if (currentDragging.x < 0){
-						currentDragging.x = 0;
-						currentDragging.x2 = currentDragging.size;
-					}
-					out = bumpAudio(trackComparisonArray, currentDragging.x, currentDragging.size);
-					out.push(currentDragging);
-					return out;
-				}
-
-			} else if (currentDragging.xNormalized < currentItem.xNormalized && currentDragging.x2 > currentItem.xNormalized){
-				//Is partailly inside of object currentItem - right side of current dragging inside left side of currentItem
-				console.log("Match on right currentDragging - left currentItem");
-				//Snap to left side of currentItem
-				currentDragging.x2 = currentItem.xNormalized;
-				currentDragging.x = currentDragging.x2Normalized - currentDragging.size;
-
-				if (currentDragging.x < 0){
-					currentDragging.x = 0;
-					currentDragging.x2 = currentDragging.size;
-				}
-				out = bumpAudio(trackComparisonArray, currentDragging.x, currentDragging.size);
-				out.push(currentDragging);
-				return out;
-			}
-		}
 	}
 
 	//Handle Y axis track movement
@@ -862,6 +764,7 @@ function timeline(dataStore, dispatcher) {
 
 	function move_x(renderItems, currentDragging, e, draggingx, lastX){
 		startX = (draggingx + e.dx/dpr); //tickOffset must be calculated based on diffence between current x value and last x value
+		currentDragging.updateBars(startX, draggingx);
 		endX = (startX + currentDragging.size)
 		rendX = utils.round(endX, 0.5);
 		rstartX = utils.round(startX, 0.5);
@@ -883,12 +786,10 @@ function timeline(dataStore, dispatcher) {
 				} else if (item.x2Normalized <= currentDragging.xNormalized){
 					if (startX <= item.x2Normalized){
 						if (e.offsetx/dpr >= item.x){
-							console.log("ran3");
 							startX = item.x2Normalized;
 							endX = startX + currentDragging.size;
 
 						} else {
-							console.log("ran4");
 							endX = item.xNormalized;
 							startX = endX - currentDragging.size;
 						}
@@ -931,30 +832,77 @@ function timeline(dataStore, dispatcher) {
 					endX = item.x2Normalized + currentDragging.size;
 					drawSnapMarker = item.x2Normalized;
 					break audioItemLoop;
-				} else {
-					if (startX >= item.xNormalized && startX <= item.x2Normalized || endX >= item.xNormalized && endX <= item.x2Normalized){
-						for (var i2=0; i2<item.barMarkersXRounded.length; i2++){
-							console.log("Comparing", rstartX, rendX, item.barMarkersXRounded[i2], i2);
-							if (rendX == item.barMarkersXRounded[i2]){ //end2start
-								console.log("match on", item.barMarkersXRounded[i2]);
-								console.log("Ran");
-								block = true;
-								blockNumber = 4;
-								startX = item.barMarkersX[i2] - currentDragging.size;
-								endX = item.barMarkersX[i2];
-								drawSnapMarker = item.barMarkersX[i2];
-								break audioItemLoop;
 
-							} else if (rstartX == item.barMarkersXRounded[i2]) { //start2/start
-								block = true;
-								blockNumber = 4;
-								startX = item.barMarkersX[i2];
-								endX = item.barMarkersX[i2] + currentDragging.size;
-								drawSnapMarker = item.barMarkersX[i2];
-								break audioItemLoop;
+				} else {
+					if (startX >= item.xNormalized && startX <= item.x2Normalized || endX >= item.xNormalized && endX <= item.x2Normalized || item.xNormalized >= startX && item.x2Normalized <= endX){
+						if (item.barMarkersX.length > 0){
+							for (var i2=0; i2<item.barMarkersXRounded.length; i2++){
+								if (rendX == item.barMarkersXRounded[i2]){ //end2start
+									block = true;
+									blockNumber = 4;
+									startX = item.barMarkersX[i2] - currentDragging.size;
+									endX = item.barMarkersX[i2];
+									drawSnapMarker = item.barMarkersX[i2];
+									break audioItemLoop;
+
+								} else if (rstartX == item.barMarkersXRounded[i2]) { //start2/start
+									block = true;
+									blockNumber = 4;
+									startX = item.barMarkersX[i2];
+									endX = item.barMarkersX[i2] + currentDragging.size;
+									drawSnapMarker = item.barMarkersX[i2];
+									break audioItemLoop;
+
+								} else {
+									for (var bi=0; bi<currentDragging.barMarkersXRounded.length; bi++){
+										if (currentDragging.barMarkersXRounded[bi] == item.barMarkersXRounded[i2]){
+											startX = item.barMarkersX[i2] - currentDragging.barMarkerDiff[currentDragging.barMarkersX[bi]][0];
+											endX = item.barMarkersX[i2] + currentDragging.barMarkerDiff[currentDragging.barMarkersX[bi]][1];
+											block = true;
+											blockNumber = 4;
+											drawSnapMarker = item.barMarkersX[i2];
+											break audioItemLoop;
+
+										} else if (currentDragging.barMarkersXRounded[bi] == item.rounded2X) {
+											startX = item.xNormalized - currentDragging.barMarkerDiff[currentDragging.barMarkersX[bi]][0];
+											endX = item.xNormalized + currentDragging.barMarkerDiff[currentDragging.barMarkersX[bi]][1];
+											block = true;
+											blockNumber = 4;
+											drawSnapMarker = item.xNormalized;
+											break audioItemLoop;
+
+										} else if (currentDragging.barMarkersXRounded[bi] == item.rounded2X2) {
+											startX = item.x2Normalized - currentDragging.barMarkerDiff[currentDragging.barMarkersX[bi]][0];
+											endX = item.x2Normalized + currentDragging.barMarkerDiff[currentDragging.barMarkersX[bi]][1];
+											block = true;
+											blockNumber = 4;
+											drawSnapMarker = item.x2Normalized;
+											break audioItemLoop;
+										}
+									}
+								}
+							}
+						} else {
+							for (var bi=0; bi<currentDragging.barMarkersXRounded.length; bi++){
+								if (currentDragging.barMarkersXRounded[bi] == item.rounded2X) {
+									startX = item.xNormalized - currentDragging.barMarkerDiff[currentDragging.barMarkersX[bi]][0];
+									endX = item.xNormalized + currentDragging.barMarkerDiff[currentDragging.barMarkersX[bi]][1];
+									block = true;
+									blockNumber = 4;
+									drawSnapMarker = item.xNormalized;
+									break audioItemLoop;
+
+								} else if (currentDragging.barMarkersXRounded[bi] == item.rounded2X2) {
+									startX = item.x2Normalized - currentDragging.barMarkerDiff[currentDragging.barMarkersX[bi]][0];
+									endX = item.x2Normalized + currentDragging.barMarkerDiff[currentDragging.barMarkersX[bi]][1];
+									block = true;
+									blockNumber = 4;
+									drawSnapMarker = item.x2Normalized;
+									break audioItemLoop;
+								}
 							}
 						}
-			}
+					}
 				}
 			}
 		}
@@ -998,7 +946,10 @@ function timeline(dataStore, dispatcher) {
 	//Handles "wheel" zoom events - trackpad zoom or scroll wheel zoom - also includes scroll left and right
 	//Handle scroll left and right - moves timeline left and right - scroll up and down zooms into/out of timeline - then two finger 
 	canvas.addEventListener("wheel", function(e){
-		console.log("Wheel", e);
+		xMove = e.deltaX/4;
+		var frame_start = dataStore.getData("ui", "scrollTime")
+		dispatcher.fire('update.scrollTime', frame_start + xMove);
+		e.preventDefault();
 	});
 
 	var draggingx = null;
@@ -1045,6 +996,7 @@ function timeline(dataStore, dispatcher) {
 					currentDragging.x2 = endX;
 					currentDragging.xNormalized = startX;
 					currentDragging.x2Normalized = endX;
+					currentDragging.updateBars(startX, draggingx);
 					lastX = startX;
 					start = +((startX / time_scale).toFixed(2));
 					end = +((endX / time_scale).toFixed(2));
@@ -1316,8 +1268,8 @@ function initCanvas () {
 
 	canvas = document.createElement('canvas');
 	canvas.setAttribute("id", "timeline-canvas");
-	canvas.style.width ='100%';
-	canvas.style.height='100%';
+	canvas.style.width ='101%';
+	canvas.style.height='101%';
 	canvas.width = timeline.offsetWidth;
 	canvas.height = timeline.offsetHeight;
 	timeline.appendChild(canvas);
@@ -1350,6 +1302,21 @@ module.exports = {
 	paintTrackColumn: paintTrackColumn
 };
 },{"./theme":7,"./utils":12}],12:[function(require,module,exports){
+function increaseArray(array, increase, roundFlag){
+	out = [];
+	outRounded = [];
+
+	for (var i=0; i<array.length; i++){
+		if (roundFlag == true){
+			v = array[i]+increase;
+			out.push(v)
+			outRounded.push(round(v));
+		}
+		out.push(array[i]+increase)
+	}
+	return out, outRounded;
+}
+
 //Convert time in seconds to x value given a timescale
 function time_to_x(s, time_scale, frame_start) {
 	var ds = s - frame_start;
@@ -1580,6 +1547,7 @@ module.exports = {
 	round: round,
 	sortByKey: sortByKey,
 	removeFromArrayById: removeFromArrayById,
-	time_to_x: time_to_x
+	time_to_x: time_to_x,
+	increaseArray: increaseArray
 };
 },{}]},{},[6]);

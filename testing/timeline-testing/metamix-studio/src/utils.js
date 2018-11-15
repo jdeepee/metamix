@@ -1,3 +1,18 @@
+function increaseArray(array, increase, roundFlag){
+	out = [];
+	outRounded = [];
+
+	for (var i=0; i<array.length; i++){
+		if (roundFlag == true){
+			v = array[i]+increase;
+			out.push(v)
+			outRounded.push(round(v));
+		}
+		out.push(array[i]+increase)
+	}
+	return out, outRounded;
+}
+
 //Convert time in seconds to x value given a timescale
 function time_to_x(s, time_scale, frame_start) {
 	var ds = s - frame_start;
@@ -228,5 +243,6 @@ module.exports = {
 	round: round,
 	sortByKey: sortByKey,
 	removeFromArrayById: removeFromArrayById,
-	time_to_x: time_to_x
+	time_to_x: time_to_x,
+	increaseArray: increaseArray
 };

@@ -28,8 +28,8 @@ function initCanvas () {
 
 	canvas = document.createElement('canvas');
 	canvas.setAttribute("id", "timeline-canvas");
-	canvas.style.width ='100%';
-	canvas.style.height='100%';
+	canvas.style.width ='101%';
+	canvas.style.height='101%';
 	canvas.width = timeline.offsetWidth;
 	canvas.height = timeline.offsetHeight;
 	timeline.appendChild(canvas);

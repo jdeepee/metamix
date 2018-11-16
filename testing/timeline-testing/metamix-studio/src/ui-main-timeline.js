@@ -16,8 +16,14 @@ function AudioItem() {
 	
 }
 
+const interpolateHeight = (total_height) => {
+  const amplitude = 256;
+  return (size) => total_height - ((size + 128) * total_height) / amplitude;
+};
+
 //Set variables for audio item
-AudioItem.prototype.set = function(x, y, x2, y2, color, audioName, id, track, time_scale, frame_start, barMarkers) {
+//This should be refactored to accept AudioItem object and then this variables set from getting values from this object - much cleaner than sending a bunch of paramters
+AudioItem.prototype.set = function(x, y, x2, y2, color, audioName, id, track, time_scale, frame_start, barMarkers, rawWaveForm) {
 	this.x = x;
 	this.y = y;
 	this.x2 = x2;
@@ -34,6 +40,7 @@ AudioItem.prototype.set = function(x, y, x2, y2, color, audioName, id, track, ti
 	this.barMarkers = barMarkers;
 	this.time_scale = time_scale;
 	this.frame_start = frame_start;
+	this.rawWaveForm = rawWaveForm;
 
 	this.rounded1X = utils.round(this.xNormalized, 0.25);
 	this.rounded1X2 = utils.round(this.x2Normalized, 0.25);
@@ -54,6 +61,26 @@ AudioItem.prototype.createBarDiff = function(){
 	this.barMarkerDiff = {};
 	for (var i=0; i<this.barMarkersX.length; i++){
 		this.barMarkerDiff[this.barMarkersX[i]] = [this.barMarkersX[i]-this.xNormalized, this.x2Normalized-this.barMarkersX[i]];
+	}
+}
+
+AudioItem.prototype.paintWaveform = function(ctx){
+	if (this.rawWaveForm != null){
+		const y = interpolateHeight(this.size);
+		ctx.beginPath();
+		// from 0 to 100
+		this.rawWaveForm.min.forEach((val, x) => {
+		  ctx.lineTo(x + 0.5, y(val) + 0.5);
+		});
+
+		// then looping back from 100 to 0
+		this.rawWaveForm.max.reverse().forEach((val, x) => {
+		  ctx.lineTo((this.rawWaveForm.offset_length - x) + 0.5, y(val) + 0.5);
+		});
+
+		ctx.closePath();
+		ctx.stroke();
+		ctx.fill();
 	}
 }
 
@@ -93,6 +120,9 @@ AudioItem.prototype.paint = function(ctx, outlineColor) {
 	ctx.fillStyle = "black";
 	txtWidth = ctx.measureText(this.audioName).width;
 	if (txtWidth < this.x2-this.x){ctx.fillText(this.audioName, this.x+txtWidth, this.y+10);}
+	this.paintWaveform(ctx);
+	this.paintBarMarkers(ctx);
+	this.paintEffects(ctx);
 };
 
 //Check if mouse at x/y is contained in audio
@@ -154,8 +184,6 @@ function timeline(dataStore, dispatcher) {
 	for (var i=0; i<trackLayers; i++){
 		trackBounds[i] = [(offset + i*lineHeight)/dpr, (offset + (i+1)*lineHeight)/dpr];
 	}
-
-	console.log(trackBounds);
 
 	var time_scale = dataStore.getData("ui", "timeScale");
 
@@ -330,9 +358,8 @@ function timeline(dataStore, dispatcher) {
 			// console.log("Computed values", "Track", track, "x (start x)", x, "x2 (width)", x2, "y1 (starting y)", y1, "y2 (height)", y2, 
 			// 			"x2-x1", x2-x, "starting time", start, "ending time", end);
 			AudioRect = new AudioItem();
-			AudioRect.set(x, y1, x2, y2, Theme.audioElement, name, id, track, time_scale, frame_start, beatMarkers);
+			AudioRect.set(x, y1, x2, y2, Theme.audioElement, name, id, track, time_scale, frame_start, beatMarkers, audioItem.raw_wave_form);
 			AudioRect.paint(ctx, Theme.audioElement);
-			AudioRect.paintBarMarkers(ctx);
 			renderItems.push(AudioRect); //Add audio item to renderItems so we can process mousemove/clicks later
 		}
 
@@ -562,8 +589,10 @@ function timeline(dataStore, dispatcher) {
 	canvas.addEventListener("wheel", function(e){
 		xMove = e.deltaX/4;
 		var frame_start = dataStore.getData("ui", "scrollTime")
+		if (frame_start != 0){
+			e.preventDefault();
+		}
 		dispatcher.fire('update.scrollTime', frame_start + xMove);
-		e.preventDefault();
 	});
 
 	var draggingx = null;

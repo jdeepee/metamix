@@ -11,5 +11,8 @@
     "do.js": "^1.0.0",
     "package-json-versionify": "^1.0.2",
     "uglifyify": "^2.6.0"
+  },
+  "dependencies": {
+    "waveform-data": "^2.1.2"
   }
 }

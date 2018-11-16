@@ -2,6 +2,7 @@ var package_json = require('../package.json'),
 	Settings = require('./settings'),
 	Do = require('do.js');
 	utils = require("./utils");
+	WaveformData = require("waveform-data");
 
 // Data Store with a source of truth
 function DataStore() {
@@ -24,6 +25,7 @@ function DataStore() {
 			lineHeight: lineHeight, //Size of track items
 			xScrollTime: 0
 		};
+		this.fetchWaveFormData();
 	}
 
 	this.updateData = function updateData(audioId, key, value) {
@@ -70,6 +72,24 @@ function DataStore() {
 
 			} else {
 				return this.ui[key];
+			}
+		}
+	}
+
+	this.fetchWaveFormData = function fetchWaveFormData(){
+		for (var i=0; i<this.data.length; i++){
+			if (this.data[i].wave_form != null){
+				xhttp = new XMLHttpRequest();
+				xhttp.open('GET', "http://localhost:8000/"+this.data[i].wave_form);
+				xhttp.i = i;
+				xhttp.responseType = 'arraybuffer';
+				var dataTmp = this;
+
+				xhttp.onload = function(data) {
+					dataTmp.data[xhttp.i].raw_wave_form = WaveformData.create(data.target);
+				};
+
+				xhttp.send();
 			}
 		}
 	}

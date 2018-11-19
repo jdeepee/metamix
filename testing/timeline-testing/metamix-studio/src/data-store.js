@@ -12,6 +12,10 @@ function DataStore() {
 	this.initData = function initData(audio, tracks){
 		this.data = audio;
 
+		// for(var i=0; i<this.data; i++){
+		// 	this.data[i].original_length = (this.data[i].end)*Settings.time_scale - (this.data[i].start)*Settings.time_scale
+		// }
+
 		var lineWidth, lineHeight = utils.getDivSize("timeline");
 		lineHeight = lineHeight * Settings.lineHeightProportion;
 

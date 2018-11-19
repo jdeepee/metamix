@@ -110,8 +110,8 @@ function trackCanvas(dataStore, dispatcher){
 		for (var i = 0; i <= trackLayers; i++){
 			ctx.strokeStyle = Theme.b;
 			ctx.beginPath();
-			ctx.moveTo(0, (offset + i*lineHeight)/dpr);
-			ctx.lineTo(width, (offset + i*lineHeight)/dpr);
+			ctx.moveTo(0, ((offset + i*lineHeight)/dpr)+i);
+			ctx.lineTo(width, ((offset + i*lineHeight)/dpr)+i);
 			ctx.stroke();
 
 			if (i != 0){

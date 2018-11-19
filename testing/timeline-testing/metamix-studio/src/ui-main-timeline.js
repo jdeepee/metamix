@@ -43,14 +43,14 @@ AudioItem.prototype.setWaveForm = function(rawWaveForm, y, y2, x, x2, time_scale
 		// 	this.rawWaveFormMin.push([i + 0.5, y(this.rawWaveForm.min[i]) + 0.5])
 		// }
 		this.rawWaveForm.min.forEach((val, x) => {
-		  this.rawWaveFormMin.push([x + 0.5, this.y+y(val)+8])
+		  this.rawWaveFormMin.push([x + 0.5, y(val)+8])
 		});
 		// this.rawWaveForm.max = this.rawWaveForm.max.reverse()
 		// for(var i=0; i<this.rawWaveForm.max.length; i++){
 		// 	this.rawWaveFormMax.push([(this.rawWaveForm.offset_length - y) + 0.5, y(this.rawWaveForm.max[i]) + 0.5]);
 		// }
 		this.rawWaveForm.max.reverse().forEach((val, x) => {
-			this.rawWaveFormMax.push([(this.rawWaveForm.offset_length - x) + 0.5, this.y+y(val)+8]);
+			this.rawWaveFormMax.push([(this.rawWaveForm.offset_length - x) + 0.5, y(val)+8]);
 		});
 
 	}
@@ -106,14 +106,14 @@ AudioItem.prototype.paintWaveform = function(ctx){
 		// from 0 to 100
 		//compute waveform min/max upon the setWaveForm function - so we dont need to recompute for each iteration over the min/max values
 		for (var i=0; i<this.rawWaveFormMin.length; i++){
-			ctx.lineTo(this.rawWaveFormMin[i][0] - this.xOffset, this.rawWaveFormMin[i][1])
+			ctx.lineTo(this.x+this.rawWaveFormMin[i][0] - this.xOffset, this.y+this.rawWaveFormMin[i][1])
 		}
 		// this.rawWaveForm.min.forEach((val, x) => {
 		//   ctx.lineTo(x + 0.5, y(val) + 0.5);
 		// });
 
 		for (var i=0; i<this.rawWaveFormMax.length; i++){
-			ctx.lineTo(this.rawWaveFormMax[i][0] - this.xOffset, this.rawWaveFormMax[i][1])
+			ctx.lineTo(this.x+this.rawWaveFormMax[i][0] - this.xOffset, this.y+this.rawWaveFormMax[i][1])
 		}
 		// then looping back from 100 to 0
 		// this.rawWaveForm.max.reverse().forEach((val, x) => {
@@ -127,7 +127,9 @@ AudioItem.prototype.paintWaveform = function(ctx){
 }
 
 AudioItem.prototype.paintEffects = function(ctx) {
-
+	//Iterate over effects and paint them on the audio item - in theme define some basic temporary colour scheme/symbols which can signify different effects
+	//So for example yellow = eq, red = volume. etc. Currently only two supported strength_curves on backend: continous and linear - just build these for now
+	//Y position on the audio item should indicate the start/target values of the effect
 }
 
 AudioItem.prototype.paintBarMarkers = function(ctx) {
@@ -215,6 +217,9 @@ function timeline(dataStore, dispatcher) {
 	var audioData = dataStore.getData("data", "data");
 	var time_scale = dataStore.getData("ui", "timeScale");
 	var lastTimeScale = time_scale;
+	var resetWaveForm = false;
+
+	//console.log("Before move data", dataStore.getData("data"));
 
 	//Create array of objects which defines the pixel bounds for each track element
 	for (var i=0; i<trackLayers; i++){
@@ -231,6 +236,7 @@ function timeline(dataStore, dispatcher) {
 		dataStore.updateUi("lineHeight", height*Settings.lineHeightProportion); //Update lineHeight in accordance to window height + proportion of track to window
 		scroll_canvas.resize();
 		track_canvas.resize();
+		resetWaveForm = true;
 
 		//Redefine track bounds after resize
 		for (var i=0; i<trackLayers; i++){
@@ -388,8 +394,7 @@ function timeline(dataStore, dispatcher) {
 
 			} else {
 				currentItem = renderItems[i];
-				if (audioItem.raw_wave_form != null && currentItem.rawWaveForm == undefined || lastTimeScale != time_scale){
-					console.log("resetting waveform data");
+				if (audioItem.raw_wave_form != null && currentItem.rawWaveForm == undefined || lastTimeScale != time_scale || resetWaveForm == true){
 					currentItem.setWaveForm(audioItem.raw_wave_form, y1, y2, x, x2, frame_start, time_scale, offset, dpr);
 				}
 				currentItem.set(x, y1, x2, y2, Theme.audioElement, audioItem.name, audioItem.id, audioItem.track, time_scale, frame_start, audioItem.beat_markers);
@@ -398,6 +403,7 @@ function timeline(dataStore, dispatcher) {
 		}
 		lastTimeScale = time_scale;
 		renderedItems = true;
+		resetWaveForm = false;
 
 		if (drawSnapMarker != false){
 			ctx.strokeStyle = "red";
@@ -672,11 +678,11 @@ function timeline(dataStore, dispatcher) {
 					currentDragging.x2Normalized = endX;
 					currentDragging.updateBars(startX, draggingx);
 					lastX = startX;
-					start = +((startX / time_scale).toFixed(2));
-					end = +((endX / time_scale).toFixed(2));
+					start = (startX / time_scale);
+					end = (endX / time_scale);
 					dispatcher.fire('update.audioTime', currentDragging.id, start, end);
 					dispatcher.fire('update.audioTrack', currentDragging.id, track);
-					// console.log(dataStore.getData("data"));
+					//console.log("Post move data", dataStore.getData("data"));
 
 				} else {
 					if (holdTick == blockNumber){

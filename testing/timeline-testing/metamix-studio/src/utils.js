@@ -20,6 +20,11 @@ function time_to_x(s, time_scale, frame_start) {
 	return ds;
 }
 
+//Convert x to time given frame start and current time scale
+function x_to_time(x, time_scale, frame_start) {
+	return frame_start + (x) / time_scale
+}
+
 function sortByKey(array, key) {
     return array.sort(function(a, b) {
         var x = a[key]; var y = b[key];
@@ -244,5 +249,6 @@ module.exports = {
 	sortByKey: sortByKey,
 	removeFromArrayById: removeFromArrayById,
 	time_to_x: time_to_x,
-	increaseArray: increaseArray
+	increaseArray: increaseArray,
+	x_to_time: x_to_time
 };

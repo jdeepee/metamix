@@ -77,16 +77,19 @@ function DataStore() {
 	}
 
 	this.fetchWaveFormData = function fetchWaveFormData(){
+		var dataTmp = this;
+
 		for (var i=0; i<this.data.length; i++){
 			if (this.data[i].wave_form != null){
-				xhttp = new XMLHttpRequest();
+				console.log("Running for", this.data[i].id)
+				var xhttp = new XMLHttpRequest();
 				xhttp.open('GET', "http://localhost:8000/"+this.data[i].wave_form);
 				xhttp.i = i;
 				xhttp.responseType = 'arraybuffer';
-				var dataTmp = this;
 
 				xhttp.onload = function(data) {
-					dataTmp.data[xhttp.i].raw_wave_form = WaveformData.create(data.target);
+					dataTmp.data[0].raw_wave_form = WaveformData.create(data.target); //currently not updating dynamically because js fucking sucks
+					dataTmp.data[1].raw_wave_form = WaveformData.create(data.target);
 				};
 
 				xhttp.send();

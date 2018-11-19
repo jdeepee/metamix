@@ -16,14 +16,47 @@ function AudioItem() {
 	
 }
 
-const interpolateHeight = (total_height) => {
+const interpolateHeight = (total_height, offset) => {
   const amplitude = 256;
   return (size) => total_height - ((size + 128) * total_height) / amplitude;
 };
 
 //Set variables for audio item
 //This should be refactored to accept AudioItem object and then this variables set from getting values from this object - much cleaner than sending a bunch of paramters
-AudioItem.prototype.set = function(x, y, x2, y2, color, audioName, id, track, time_scale, frame_start, barMarkers, rawWaveForm) {
+AudioItem.prototype.setWaveForm = function(rawWaveForm, y, y2, x, x2, time_scale, frame_start, offset, dpr){
+	this.rawWaveForm = rawWaveForm;
+	this.rawWaveFormMin = [];
+	this.rawWaveFormMax = [];
+	this.y = y;
+	this.y2 = y2;
+	this.x = x;
+	this.x2 = x2;
+	this.xNormalized = this.x + (frame_start * time_scale);
+	this.x2Normalized = this.x2 + (frame_start * time_scale);
+	this.size = this.x2Normalized - this.xNormalized;
+
+	if (this.rawWaveForm != null){
+		const y = interpolateHeight(this.y2-16);
+		this.rawWaveForm = this.rawWaveForm.resample({ width: this.size })
+
+		// for(var i=0; i<this.rawWaveForm.min.length; i++){
+		// 	this.rawWaveFormMin.push([i + 0.5, y(this.rawWaveForm.min[i]) + 0.5])
+		// }
+		this.rawWaveForm.min.forEach((val, x) => {
+		  this.rawWaveFormMin.push([x + 0.5, this.y+y(val)+8])
+		});
+		// this.rawWaveForm.max = this.rawWaveForm.max.reverse()
+		// for(var i=0; i<this.rawWaveForm.max.length; i++){
+		// 	this.rawWaveFormMax.push([(this.rawWaveForm.offset_length - y) + 0.5, y(this.rawWaveForm.max[i]) + 0.5]);
+		// }
+		this.rawWaveForm.max.reverse().forEach((val, x) => {
+			this.rawWaveFormMax.push([(this.rawWaveForm.offset_length - x) + 0.5, this.y+y(val)+8]);
+		});
+
+	}
+}
+
+AudioItem.prototype.set = function(x, y, x2, y2, color, audioName, id, track, time_scale, frame_start, barMarkers) {
 	this.x = x;
 	this.y = y;
 	this.x2 = x2;
@@ -35,12 +68,13 @@ AudioItem.prototype.set = function(x, y, x2, y2, color, audioName, id, track, ti
 	this.xNormalized = x + (frame_start * time_scale);
 	this.x2Normalized = x2 + (frame_start * time_scale);
 	this.size = this.x2Normalized - this.xNormalized;
+	this.ySize = this.y2 - this.y;
 	this.xMiddle = this.xNormalized + ((this.size) / 2);
-	this.effects = effects;
+	//this.effects = effects;
 	this.barMarkers = barMarkers;
 	this.time_scale = time_scale;
 	this.frame_start = frame_start;
-	this.rawWaveForm = rawWaveForm;
+	this.xOffset = this.frame_start * this.time_scale;
 
 	this.rounded1X = utils.round(this.xNormalized, 0.25);
 	this.rounded1X2 = utils.round(this.x2Normalized, 0.25);
@@ -54,7 +88,6 @@ AudioItem.prototype.set = function(x, y, x2, y2, color, audioName, id, track, ti
 
 AudioItem.prototype.updateBars = function(startX, draggingx){
 	this.barMarkersX, this.barMarkersXRounded = utils.increaseArray(this.barMarkersX, (startX-draggingx), true);
-	// this.createBarDiff();
 }
 
 AudioItem.prototype.createBarDiff = function(){
@@ -65,18 +98,27 @@ AudioItem.prototype.createBarDiff = function(){
 }
 
 AudioItem.prototype.paintWaveform = function(ctx){
-	if (this.rawWaveForm != null){
-		const y = interpolateHeight(this.size);
+	if (this.rawWaveForm != undefined){
+		// //console.log(this.rawWaveForm)
+		//lets add some checking to this rendering which will check if X value is greater/less than canvas width -> if so then dont render only render what is in view
+		//pre rendering?
 		ctx.beginPath();
 		// from 0 to 100
-		this.rawWaveForm.min.forEach((val, x) => {
-		  ctx.lineTo(x + 0.5, y(val) + 0.5);
-		});
+		//compute waveform min/max upon the setWaveForm function - so we dont need to recompute for each iteration over the min/max values
+		for (var i=0; i<this.rawWaveFormMin.length; i++){
+			ctx.lineTo(this.rawWaveFormMin[i][0] - this.xOffset, this.rawWaveFormMin[i][1])
+		}
+		// this.rawWaveForm.min.forEach((val, x) => {
+		//   ctx.lineTo(x + 0.5, y(val) + 0.5);
+		// });
 
+		for (var i=0; i<this.rawWaveFormMax.length; i++){
+			ctx.lineTo(this.rawWaveFormMax[i][0] - this.xOffset, this.rawWaveFormMax[i][1])
+		}
 		// then looping back from 100 to 0
-		this.rawWaveForm.max.reverse().forEach((val, x) => {
-		  ctx.lineTo((this.rawWaveForm.offset_length - x) + 0.5, y(val) + 0.5);
-		});
+		// this.rawWaveForm.max.reverse().forEach((val, x) => {
+		//   ctx.lineTo((this.rawWaveForm.offset_length - x) + 0.5, y(val) + 0.5);
+		// });
 
 		ctx.closePath();
 		ctx.stroke();
@@ -102,8 +144,8 @@ AudioItem.prototype.paintBarMarkers = function(ctx) {
 		ctx.beginPath();
 		ctx.moveTo(time, this.y+1);
 		ctx.lineTo(time, this.y+this.y2);
-		ctx.stroke();
 		ctx.fillText(i+1, time+5, this.y+this.y2-1);
+		ctx.stroke();
 	}
 	this.createBarDiff();
 	ctx.lineWidth = 1.0;
@@ -138,16 +180,6 @@ AudioItem.prototype.alert = function(ctx, outlineColor){
 	this.paint(ctx, outlineColor);
 }
 
-// AudioItem.prototype.mousedrag = function(){
-// 	var t1 = x_to_time(x1 + e.dx);
-// 	t1 = Math.max(0, t1);
-// 	// TODO limit moving to neighbours
-// 	start = t1;
-
-// 	var t2 = x_to_time(x2 + e.dx);
-// 	t2 = Math.max(0, t2);
-// 	frame2.time = t2;
-// }
 
 //Gets the timescale values for each tick
 function time_scaled(time_scale) {
@@ -171,7 +203,8 @@ function timeline(dataStore, dispatcher) {
 	var scroll_canvas = new timelineScroll.timelineScroll(dataStore, dispatcher); //Creates timeline scroll and gets object of timeline scroll
 	var track_canvas = new uiExterior.trackCanvas(dataStore, dispatcher); //Creates exterior track canvas and gets object
 	var time_scale;
-	var renderItems;
+	var renderItems = [];
+	var renderedItems = false;
 	var drawSnapMarker = 0;
 	var trackLayers = dataStore.getData("ui", "tracks");
 	var lineHeight = dataStore.getData("ui", "lineHeight");
@@ -179,13 +212,13 @@ function timeline(dataStore, dispatcher) {
 	var trackBounds = {};
 	var height = canvas.height;
 	var width = canvas.width;
+	var audioData = dataStore.getData("data", "data");
+	var time_scale = dataStore.getData("ui", "timeScale");
 
 	//Create array of objects which defines the pixel bounds for each track element
 	for (var i=0; i<trackLayers; i++){
 		trackBounds[i] = [(offset + i*lineHeight)/dpr, (offset + (i+1)*lineHeight)/dpr];
 	}
-
-	var time_scale = dataStore.getData("ui", "timeScale");
 
 	//Resize function called upon window resize - will resize canvas so that future paint operations can be correctly painted according to resize
 	function resize() {
@@ -320,8 +353,6 @@ function timeline(dataStore, dispatcher) {
 	}
 
 	function drawAudioElements() {
-		renderItems = [];
-
 		var trackLayers = dataStore.getData("ui", "tracks");
 		var lineHeight = dataStore.getData("ui", "lineHeight"); //TODO line height should be updated as more track layers are added - if track layers extend view
 		var offset = dataStore.getData("ui", "trackTimelineOffset");
@@ -342,26 +373,28 @@ function timeline(dataStore, dispatcher) {
 		//Iterate over audioData and paint componenets on timeline - along will all effects associated on them
 		for (var i = 0; i < audioData.length; i++){
 			audioItem = audioData[i];
-			track = audioItem.track;
-			start = audioItem.start;
-			end = audioItem.end;
-			effects = audioItem.effects;
-			beatMarkers = audioItem.beat_markers;
-			name = audioItem.name;
-			id = audioItem.id;
-
-			x = utils.time_to_x(start, time_scale, frame_start); //Starting x value for audio item
-			x2 = utils.time_to_x(end, time_scale, frame_start); //Ending x value for audio item
-
-			var y1 = (offset + track * lineHeight)/dpr; //Starting y value for audio item
+			x = utils.time_to_x(audioItem.start, time_scale, frame_start); //Starting x value for audio item
+			x2 = utils.time_to_x(audioItem.end, time_scale, frame_start); //Ending x value for audio item
+			var y1 = (offset + audioItem.track * lineHeight)/dpr; //Starting y value for audio item
 			var y2 = (lineHeight)/dpr; //Ending y value for audio item
-			// console.log("Computed values", "Track", track, "x (start x)", x, "x2 (width)", x2, "y1 (starting y)", y1, "y2 (height)", y2, 
-			// 			"x2-x1", x2-x, "starting time", start, "ending time", end);
-			AudioRect = new AudioItem();
-			AudioRect.set(x, y1, x2, y2, Theme.audioElement, name, id, track, time_scale, frame_start, beatMarkers, audioItem.raw_wave_form);
-			AudioRect.paint(ctx, Theme.audioElement);
-			renderItems.push(AudioRect); //Add audio item to renderItems so we can process mousemove/clicks later
+
+			if (renderedItems == false){
+				AudioRect = new AudioItem();
+				AudioRect.setWaveForm(audioItem.raw_wave_form, y1, y2, x, x2, frame_start, time_scale, offset, dpr);
+				AudioRect.set(x, y1, x2, y2, Theme.audioElement, audioItem.name, audioItem.id, audioItem.track, time_scale, frame_start, audioItem.beat_markers);
+				AudioRect.paint(ctx, Theme.audioElement);
+				renderItems.push(AudioRect);
+
+			} else {
+				currentItem = renderItems[i];
+				if (audioItem.raw_wave_form != null && currentItem.rawWaveForm == undefined){
+					currentItem.setWaveForm(audioItem.raw_wave_form, y1, y2, x, x2, frame_start, time_scale, offset, dpr);
+				}
+				currentItem.set(x, y1, x2, y2, Theme.audioElement, audioItem.name, audioItem.id, audioItem.track, time_scale, frame_start, audioItem.beat_markers);
+				currentItem.paint(ctx, Theme.audioElement);
+			}
 		}
+		renderedItems = true;
 
 		if (drawSnapMarker != false){
 			ctx.strokeStyle = "red";
@@ -370,11 +403,6 @@ function timeline(dataStore, dispatcher) {
 			ctx.lineTo(drawSnapMarker - frame_start * time_scale, height);
 			ctx.stroke();
 		}
-	}
-
-	//Convert x to time given frame start and current time scale
-	function x_to_time(x, time_scale) {
-		return frame_start + (x) / time_scale
 	}
 
 	//Handle Y axis track movement
@@ -621,7 +649,7 @@ function timeline(dataStore, dispatcher) {
 					return;
 				}
 			}
-			dispatcher.fire('time.update', x_to_time((e.offsetx)/dpr, time_scale));
+			dispatcher.fire('time.update', utils.x_to_time((e.offsetx)/dpr, time_scale, frame_start));
 		},
 		function move(e){
 			var time_scale = dataStore.getData("ui", "timeScale");
@@ -659,7 +687,7 @@ function timeline(dataStore, dispatcher) {
 				}
 
 			} else {
-				dispatcher.fire('time.update', x_to_time((e.offsetx)/dpr, time_scale));
+				dispatcher.fire('time.update', utils.x_to_time((e.offsetx)/dpr, time_scale, frame_start));
 			}
 		},
 		function up(e){

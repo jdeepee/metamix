@@ -2008,6 +2008,7 @@ function timeline(dataStore, dispatcher) {
 	var width = canvas.width;
 	var audioData = dataStore.getData("data", "data");
 	var time_scale = dataStore.getData("ui", "timeScale");
+	var lastTimeScale = time_scale;
 
 	//Create array of objects which defines the pixel bounds for each track element
 	for (var i=0; i<trackLayers; i++){
@@ -2181,13 +2182,15 @@ function timeline(dataStore, dispatcher) {
 
 			} else {
 				currentItem = renderItems[i];
-				if (audioItem.raw_wave_form != null && currentItem.rawWaveForm == undefined){
+				if (audioItem.raw_wave_form != null && currentItem.rawWaveForm == undefined || lastTimeScale != time_scale){
+					console.log("resetting waveform data");
 					currentItem.setWaveForm(audioItem.raw_wave_form, y1, y2, x, x2, frame_start, time_scale, offset, dpr);
 				}
 				currentItem.set(x, y1, x2, y2, Theme.audioElement, audioItem.name, audioItem.id, audioItem.track, time_scale, frame_start, audioItem.beat_markers);
 				currentItem.paint(ctx, Theme.audioElement);
 			}
 		}
+		lastTimeScale = time_scale;
 		renderedItems = true;
 
 		if (drawSnapMarker != false){

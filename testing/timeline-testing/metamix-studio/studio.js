@@ -1512,7 +1512,7 @@ function DataStore() {
 
 module.exports = DataStore;
 
-},{"../package.json":9,"./settings":12,"./utils":19,"do.js":1,"waveform-data":8}],11:[function(require,module,exports){
+},{"../package.json":9,"./settings":13,"./utils":20,"do.js":1,"waveform-data":8}],11:[function(require,module,exports){
 /**************************/
 // Dispatcher
 /**************************/
@@ -1549,6 +1549,50 @@ function Dispatcher() {
 
 module.exports = Dispatcher;
 },{}],12:[function(require,module,exports){
+var Settings = require("./settings");
+	utils = require("./utils.js");
+
+function computeHighLow(start, end, type){
+	//Computes high/low ratio (0-100) of where the start/target of the effects are compared to possible min/max
+	//get min/max of start/end of given effect type
+	//normalize min/max so -> min = 0 , max = max + offset of min to get to 0
+	//then ratio will be max / (start/end) + offset of min to get to 0
+	offset = 0;
+	bounds = Settings.effectBounds[type];
+	if (bounds["startMin"] <= 0){
+		offset = +bounds["startMin"]
+	} else {
+		offset = -bounds["startMin"]
+	}
+
+	max = bounds["startMax"] + offset
+	startOff = start + offset;
+	endOffset = end + offset;
+
+	if (startOff == 0){
+		return [0, (endOffset / max)*100]
+
+	} else if (endOffset == 0){
+		return [(startOff / max)*100, 0]
+
+	} else {
+		return [(startOff / max)*100, (endOffset / max)*100]
+	}
+}
+
+function computeEffectsX(effects, startX, time_scale, frame_start){
+	for (var i=0; i<effects.length; i++){
+		effects[i]["startX"] = startX + effects[i]["start"] * time_scale;
+		effects[i]["endX"] = startX + effects[i]["end"] * time_scale;
+	}
+	return effects;
+}
+
+module.exports = {
+	computeHighLow: computeHighLow,
+	computeEffectsX: computeEffectsX
+}
+},{"./settings":13,"./utils.js":20}],13:[function(require,module,exports){
 //Time scale definitions
 var DEFAULT_TIME_SCALE = 60;
 
@@ -1568,6 +1612,17 @@ var topTimelineHeight = 0.6
 var lineHeightProportion = 0.22 //This value should be worked out on size of studio vs number of tracks so that we can fill the entire space
 var trackTimelineOffset = 40;
 
+//min/max bounds for start/end of effects - EQ is missing min/max bounds for start/target-decibels
+var effectBounds = {"volume": {"startMin": 0, "startMax": 1, "endMin": 0, "endMax": 1}, 
+                    "high_pass_filter": {"startMin": 20, "startMax": 15000, "endMin": 20, "endMax": 15000}, 
+                    "low_pass_filter": {"startMin": 15000, "startMax": 20, "endMin": 15000, "endMax": 20}, 
+                    "eq": {"startMin": 0, "startMax": 2, "endMin": 0, "endMax": 2}, 
+                    "pitch": {"startMin": -12, "startMax": 12, "endMin": -12, "endMax": 12}, 
+                    "tempo": {"startMin": 0, "startMax": 250, "endMin": 0, "endMax": 250}}
+                    // "gain": {"startMin": , "startMax": , "endMin": , "endMax": }, "flanger": {"startMin": , "startMax": , "endMin": , "endMax": }, 
+                    // "echo": {"startMin": , "startMax": , "endMin": , "endMax": }, "phaser": {"startMin": , "startMax": , "endMin": , "endMax": }, 
+                    // "reverb": {"startMin": , "startMax": , "endMin": , "endMax": }}
+
 // Dimensions
 module.exports = {
 	MARKER_TRACK_HEIGHT: 60,
@@ -1583,10 +1638,11 @@ module.exports = {
     timelineToolbarHeight: timelineToolbarHeight,
     timelineToolbarWidth: timelineToolbarWidth,
     lineHeightProportion: lineHeightProportion,
-    trackTimelineOffset: trackTimelineOffset
+    trackTimelineOffset: trackTimelineOffset,
+    effectBounds: effectBounds
 };
 
-},{}],13:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 var ui = require("./ui"),
 	Dispatcher = require("./dispatcher"),
 	dataStore = require("./data-store"),
@@ -1657,16 +1713,19 @@ function Studio(audio){
 }
 
 window.Studio = Studio;
-},{"./data-store":10,"./dispatcher":11,"./settings":12,"./ui":18,"./ui-main-timeline":16,"./ui-scroll":17}],14:[function(require,module,exports){
+},{"./data-store":10,"./dispatcher":11,"./settings":13,"./ui":19,"./ui-main-timeline":17,"./ui-scroll":18}],15:[function(require,module,exports){
 module.exports = {
 	// photoshop colors
 	a: '#343434',
 	b: '#535353',
 	c: '#b8b8b8',
 	d: '#d6d6d6',
-	audioElement: '#4286f4'
+	audioElement: '#4286f4',
+	effectColours: {"volume": "#15a071", "high_pass_filter": "#ffff00", "low_pass_filter": "#ffae19", "eq": "#FF5733", "pitch": "#3933FF", 
+					"tempo": "#FF33BB", "gain": "#FF3333", "flanger": "#1DFF2B", "echo": "#1DC8FF", "phaser": "#AD1DFF", 
+					"reverb": "#FF1DA6"}
 };
-},{}],15:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 var Settings = require("./settings");
 	utils = require("./utils");
 
@@ -1796,13 +1855,14 @@ function trackCanvas(dataStore, dispatcher){
 module.exports = {
 	trackCanvas: trackCanvas
 };
-},{"./settings":12,"./utils":19}],16:[function(require,module,exports){
+},{"./settings":13,"./utils":20}],17:[function(require,module,exports){
 var Settings = require("./settings");
 	utils = require("./utils");
 	proxy_ctx = utils.proxy_ctx,
 	Theme = require("./theme");
 	timelineScroll = require("./ui-scroll");
 	uiExterior = require("./ui-exterior");
+	effectUtils = require("./effects.js");
 //Import settings/functions from other files
 
 var tickMark1;
@@ -1855,7 +1915,7 @@ AudioItem.prototype.setWaveForm = function(rawWaveForm, y, y2, x, x2, time_scale
 	}
 }
 
-AudioItem.prototype.set = function(x, y, x2, y2, color, audioName, id, track, time_scale, frame_start, barMarkers) {
+AudioItem.prototype.set = function(x, y, x2, y2, color, audioName, id, track, time_scale, frame_start, barMarkers, effects) {
 	this.x = x;
 	this.y = y;
 	this.x2 = x2;
@@ -1869,11 +1929,12 @@ AudioItem.prototype.set = function(x, y, x2, y2, color, audioName, id, track, ti
 	this.size = this.x2Normalized - this.xNormalized;
 	this.ySize = this.y2 - this.y;
 	this.xMiddle = this.xNormalized + ((this.size) / 2);
-	//this.effects = effects;
+	this.effects = effects;
 	this.barMarkers = barMarkers;
 	this.time_scale = time_scale;
 	this.frame_start = frame_start;
 	this.xOffset = this.frame_start * this.time_scale;
+	this.ratio = this.y2 / 100;
 
 	this.rounded1X = utils.round(this.xNormalized, 0.25);
 	this.rounded1X2 = utils.round(this.x2Normalized, 0.25);
@@ -1905,14 +1966,14 @@ AudioItem.prototype.paintWaveform = function(ctx){
 		// from 0 to 100
 		//compute waveform min/max upon the setWaveForm function - so we dont need to recompute for each iteration over the min/max values
 		for (var i=0; i<this.rawWaveFormMin.length; i++){
-			ctx.lineTo(this.x+this.rawWaveFormMin[i][0] - this.xOffset, this.y+this.rawWaveFormMin[i][1])
+			ctx.lineTo(this.xNormalized+this.rawWaveFormMin[i][0] - this.xOffset, this.y+this.rawWaveFormMin[i][1])
 		}
 		// this.rawWaveForm.min.forEach((val, x) => {
 		//   ctx.lineTo(x + 0.5, y(val) + 0.5);
 		// });
 
 		for (var i=0; i<this.rawWaveFormMax.length; i++){
-			ctx.lineTo(this.x+this.rawWaveFormMax[i][0] - this.xOffset, this.y+this.rawWaveFormMax[i][1])
+			ctx.lineTo(this.xNormalized+this.rawWaveFormMax[i][0] - this.xOffset, this.y+this.rawWaveFormMax[i][1])
 		}
 		// then looping back from 100 to 0
 		// this.rawWaveForm.max.reverse().forEach((val, x) => {
@@ -1926,7 +1987,45 @@ AudioItem.prototype.paintWaveform = function(ctx){
 }
 
 AudioItem.prototype.paintEffects = function(ctx) {
+	//Iterate over effects and paint them on the audio item - in theme define some basic temporary colour scheme/symbols which can signify different effects
+	//So for example yellow = eq, red = volume. etc. Currently only two supported strength_curves on backend: continous and linear - just build these for now
+	//Y position on the audio item should indicate the start/target values of the effect
+	for (var i=0; i<this.effects.length; i++){
+		effect = this.effects[i];
+		//currently start/target only works for phase 1 of effect - this should be able to handle effects which have multiple start/targets - 
+		//maybe this means drawing multiple curves?
+		var effectStartRatio, effectEndRatio;
+		out = effectUtils.computeHighLow(effect["params"]["start"], effect["params"]["target"], effect["type"]);
+		effectStartRatio = out[0];
+		effectEndRatio = out[1];
+		effectStartY = this.y + this.y2 - effectStartRatio * this.ratio;
+		effectEndY = this.y + this.y2 - effectEndRatio * this.ratio;
+		console.log(effectStartRatio, effectEndRatio);
+		console.log(effectStartY, effectEndY);
+		console.log(effect["startX"], effect["endX"]);
+		//now we need to start/end ratios and figure out the Y value which would be associated 
+		//then draw Y lines at effect startX/endX with either continous or linear line connecting the two
+		//where start/end of the line are computed from the ratios generated above
+		ctx.strokeStyle = Theme.effectColours[effect["type"]];
+		ctx.beginPath();
+		ctx.moveTo(effect["startX"], this.y);
+		ctx.lineTo(effect["startX"], this.y+this.y2);
+		ctx.stroke();
+		ctx.moveTo(effect["endX"], this.y);
+		ctx.lineTo(effect["endX"], this.y+this.y2);
+		ctx.stroke();
 
+		if (effect["params"]["strength_curve"] == "linear"){
+			ctx.moveTo(effect["startX"], effectStartY);
+			ctx.lineTo(effect["endX"], effectEndY)
+			ctx.stroke();
+
+		} else if (effect["params"]["strength_curve"] == "continous"){
+			ctx.moveTo(effect["startX"], effectEndY);
+			ctx.lineTo(effect["endX"], effectEndY)
+			ctx.stroke();
+		}
+	}
 }
 
 AudioItem.prototype.paintBarMarkers = function(ctx) {
@@ -2179,13 +2278,14 @@ function timeline(dataStore, dispatcher) {
 			audioItem = audioData[i];
 			x = utils.time_to_x(audioItem.start, time_scale, frame_start); //Starting x value for audio item
 			x2 = utils.time_to_x(audioItem.end, time_scale, frame_start); //Ending x value for audio item
+			audioItem.effects = effectUtils.computeEffectsX(audioItem.effects, x, time_scale, frame_start);
 			var y1 = (offset + audioItem.track * lineHeight)/dpr; //Starting y value for audio item
 			var y2 = (lineHeight)/dpr; //Ending y value for audio item
 
 			if (renderedItems == false){
 				AudioRect = new AudioItem();
 				AudioRect.setWaveForm(audioItem.raw_wave_form, y1, y2, x, x2, frame_start, time_scale, offset, dpr);
-				AudioRect.set(x, y1, x2, y2, Theme.audioElement, audioItem.name, audioItem.id, audioItem.track, time_scale, frame_start, audioItem.beat_markers);
+				AudioRect.set(x, y1, x2, y2, Theme.audioElement, audioItem.name, audioItem.id, audioItem.track, time_scale, frame_start, audioItem.beat_markers, audioItem.effects);
 				AudioRect.paint(ctx, Theme.audioElement);
 				renderItems.push(AudioRect);
 
@@ -2194,7 +2294,7 @@ function timeline(dataStore, dispatcher) {
 				if (audioItem.raw_wave_form != null && currentItem.rawWaveForm == undefined || lastTimeScale != time_scale || resetWaveForm == true){
 					currentItem.setWaveForm(audioItem.raw_wave_form, y1, y2, x, x2, frame_start, time_scale, offset, dpr);
 				}
-				currentItem.set(x, y1, x2, y2, Theme.audioElement, audioItem.name, audioItem.id, audioItem.track, time_scale, frame_start, audioItem.beat_markers);
+				currentItem.set(x, y1, x2, y2, Theme.audioElement, audioItem.name, audioItem.id, audioItem.track, time_scale, frame_start, audioItem.beat_markers, audioItem.effects);
 				currentItem.paint(ctx, Theme.audioElement);
 			}
 		}
@@ -2429,6 +2529,25 @@ function timeline(dataStore, dispatcher) {
 		dispatcher.fire('update.scrollTime', frame_start + xMove);
 	});
 
+	canvas.addEventListener("keydown", function(e){
+		console.log("Event called");
+		if (e.keyCode == 37){ //left arrow key
+			dispatcher.fire('update.scrollTime', frame_start -5);
+
+		} else if (e.keyCode == 39){ //right arrow key
+			dispatcher.fire('update.scrollTime', frame_start +5);
+
+		} else if (e.keyCode == 38){ //up arrow key
+			var time_scale = dataStore.getData("ui", "timeScale");
+			dispatcher.fire('update.scale', time_scale +5);
+
+		} else if (e.keyCode == 40){ //down arrow key
+			var time_scale = dataStore.getData("ui", "timeScale");
+			dispatcher.fire('update.scale', time_scale +5);
+
+		}
+	});
+
 	var draggingx = null;
 	var currentDragging = null;
 	var holdTick = 0; //Handles snapping of items on y axis to assist with moving tracks together
@@ -2511,7 +2630,7 @@ function timeline(dataStore, dispatcher) {
 module.exports = {
 	timeline: timeline
 };
-},{"./settings":12,"./theme":14,"./ui-exterior":15,"./ui-scroll":17,"./utils":19}],17:[function(require,module,exports){
+},{"./effects.js":12,"./settings":13,"./theme":15,"./ui-exterior":16,"./ui-scroll":18,"./utils":20}],18:[function(require,module,exports){
 var Theme = require("./theme")
 	utils = require("./utils")
 
@@ -2714,7 +2833,7 @@ function timelineScroll(dataStore, dispatcher){
 module.exports = {
 	timelineScroll: timelineScroll
 };
-},{"./theme":14,"./utils":19}],18:[function(require,module,exports){
+},{"./theme":15,"./utils":20}],19:[function(require,module,exports){
 var utils = require("./utils");
 	Theme = require("./theme")
 
@@ -2778,7 +2897,7 @@ module.exports = {
 	initCanvas: initCanvas,
 	paintTrackColumn: paintTrackColumn
 };
-},{"./theme":14,"./utils":19}],19:[function(require,module,exports){
+},{"./theme":15,"./utils":20}],20:[function(require,module,exports){
 function increaseArray(array, increase, roundFlag){
 	out = [];
 	outRounded = [];
@@ -3033,4 +3152,4 @@ module.exports = {
 	increaseArray: increaseArray,
 	x_to_time: x_to_time
 };
-},{}]},{},[13]);
+},{}]},{},[14]);

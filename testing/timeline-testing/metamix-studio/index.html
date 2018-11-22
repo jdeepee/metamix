@@ -11,7 +11,18 @@ audio = [
 	{
 		"id": "test song-id",
 		"name": "Test song 1",
-		"effects": [],
+		"effects": [
+			{
+				"start": 1,
+				"end": 5,
+				'type': "eq",
+				"params": {
+					"strength_curve": "linear",
+					"start": 0.1,
+					"target": 1.8
+				}
+			}
+		],
 		"beat_markers": [1,5,10,15,20,24.3],
 		"wave_form": "test.dat", //Currently wave form is a file - in the future this would most likely be a s3 URL which contains the file - request would be made to retrieve the file and the it would be loaded into the page and used for rendering
 		"raw_wave_form": null,

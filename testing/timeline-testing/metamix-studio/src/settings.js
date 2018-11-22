@@ -17,6 +17,17 @@ var topTimelineHeight = 0.6
 var lineHeightProportion = 0.22 //This value should be worked out on size of studio vs number of tracks so that we can fill the entire space
 var trackTimelineOffset = 40;
 
+//min/max bounds for start/end of effects - EQ is missing min/max bounds for start/target-decibels
+var effectBounds = {"volume": {"startMin": 0, "startMax": 1, "endMin": 0, "endMax": 1}, 
+                    "high_pass_filter": {"startMin": 20, "startMax": 15000, "endMin": 20, "endMax": 15000}, 
+                    "low_pass_filter": {"startMin": 15000, "startMax": 20, "endMin": 15000, "endMax": 20}, 
+                    "eq": {"startMin": 0, "startMax": 2, "endMin": 0, "endMax": 2}, 
+                    "pitch": {"startMin": -12, "startMax": 12, "endMin": -12, "endMax": 12}, 
+                    "tempo": {"startMin": 0, "startMax": 250, "endMin": 0, "endMax": 250}}
+                    // "gain": {"startMin": , "startMax": , "endMin": , "endMax": }, "flanger": {"startMin": , "startMax": , "endMin": , "endMax": }, 
+                    // "echo": {"startMin": , "startMax": , "endMin": , "endMax": }, "phaser": {"startMin": , "startMax": , "endMin": , "endMax": }, 
+                    // "reverb": {"startMin": , "startMax": , "endMin": , "endMax": }}
+
 // Dimensions
 module.exports = {
 	MARKER_TRACK_HEIGHT: 60,
@@ -32,5 +43,6 @@ module.exports = {
     timelineToolbarHeight: timelineToolbarHeight,
     timelineToolbarWidth: timelineToolbarWidth,
     lineHeightProportion: lineHeightProportion,
-    trackTimelineOffset: trackTimelineOffset
+    trackTimelineOffset: trackTimelineOffset,
+    effectBounds: effectBounds
 };

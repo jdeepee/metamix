@@ -1,3 +1,14 @@
+function linepointNearestMouse(line,x,y) {
+    //
+    lerp=function(a,b,x){ return(a+x*(b-a)); };
+    var dx=line.x1-line.x0;
+    var dy=line.y1-line.y0;
+    var t=((x-line.x0)*dx+(y-line.y0)*dy)/(dx*dx+dy*dy);
+    var lineX=lerp(line.x0, line.x1, t);
+    var lineY=lerp(line.y0, line.y1, t);
+    return({x:lineX,y:lineY});
+};
+
 function increaseArray(array, increase, roundFlag){
 	out = [];
 	outRounded = [];
@@ -250,5 +261,6 @@ module.exports = {
 	removeFromArrayById: removeFromArrayById,
 	time_to_x: time_to_x,
 	increaseArray: increaseArray,
-	x_to_time: x_to_time
+	x_to_time: x_to_time,
+	linepointNearestMouse: linepointNearestMouse
 };

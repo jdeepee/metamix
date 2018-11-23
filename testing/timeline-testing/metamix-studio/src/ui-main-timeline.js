@@ -78,6 +78,7 @@ AudioItem.prototype.set = function(x, y, x2, y2, color, audioName, id, track, ti
 	this.frame_start = frame_start;
 	this.xOffset = this.frame_start * this.time_scale;
 	this.ratio = this.y2 / 100;
+	this.curveValues = [];
 
 	this.rounded1X = utils.round(this.xNormalized, 0.25);
 	this.rounded1X2 = utils.round(this.x2Normalized, 0.25);
@@ -159,11 +160,13 @@ AudioItem.prototype.paintEffects = function(ctx) {
 		ctx.stroke();
 
 		if (effect["params"]["strength_curve"] == "linear"){
+			this.curveValues.push({x0: effect["startX"], y0: effectStartY, x1: effect["endX"], y1: effectEndY});
 			ctx.moveTo(effect["startX"], effectStartY);
 			ctx.lineTo(effect["endX"], effectEndY)
 			ctx.stroke();
 
 		} else if (effect["params"]["strength_curve"] == "continous"){
+			this.curveValues.push({x0: effect["startX"], y0: effectStartY, x1: effect["endX"], y1: effectEndY});
 			ctx.moveTo(effect["startX"], effectEndY);
 			ctx.lineTo(effect["endX"], effectEndY)
 			ctx.stroke();
@@ -216,11 +219,34 @@ AudioItem.prototype.contains = function(x, y, time_scale, frame_start) {
 	return x >= this.xNormalized && y >= this.y  && x <= this.x2Normalized && y <= this.y + this.y2;
 };
 
+AudioItem.prototype.containsEffect = function(x, y){
+	for (var i=0; i<this.curveValues.length; i++){
+		line = this.curveValues[i];
+		// mouseX=parseInt(e.clientX-offsetX);
+		// mouseY=parseInt(e.clientY-offsetY);
+		if(x<line.x0 || y>line.x1){
+		  return;          
+		}
+		var linepoint=utils.linepointNearestMouse(line,x,y);
+		var dx=x-linepoint.x;
+		var dy=y-linepoint.y;
+		var distance=Math.abs(Math.sqrt(dx*dx+dy*dy));
+		tolerance = 5;
+		if(distance<tolerance){
+			console.log("Inside line");
+			return true;
+
+		}else{
+			console.log("Outside line");
+			return false;
+		}
+	}
+}
+
 //Change outline to red to notify user that they cannot slide audio over item in same track
 AudioItem.prototype.alert = function(ctx, outlineColor){
 	this.paint(ctx, outlineColor);
 }
-
 
 //Gets the timescale values for each tick
 function time_scaled(time_scale) {
@@ -721,10 +747,15 @@ function timeline(dataStore, dispatcher) {
 			for (var i = 0; i < renderItems.length; i++){
 				item = renderItems[i];
 				if (item.contains(((e.offsetx)/dpr + (frame_start * time_scale)), (e.offsety)/dpr, time_scale, frame_start)) {
-					draggingx = item.x + frame_start * time_scale
-					currentDragging = item;
-					canvas.style.cursor = 'grabbing';
-					return;
+					if (item.containsEffect((e.offsetx)/dpr + (frame_start * time_scale), (e.offsety)/dpr) == false){
+						draggingx = item.x + frame_start * time_scale
+						currentDragging = item;
+						canvas.style.cursor = 'grabbing';
+						return;
+
+					} else {
+						//Open effect modal
+					}
 				}
 			}
 			dispatcher.fire('time.update', utils.x_to_time((e.offsetx)/dpr, time_scale, frame_start));

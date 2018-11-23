@@ -1,10 +1,23 @@
-function itemClick (itemName, e) {
+function itemClick (itemName) {
     switch(itemName) {
       case "test1":
         console.log("1")
         break;
     }
 }
+
+menuContent = [
+    {title: "Copy Item", name: "copyItem"},
+    "<hr>",
+    {title: "Add Effect", name: "addEffect"},
+    "<hr>",
+    {title: "Create Clip", name: "createClip"},
+    "<hr>",
+    {title: "Delete Audio", name: "deleteAudio"},
+    "<hr>",
+    {title: "Adjust Bar Markers", name: "adjustBarMarkers"}
+];
+
 
 const __menuConf = {
     "menu": undefined,
@@ -83,16 +96,15 @@ const __menuConf = {
         if (!window.hasOwnProperty("itemClick")) {
             // Triggered on click of an item
             window["itemClick"] = (name) => {
-                console.log(this.e);
-                itemClick(name, this.e);
+                itemClick(name);
                 console.warn(`( Menu.js ):\nMenu-item ${name} was clicked.\n***`);
             }
         }
     },
 
     // Triggered on contextmenu event
-    "menuEvent": (e) => {
-        this.e = e;
+    "menuEvent": (e, audioId) => {
+        this.audioId = audioId;
         if (!window.hasOwnProperty("__menuEnabled")) {
             window["__menuEnabled"] = true;
         }
@@ -103,6 +115,7 @@ const __menuConf = {
             }
 
             if (__menuConf.menuState) {
+                //add check here that will confirm if mouse is over audio item
                 openMenu(e);
             } else {
                 closeMenu();
@@ -110,21 +123,6 @@ const __menuConf = {
         }
     },
 };
-
-// Contextmenu-eventlistener
-document.addEventListener("contextmenu", (e) => {
-    if (__menuEnabled) {
-        e.preventDefault();
-    }
-    __menuConf.menuState = !__menuConf.menuState;
-    __menuConf.menuEvent(e);
-}, false);
-
-// Click-eventlistener
-document.addEventListener("click", () => {
-    __menuConf.menuState = false;
-    closeMenu();
-}, false);
 
 // Open the menu
 function openMenu(e) {
@@ -138,5 +136,10 @@ function closeMenu() {
     __menuConf.menu.style.display = "none";
 }
 
-// Starts the lib
-window.addEventListener("load", __menuConf.startMenu, false);
+module.exports = {
+    __menuConf: __menuConf,
+    closeMenu: closeMenu
+}
+
+// // Starts the lib
+// window.addEventListener("load", __menuConf.startMenu, false);

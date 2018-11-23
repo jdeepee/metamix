@@ -136,40 +136,37 @@ AudioItem.prototype.paintEffects = function(ctx) {
 	//Y position on the audio item should indicate the start/target values of the effect
 	for (var i=0; i<this.effects.length; i++){
 		effect = this.effects[i];
-		//currently start/target only works for phase 1 of effect - this should be able to handle effects which have multiple start/targets - 
-		//maybe this means drawing multiple curves?
-		var effectStartRatio, effectEndRatio;
-		out = effectUtils.computeHighLow(effect["params"]["start"], effect["params"]["target"], effect["type"]);
-		effectStartRatio = out[0];
-		effectEndRatio = out[1];
-		effectStartY = this.y + this.y2 - effectStartRatio * this.ratio;
-		effectEndY = this.y + this.y2 - effectEndRatio * this.ratio;
-		// console.log(effectStartRatio, effectEndRatio);
-		// console.log(effectStartY, effectEndY);
-		// console.log(effect["startX"], effect["endX"]);
-		//now we need to start/end ratios and figure out the Y value which would be associated 
-		//then draw Y lines at effect startX/endX with either continous or linear line connecting the two
-		//where start/end of the line are computed from the ratios generated above
-		ctx.strokeStyle = Theme.effectColours[effect["type"]];
-		ctx.beginPath();
-		ctx.moveTo(effect["startX"], this.y);
-		ctx.lineTo(effect["startX"], this.y+this.y2);
-		ctx.stroke();
-		ctx.moveTo(effect["endX"], this.y);
-		ctx.lineTo(effect["endX"], this.y+this.y2);
-		ctx.stroke();
+		if (effect["endX"] - effect["startX"] > 5){
+			//currently start/target only works for phase 1 of effect - this should be able to handle effects which have multiple start/targets - 
+			//maybe this means drawing multiple curves?
+			var effectStartRatio, effectEndRatio;
+			out = effectUtils.computeHighLow(effect["params"]["start"], effect["params"]["target"], effect["type"]);
+			effectStartRatio = out[0];
+			effectEndRatio = out[1];
+			effectStartY = this.y + this.y2 - effectStartRatio * this.ratio;
+			effectEndY = this.y + this.y2 - effectEndRatio * this.ratio;
 
-		if (effect["params"]["strength_curve"] == "linear"){
-			this.curveValues.push({x0: effect["startX"], y0: effectStartY, x1: effect["endX"], y1: effectEndY});
-			ctx.moveTo(effect["startX"], effectStartY);
-			ctx.lineTo(effect["endX"], effectEndY)
+			ctx.strokeStyle = Theme.effectColours[effect["type"]];
+			ctx.beginPath();
+			ctx.moveTo(effect["startX"], this.y);
+			ctx.lineTo(effect["startX"], this.y+this.y2);
+			ctx.stroke();
+			ctx.moveTo(effect["endX"], this.y);
+			ctx.lineTo(effect["endX"], this.y+this.y2);
 			ctx.stroke();
 
-		} else if (effect["params"]["strength_curve"] == "continous"){
-			this.curveValues.push({x0: effect["startX"], y0: effectStartY, x1: effect["endX"], y1: effectEndY});
-			ctx.moveTo(effect["startX"], effectEndY);
-			ctx.lineTo(effect["endX"], effectEndY)
-			ctx.stroke();
+			if (effect["params"]["strength_curve"] == "linear"){
+				this.curveValues.push({x0: effect["startX"], y0: effectStartY, x1: effect["endX"], y1: effectEndY});
+				ctx.moveTo(effect["startX"], effectStartY);
+				ctx.lineTo(effect["endX"], effectEndY)
+				ctx.stroke();
+
+			} else if (effect["params"]["strength_curve"] == "continous"){
+				this.curveValues.push({x0: effect["startX"], y0: effectStartY, x1: effect["endX"], y1: effectEndY});
+				ctx.moveTo(effect["startX"], effectEndY);
+				ctx.lineTo(effect["endX"], effectEndY)
+				ctx.stroke();
+			}
 		}
 	}
 }
@@ -231,16 +228,17 @@ AudioItem.prototype.containsEffect = function(x, y){
 		var dx=x-linepoint.x;
 		var dy=y-linepoint.y;
 		var distance=Math.abs(Math.sqrt(dx*dx+dy*dy));
-		tolerance = 5;
+		tolerance = 3;
 		if(distance<tolerance){
 			console.log("Inside line");
 			return true;
 
-		}else{
+		} else {
 			console.log("Outside line");
 			return false;
 		}
 	}
+	return false;
 }
 
 //Change outline to red to notify user that they cannot slide audio over item in same track
@@ -283,6 +281,7 @@ function timeline(dataStore, dispatcher) {
 	var time_scale = dataStore.getData("ui", "timeScale");
 	var lastTimeScale = time_scale;
 	var resetWaveForm = false;
+	var bounds = bounds = canvas.getBoundingClientRect();
 
 	//console.log("Before move data", dataStore.getData("data"));
 
@@ -302,6 +301,7 @@ function timeline(dataStore, dispatcher) {
 		scroll_canvas.resize();
 		track_canvas.resize();
 		resetWaveForm = true;
+		bounds = canvas.getBoundingClientRect();
 
 		//Redefine track bounds after resize
 		for (var i=0; i<trackLayers; i++){
@@ -665,36 +665,46 @@ function timeline(dataStore, dispatcher) {
 	this.paint = paint;
 	this.resize = resize;
 
-	//mousemove eventListener to handle cursor changing to pointer upon hovering over a draggable item
-	canvas.addEventListener("mousemove", function(e){
-		bounds = canvas.getBoundingClientRect();
-		var time_scale = dataStore.getData("ui", "timeScale");
-		frame_start = dataStore.getData("ui", "scrollTime");
+	__menuConf = menu.__menuConf;
+	__menuConf.startMenu();
+
+	// Contextmenu-eventlistener
+	canvas.addEventListener("contextmenu", function(e){
+		currentX = ((e.clientX - bounds.left)/dpr + (frame_start * time_scale));
+		currentY = (e.clientY - bounds.top)/dpr;
 
 		for (var i = 0; i < renderItems.length; i++){
 			item = renderItems[i];
-			if (item.contains(((e.clientX - bounds.left)/dpr + (frame_start * time_scale)), (e.clientY - bounds.top)/dpr, time_scale, frame_start)) {
+			if (item.contains(currentX, currentY, time_scale, frame_start)) {
+			    e.preventDefault();
+			    __menuConf.menuState = !__menuConf.menuState;
+			    __menuConf.menuEvent(e, item.id);
+			}
+		}
+	}, false);
+
+	// Click-eventlistener
+	document.addEventListener("click", () => {
+	    __menuConf.menuState = false;
+	    menu.closeMenu();
+	}, false);
+
+	//mousemove eventListener to handle cursor changing to pointer upon hovering over a draggable item
+	canvas.addEventListener("mousemove", function(e){
+		var time_scale = dataStore.getData("ui", "timeScale");
+		frame_start = dataStore.getData("ui", "scrollTime");
+		currentX = ((e.clientX - bounds.left)/dpr + (frame_start * time_scale));
+		currentY = (e.clientY - bounds.top)/dpr;
+
+		for (var i = 0; i < renderItems.length; i++){
+			item = renderItems[i];
+			if (item.contains(currentX, currentY, time_scale, frame_start)) {
 				canvas.style.cursor = 'pointer';
 				return;
 			}
 		}
 		canvas.style.cursor = 'default';
 	});
-
-	menuContent = [
-	    {title: "Copy Item", name: "copyItem"},
-	    "<hr>",
-	    {title: "Add Effect", name: "addEffect"},
-	    "<hr>",
-	    {title: "Create Clip", name: "createClip"}
-	];
-
-	//Right click even listner - will be used for adding effects onto clicked audio item
-	// canvas.addEventListener('contextmenu', function(e) {
-	//     e.preventDefault();
-	//     openMenu(e);
-	//     return false;
-	// }, false);
 
 
 	//Handles "wheel" zoom events - trackpad zoom or scroll wheel zoom - also includes scroll left and right
@@ -755,6 +765,7 @@ function timeline(dataStore, dispatcher) {
 
 					} else {
 						//Open effect modal
+						return;
 					}
 				}
 			}

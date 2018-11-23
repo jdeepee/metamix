@@ -55,6 +55,7 @@ function zoom(dataStore, dispatcher){
 	range.min = 1;
 	range.max = 100;
 	range.step = 0.5;
+	range.steps = 10;
 
 	utils.style(range, {
 		width: (div.offsetWidth-20).toString() + "px"

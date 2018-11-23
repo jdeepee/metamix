@@ -1512,7 +1512,7 @@ function DataStore() {
 
 module.exports = DataStore;
 
-},{"../package.json":9,"./settings":13,"./utils":20,"do.js":1,"waveform-data":8}],11:[function(require,module,exports){
+},{"../package.json":9,"./settings":14,"./utils":21,"do.js":1,"waveform-data":8}],11:[function(require,module,exports){
 /**************************/
 // Dispatcher
 /**************************/
@@ -1550,7 +1550,6 @@ function Dispatcher() {
 module.exports = Dispatcher;
 },{}],12:[function(require,module,exports){
 var Settings = require("./settings");
-	utils = require("./utils.js");
 
 function computeHighLow(start, end, type){
 	//Computes high/low ratio (0-100) of where the start/target of the effects are compared to possible min/max
@@ -1592,7 +1591,151 @@ module.exports = {
 	computeHighLow: computeHighLow,
 	computeEffectsX: computeEffectsX
 }
-},{"./settings":13,"./utils.js":20}],13:[function(require,module,exports){
+},{"./settings":14}],13:[function(require,module,exports){
+function itemClick (itemName, e) {
+    switch(itemName) {
+      case "test1":
+        console.log("1")
+        break;
+    }
+}
+
+const __menuConf = {
+    "menu": undefined,
+    "item": undefined,
+    "menuState": false,
+    "oldContent": [],
+
+    // Style of menu
+    "menuStyle": {
+        display: "none",
+        fontFamily: "monospace",
+        width: "min-width",
+        height: "min-height",
+        padding: "8px 0 8px 0",
+        margin: 0,
+        borderRadius: "5px",
+        border: "1px solid #555",
+        backgroundColor: "#222",
+        position: "absolute",
+        top: 0,
+        left: 0,
+        userSelect: "none"
+    },
+
+    // Style menu items
+    "itemStyle": {
+        fontSize: "16px",
+        padding: "2px 11px 2px 10px",
+        margin: 0,
+        color: "#ccc"
+    },
+
+    // Add items to menu
+    "addContent": () => {
+        console.log("addcontent");
+        let temp;
+
+        if (!window.hasOwnProperty("menuContent")) {
+            window["menuContent"] = [{
+                title: "Empty",
+                name: "empty"
+            }];
+        }
+
+        __menuConf.oldContent = menuContent.map(a => {
+            return a
+        });
+        __menuConf.menu.innerHTML = "";
+
+        for (let i = 0; i < __menuConf.oldContent.length; i++) {
+            if (__menuConf.oldContent[i] !== "<hr>") {
+                temp = __menuConf.item;
+                temp.id = "__menuItem" + i;
+                temp.setAttribute("onmouseover", `this.style.color="#fff"; this.style.backgroundColor="#333"`);
+                temp.setAttribute("onmouseout", `this.style.color="#ccc"; this.style.backgroundColor="#222"`);
+                temp.setAttribute("onclick", `itemClick("${__menuConf.oldContent[i].name}")`);
+                temp.innerHTML = __menuConf.oldContent[i].title;
+                __menuConf.menu.innerHTML += temp.outerHTML;
+            } else {
+                __menuConf.menu.innerHTML += `<hr style="border: none; height: 1px; background-color: #444">`;
+            }
+        }
+    },
+
+    // Run at lib-start
+    "startMenu": () => {
+        __menuConf.menu = document.createElement("div");
+        Object.assign(__menuConf.menu.style, __menuConf.menuStyle);
+        __menuConf.menuEvent();
+
+        __menuConf.item = document.createElement("p");
+        Object.assign(__menuConf.item.style, __menuConf.itemStyle);
+
+        __menuConf.addContent();
+        document.body.appendChild(__menuConf.menu);
+
+        if (!window.hasOwnProperty("itemClick")) {
+            // Triggered on click of an item
+            window["itemClick"] = (name) => {
+                console.log(this.e);
+                itemClick(name, this.e);
+                console.warn(`( Menu.js ):\nMenu-item ${name} was clicked.\n***`);
+            }
+        }
+    },
+
+    // Triggered on contextmenu event
+    "menuEvent": (e) => {
+        this.e = e;
+        if (!window.hasOwnProperty("__menuEnabled")) {
+            window["__menuEnabled"] = true;
+        }
+
+        if (__menuEnabled) {
+            if (__menuConf.oldContent !== menuContent) {
+                __menuConf.oldContent = menuContent.splice();
+            }
+
+            if (__menuConf.menuState) {
+                openMenu(e);
+            } else {
+                closeMenu();
+            }
+        }
+    },
+};
+
+// Contextmenu-eventlistener
+document.addEventListener("contextmenu", (e) => {
+    if (__menuEnabled) {
+        e.preventDefault();
+    }
+    __menuConf.menuState = !__menuConf.menuState;
+    __menuConf.menuEvent(e);
+}, false);
+
+// Click-eventlistener
+document.addEventListener("click", () => {
+    __menuConf.menuState = false;
+    closeMenu();
+}, false);
+
+// Open the menu
+function openMenu(e) {
+    __menuConf.menu.style.display = "block";
+    __menuConf.menu.style.top = e.clientY + "px";
+    __menuConf.menu.style.left = e.clientX + "px";
+}
+
+// Cleses the menu
+function closeMenu() {
+    __menuConf.menu.style.display = "none";
+}
+
+// Starts the lib
+window.addEventListener("load", __menuConf.startMenu, false);
+},{}],14:[function(require,module,exports){
 //Time scale definitions
 var DEFAULT_TIME_SCALE = 60;
 
@@ -1642,7 +1785,7 @@ module.exports = {
     effectBounds: effectBounds
 };
 
-},{}],14:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 var ui = require("./ui"),
 	Dispatcher = require("./dispatcher"),
 	dataStore = require("./data-store"),
@@ -1713,7 +1856,7 @@ function Studio(audio){
 }
 
 window.Studio = Studio;
-},{"./data-store":10,"./dispatcher":11,"./settings":13,"./ui":19,"./ui-main-timeline":17,"./ui-scroll":18}],15:[function(require,module,exports){
+},{"./data-store":10,"./dispatcher":11,"./settings":14,"./ui":20,"./ui-main-timeline":18,"./ui-scroll":19}],16:[function(require,module,exports){
 module.exports = {
 	// photoshop colors
 	a: '#343434',
@@ -1725,7 +1868,7 @@ module.exports = {
 					"tempo": "#FF33BB", "gain": "#FF3333", "flanger": "#1DFF2B", "echo": "#1DC8FF", "phaser": "#AD1DFF", 
 					"reverb": "#FF1DA6"}
 };
-},{}],16:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 var Settings = require("./settings");
 	utils = require("./utils");
 
@@ -1855,7 +1998,7 @@ function trackCanvas(dataStore, dispatcher){
 module.exports = {
 	trackCanvas: trackCanvas
 };
-},{"./settings":13,"./utils":20}],17:[function(require,module,exports){
+},{"./settings":14,"./utils":21}],18:[function(require,module,exports){
 var Settings = require("./settings");
 	utils = require("./utils");
 	proxy_ctx = utils.proxy_ctx,
@@ -1863,6 +2006,7 @@ var Settings = require("./settings");
 	timelineScroll = require("./ui-scroll");
 	uiExterior = require("./ui-exterior");
 	effectUtils = require("./effects.js");
+	menu = require("./menu.js");
 //Import settings/functions from other files
 
 var tickMark1;
@@ -2000,9 +2144,9 @@ AudioItem.prototype.paintEffects = function(ctx) {
 		effectEndRatio = out[1];
 		effectStartY = this.y + this.y2 - effectStartRatio * this.ratio;
 		effectEndY = this.y + this.y2 - effectEndRatio * this.ratio;
-		console.log(effectStartRatio, effectEndRatio);
-		console.log(effectStartY, effectEndY);
-		console.log(effect["startX"], effect["endX"]);
+		// console.log(effectStartRatio, effectEndRatio);
+		// console.log(effectStartY, effectEndY);
+		// console.log(effect["startX"], effect["endX"]);
 		//now we need to start/end ratios and figure out the Y value which would be associated 
 		//then draw Y lines at effect startX/endX with either continous or linear line connecting the two
 		//where start/end of the line are computed from the ratios generated above
@@ -2512,11 +2656,21 @@ function timeline(dataStore, dispatcher) {
 		canvas.style.cursor = 'default';
 	});
 
+	menuContent = [
+	    {title: "Copy Item", name: "copyItem"},
+	    "<hr>",
+	    {title: "Add Effect", name: "addEffect"},
+	    "<hr>",
+	    {title: "Create Clip", name: "createClip"}
+	];
+
 	//Right click even listner - will be used for adding effects onto clicked audio item
-	canvas.addEventListener('contextmenu', function(e) {
-	    e.preventDefault();
-	    return false;
-	}, false);
+	// canvas.addEventListener('contextmenu', function(e) {
+	//     e.preventDefault();
+	//     openMenu(e);
+	//     return false;
+	// }, false);
+
 
 	//Handles "wheel" zoom events - trackpad zoom or scroll wheel zoom - also includes scroll left and right
 	//Handle scroll left and right - moves timeline left and right - scroll up and down zooms into/out of timeline - then two finger 
@@ -2630,7 +2784,7 @@ function timeline(dataStore, dispatcher) {
 module.exports = {
 	timeline: timeline
 };
-},{"./effects.js":12,"./settings":13,"./theme":15,"./ui-exterior":16,"./ui-scroll":18,"./utils":20}],18:[function(require,module,exports){
+},{"./effects.js":12,"./menu.js":13,"./settings":14,"./theme":16,"./ui-exterior":17,"./ui-scroll":19,"./utils":21}],19:[function(require,module,exports){
 var Theme = require("./theme")
 	utils = require("./utils")
 
@@ -2833,7 +2987,7 @@ function timelineScroll(dataStore, dispatcher){
 module.exports = {
 	timelineScroll: timelineScroll
 };
-},{"./theme":15,"./utils":20}],19:[function(require,module,exports){
+},{"./theme":16,"./utils":21}],20:[function(require,module,exports){
 var utils = require("./utils");
 	Theme = require("./theme")
 
@@ -2897,7 +3051,7 @@ module.exports = {
 	initCanvas: initCanvas,
 	paintTrackColumn: paintTrackColumn
 };
-},{"./theme":15,"./utils":20}],20:[function(require,module,exports){
+},{"./theme":16,"./utils":21}],21:[function(require,module,exports){
 function increaseArray(array, increase, roundFlag){
 	out = [];
 	outRounded = [];
@@ -3152,4 +3306,4 @@ module.exports = {
 	increaseArray: increaseArray,
 	x_to_time: x_to_time
 };
-},{}]},{},[14]);
+},{}]},{},[15]);

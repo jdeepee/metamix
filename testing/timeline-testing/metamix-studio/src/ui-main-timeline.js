@@ -5,6 +5,7 @@ var Settings = require("./settings");
 	timelineScroll = require("./ui-scroll");
 	uiExterior = require("./ui-exterior");
 	effectUtils = require("./effects.js");
+	menu = require("./menu.js");
 //Import settings/functions from other files
 
 var tickMark1;
@@ -142,9 +143,9 @@ AudioItem.prototype.paintEffects = function(ctx) {
 		effectEndRatio = out[1];
 		effectStartY = this.y + this.y2 - effectStartRatio * this.ratio;
 		effectEndY = this.y + this.y2 - effectEndRatio * this.ratio;
-		console.log(effectStartRatio, effectEndRatio);
-		console.log(effectStartY, effectEndY);
-		console.log(effect["startX"], effect["endX"]);
+		// console.log(effectStartRatio, effectEndRatio);
+		// console.log(effectStartY, effectEndY);
+		// console.log(effect["startX"], effect["endX"]);
 		//now we need to start/end ratios and figure out the Y value which would be associated 
 		//then draw Y lines at effect startX/endX with either continous or linear line connecting the two
 		//where start/end of the line are computed from the ratios generated above
@@ -654,11 +655,21 @@ function timeline(dataStore, dispatcher) {
 		canvas.style.cursor = 'default';
 	});
 
+	menuContent = [
+	    {title: "Copy Item", name: "copyItem"},
+	    "<hr>",
+	    {title: "Add Effect", name: "addEffect"},
+	    "<hr>",
+	    {title: "Create Clip", name: "createClip"}
+	];
+
 	//Right click even listner - will be used for adding effects onto clicked audio item
-	canvas.addEventListener('contextmenu', function(e) {
-	    e.preventDefault();
-	    return false;
-	}, false);
+	// canvas.addEventListener('contextmenu', function(e) {
+	//     e.preventDefault();
+	//     openMenu(e);
+	//     return false;
+	// }, false);
+
 
 	//Handles "wheel" zoom events - trackpad zoom or scroll wheel zoom - also includes scroll left and right
 	//Handle scroll left and right - moves timeline left and right - scroll up and down zooms into/out of timeline - then two finger 

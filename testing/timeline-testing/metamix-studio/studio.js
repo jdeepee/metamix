@@ -1551,6 +1551,42 @@ module.exports = Dispatcher;
 },{}],12:[function(require,module,exports){
 var Settings = require("./settings");
 
+function effectClicker(type){
+	console.log(type);
+}
+
+function eqEffect(){
+
+}
+
+function volumeEffect(){
+
+}
+
+function highPassEffect(){
+
+}
+
+function lowPassEffect(){
+
+}
+
+function pitchEffect(){
+
+}
+
+function tempoEffect(){
+
+}
+
+function cutEffect(){
+
+}
+
+function removeAudio(){
+
+}
+
 function computeHighLow(start, end, type){
 	//Computes high/low ratio (0-100) of where the start/target of the effects are compared to possible min/max
 	//get min/max of start/end of given effect type
@@ -1589,7 +1625,8 @@ function computeEffectsX(effects, startX, time_scale, frame_start){
 
 module.exports = {
 	computeHighLow: computeHighLow,
-	computeEffectsX: computeEffectsX
+	computeEffectsX: computeEffectsX,
+	effectClicker: effectClicker
 }
 },{"./settings":14}],13:[function(require,module,exports){
 function itemClick (itemName) {
@@ -1873,6 +1910,8 @@ module.exports = {
 },{}],17:[function(require,module,exports){
 var Settings = require("./settings");
 	utils = require("./utils");
+	Theme = require("./theme");
+	effectUtils = require("./effects");
 
 function Rect() {
 	
@@ -1998,10 +2037,67 @@ function trackCanvas(dataStore, dispatcher){
 	}
 }
 
+function effectMenu(){
+	var effectDiv = document.getElementById("top-toolbar");
+	effectDiv.style.backgroundColor = Theme.a;
+	effectDiv.classList.add("flex-container");
+	
+	var cutDiv = document.createElement('div');
+	cutDiv.id = "cutDiv";
+	cutDiv.onclick = function() {effectUtils.effectClicker("cut")};
+	cutDiv.classList.add("flex-item");
+	cutDiv.innerHTML = '<i class="material-icons" style="font-size: 5rem">content_cut</i><p>Cut</p>';
+
+	var eqDiv = document.createElement('div');
+	eqDiv.onclick = function() {effectUtils.effectClicker("eq")};
+	eqDiv.classList.add("flex-item");
+	eqDiv.innerHTML = '<i class="material-icons" style="font-size: 5rem">tune</i><p>EQ</p>';
+
+	var volumeDiv = document.createElement('div');
+	volumeDiv.onclick = function() {effectUtils.effectClicker("volume")};
+	volumeDiv.classList.add("flex-item");
+	volumeDiv.innerHTML = '<i class="material-icons" style="font-size: 5rem">volume_up</i><p>Volume Modulation</p>';
+
+	var highPassDiv = document.createElement('div');
+	highPassDiv.onclick = function() {effectUtils.effectClicker("highPass")};
+	highPassDiv.classList.add("flex-item");
+	highPassDiv.innerHTML = '<i class="material-icons" style="font-size: 5rem">blur_linear</i><p>High Pass Filter</p>';
+
+	var lowPassDiv = document.createElement('div');
+	lowPassDiv.onclick = function() {effectUtils.effectClicker("lowPass")};
+	lowPassDiv.classList.add("flex-item");
+	lowPassDiv.innerHTML = '<i class="material-icons" style="font-size: 5rem; moz-transform: scaleX(-1); -o-transform: scaleX(-1); -webkit-transform: scaleX(-1); transform: scaleX(-1); filter: FlipH -ms-filter: "FlipH";">blur_linear</i><p>Low Pass Filter</p>';
+
+	var pitchDiv = document.createElement('div');
+	pitchDiv.onclick = function() {effectUtils.effectClicker("pitch")};
+	pitchDiv.classList.add("flex-item");
+	pitchDiv.innerHTML = '<i class="material-icons" style="font-size: 5rem">trending_up</i><p>Pitch Shift</p>';
+
+	var tempoDiv = document.createElement('div');
+	tempoDiv.onclick = function() {effectUtils.effectClicker("tempo")};
+	tempoDiv.classList.add("flex-item");
+	tempoDiv.innerHTML = '<i class="material-icons" style="font-size: 5rem">fast_rewind</i><i class="material-icons" style="font-size: 5rem">fast_forward</i><p>Tempo Modulation</p>';
+
+	var removeDiv = document.createElement('div');
+	removeDiv.onclick = function() {effectUtils.effectClicker("remove")};
+	removeDiv.classList.add("flex-item");
+	removeDiv.innerHTML = '<i class="material-icons" style="font-size: 5rem">cancel</i><p>Remove Audio</p>';
+
+	effectDiv.appendChild(cutDiv);
+	effectDiv.appendChild(eqDiv);
+	effectDiv.appendChild(volumeDiv);
+	effectDiv.appendChild(highPassDiv);
+	effectDiv.appendChild(lowPassDiv);
+	effectDiv.appendChild(pitchDiv);
+	effectDiv.appendChild(tempoDiv);
+	effectDiv.appendChild(removeDiv);
+}
+
 module.exports = {
-	trackCanvas: trackCanvas
+	trackCanvas: trackCanvas,
+	effectMenu: effectMenu
 };
-},{"./settings":14,"./utils":21}],18:[function(require,module,exports){
+},{"./effects":12,"./settings":14,"./theme":16,"./utils":21}],18:[function(require,module,exports){
 var Settings = require("./settings");
 	utils = require("./utils");
 	proxy_ctx = utils.proxy_ctx,
@@ -2018,6 +2114,7 @@ var tickMark3;
 var frame_start;
 
 //AudioItem class? which is used to draw each audio item + x/y containing operations 
+//AudioItem code should be moved to its own file - its getting huge and cluttering this file
 function AudioItem() {
 	
 }
@@ -2234,11 +2331,9 @@ AudioItem.prototype.containsEffect = function(x, y){
 		var distance=Math.abs(Math.sqrt(dx*dx+dy*dy));
 		tolerance = 3;
 		if(distance<tolerance){
-			console.log("Inside line");
 			return true;
 
 		} else {
-			console.log("Outside line");
 			return false;
 		}
 	}
@@ -2293,6 +2388,8 @@ function timeline(dataStore, dispatcher) {
 	for (var i=0; i<trackLayers; i++){
 		trackBounds[i] = [(offset + i*lineHeight)/dpr, (offset + (i+1)*lineHeight)/dpr];
 	}
+
+	uiExterior.effectMenu();
 
 	//Resize function called upon window resize - will resize canvas so that future paint operations can be correctly painted according to resize
 	function resize() {
@@ -2676,17 +2773,12 @@ function timeline(dataStore, dispatcher) {
 	canvas.addEventListener("contextmenu", function(e){
 		currentX = ((e.clientX - bounds.left)/dpr + (frame_start * time_scale));
 		currentY = (e.clientY - bounds.top)/dpr;
-		console.log(renderItems);
-		console.log(currentX);
-		console.log(currentY);
-		console.log(bounds.left)
 
 		for (var i = 0; i < renderItems.length; i++){
-			item = renderItems[i];
-			if (item.contains(currentX, currentY, time_scale, frame_start)) {
+			if (renderItems[i].contains(currentX, currentY, time_scale, frame_start)) {
 			    e.preventDefault();
 			    __menuConf.menuState = !__menuConf.menuState;
-			    __menuConf.menuEvent(e, item.id);
+			    __menuConf.menuEvent(e, renderItems[i].id);
 			}
 		}
 	}, false);
@@ -2694,7 +2786,7 @@ function timeline(dataStore, dispatcher) {
 	// Click-eventlistener
 	document.addEventListener("click", () => {
 	    __menuConf.menuState = false;
-	    menu.closeMenu();
+	    menu.closeMenu(); //lets move this function insde __menuConf
 	}, false);
 
 	//mousemove eventListener to handle cursor changing to pointer upon hovering over a draggable item
@@ -2705,8 +2797,7 @@ function timeline(dataStore, dispatcher) {
 		currentY = (e.clientY - bounds.top)/dpr;
 
 		for (var i = 0; i < renderItems.length; i++){
-			item = renderItems[i];
-			if (item.contains(currentX, currentY, time_scale, frame_start)) {
+			if (renderItems[i].contains(currentX, currentY, time_scale, frame_start)) {
 				canvas.style.cursor = 'pointer';
 				return;
 			}

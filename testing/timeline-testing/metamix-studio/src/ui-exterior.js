@@ -1,5 +1,7 @@
 var Settings = require("./settings");
 	utils = require("./utils");
+	Theme = require("./theme");
+	effectUtils = require("./effects");
 
 function Rect() {
 	
@@ -125,6 +127,63 @@ function trackCanvas(dataStore, dispatcher){
 	}
 }
 
+function effectMenu(){
+	var effectDiv = document.getElementById("top-toolbar");
+	effectDiv.style.backgroundColor = Theme.a;
+	effectDiv.classList.add("flex-container");
+	
+	var cutDiv = document.createElement('div');
+	cutDiv.id = "cutDiv";
+	cutDiv.onclick = function() {effectUtils.effectClicker("cut")};
+	cutDiv.classList.add("flex-item");
+	cutDiv.innerHTML = '<i class="material-icons" style="font-size: 5rem">content_cut</i><p>Cut</p>';
+
+	var eqDiv = document.createElement('div');
+	eqDiv.onclick = function() {effectUtils.effectClicker("eq")};
+	eqDiv.classList.add("flex-item");
+	eqDiv.innerHTML = '<i class="material-icons" style="font-size: 5rem">tune</i><p>EQ</p>';
+
+	var volumeDiv = document.createElement('div');
+	volumeDiv.onclick = function() {effectUtils.effectClicker("volume")};
+	volumeDiv.classList.add("flex-item");
+	volumeDiv.innerHTML = '<i class="material-icons" style="font-size: 5rem">volume_up</i><p>Volume Modulation</p>';
+
+	var highPassDiv = document.createElement('div');
+	highPassDiv.onclick = function() {effectUtils.effectClicker("highPass")};
+	highPassDiv.classList.add("flex-item");
+	highPassDiv.innerHTML = '<i class="material-icons" style="font-size: 5rem">blur_linear</i><p>High Pass Filter</p>';
+
+	var lowPassDiv = document.createElement('div');
+	lowPassDiv.onclick = function() {effectUtils.effectClicker("lowPass")};
+	lowPassDiv.classList.add("flex-item");
+	lowPassDiv.innerHTML = '<i class="material-icons" style="font-size: 5rem; moz-transform: scaleX(-1); -o-transform: scaleX(-1); -webkit-transform: scaleX(-1); transform: scaleX(-1); filter: FlipH -ms-filter: "FlipH";">blur_linear</i><p>Low Pass Filter</p>';
+
+	var pitchDiv = document.createElement('div');
+	pitchDiv.onclick = function() {effectUtils.effectClicker("pitch")};
+	pitchDiv.classList.add("flex-item");
+	pitchDiv.innerHTML = '<i class="material-icons" style="font-size: 5rem">trending_up</i><p>Pitch Shift</p>';
+
+	var tempoDiv = document.createElement('div');
+	tempoDiv.onclick = function() {effectUtils.effectClicker("tempo")};
+	tempoDiv.classList.add("flex-item");
+	tempoDiv.innerHTML = '<i class="material-icons" style="font-size: 5rem">fast_rewind</i><i class="material-icons" style="font-size: 5rem">fast_forward</i><p>Tempo Modulation</p>';
+
+	var removeDiv = document.createElement('div');
+	removeDiv.onclick = function() {effectUtils.effectClicker("remove")};
+	removeDiv.classList.add("flex-item");
+	removeDiv.innerHTML = '<i class="material-icons" style="font-size: 5rem">cancel</i><p>Remove Audio</p>';
+
+	effectDiv.appendChild(cutDiv);
+	effectDiv.appendChild(eqDiv);
+	effectDiv.appendChild(volumeDiv);
+	effectDiv.appendChild(highPassDiv);
+	effectDiv.appendChild(lowPassDiv);
+	effectDiv.appendChild(pitchDiv);
+	effectDiv.appendChild(tempoDiv);
+	effectDiv.appendChild(removeDiv);
+}
+
 module.exports = {
-	trackCanvas: trackCanvas
+	trackCanvas: trackCanvas,
+	effectMenu: effectMenu
 };

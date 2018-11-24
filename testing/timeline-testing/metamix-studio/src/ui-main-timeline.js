@@ -14,6 +14,7 @@ var tickMark3;
 var frame_start;
 
 //AudioItem class? which is used to draw each audio item + x/y containing operations 
+//AudioItem code should be moved to its own file - its getting huge and cluttering this file
 function AudioItem() {
 	
 }
@@ -230,11 +231,9 @@ AudioItem.prototype.containsEffect = function(x, y){
 		var distance=Math.abs(Math.sqrt(dx*dx+dy*dy));
 		tolerance = 3;
 		if(distance<tolerance){
-			console.log("Inside line");
 			return true;
 
 		} else {
-			console.log("Outside line");
 			return false;
 		}
 	}
@@ -289,6 +288,8 @@ function timeline(dataStore, dispatcher) {
 	for (var i=0; i<trackLayers; i++){
 		trackBounds[i] = [(offset + i*lineHeight)/dpr, (offset + (i+1)*lineHeight)/dpr];
 	}
+
+	uiExterior.effectMenu();
 
 	//Resize function called upon window resize - will resize canvas so that future paint operations can be correctly painted according to resize
 	function resize() {
@@ -674,11 +675,10 @@ function timeline(dataStore, dispatcher) {
 		currentY = (e.clientY - bounds.top)/dpr;
 
 		for (var i = 0; i < renderItems.length; i++){
-			item = renderItems[i];
-			if (item.contains(currentX, currentY, time_scale, frame_start)) {
+			if (renderItems[i].contains(currentX, currentY, time_scale, frame_start)) {
 			    e.preventDefault();
 			    __menuConf.menuState = !__menuConf.menuState;
-			    __menuConf.menuEvent(e, item.id);
+			    __menuConf.menuEvent(e, renderItems[i].id);
 			}
 		}
 	}, false);
@@ -686,7 +686,7 @@ function timeline(dataStore, dispatcher) {
 	// Click-eventlistener
 	document.addEventListener("click", () => {
 	    __menuConf.menuState = false;
-	    menu.closeMenu();
+	    menu.closeMenu(); //lets move this function insde __menuConf
 	}, false);
 
 	//mousemove eventListener to handle cursor changing to pointer upon hovering over a draggable item
@@ -697,8 +697,7 @@ function timeline(dataStore, dispatcher) {
 		currentY = (e.clientY - bounds.top)/dpr;
 
 		for (var i = 0; i < renderItems.length; i++){
-			item = renderItems[i];
-			if (item.contains(currentX, currentY, time_scale, frame_start)) {
+			if (renderItems[i].contains(currentX, currentY, time_scale, frame_start)) {
 				canvas.style.cursor = 'pointer';
 				return;
 			}

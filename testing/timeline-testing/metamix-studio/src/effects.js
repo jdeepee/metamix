@@ -1,5 +1,41 @@
 var Settings = require("./settings");
 
+function effectClicker(type){
+	console.log(type);
+}
+
+function eqEffect(){
+
+}
+
+function volumeEffect(){
+
+}
+
+function highPassEffect(){
+
+}
+
+function lowPassEffect(){
+
+}
+
+function pitchEffect(){
+
+}
+
+function tempoEffect(){
+
+}
+
+function cutEffect(){
+
+}
+
+function removeAudio(){
+
+}
+
 function computeHighLow(start, end, type){
 	//Computes high/low ratio (0-100) of where the start/target of the effects are compared to possible min/max
 	//get min/max of start/end of given effect type
@@ -38,5 +74,6 @@ function computeEffectsX(effects, startX, time_scale, frame_start){
 
 module.exports = {
 	computeHighLow: computeHighLow,
-	computeEffectsX: computeEffectsX
+	computeEffectsX: computeEffectsX,
+	effectClicker: effectClicker
 }

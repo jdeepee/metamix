@@ -1816,14 +1816,13 @@ function effectHandler(dataStore, renderItems, canvas, dpr, overwriteCursor, bou
 	}
 
 	function effectClicker(type){
-		var time_scale = dataStore.getData("ui", "timeScale");
-		var frame_start = dataStore.getData("ui", "scrollTime");
-
 		htmlElement = document.getElementById("removeI");
 		htmlElement.setAttribute("text-shadow", "5px 5px 5px #ccc");
 		makeCursorChange(type);
 
 		audioSelectCallback = function(e) {
+			var time_scale = dataStore.getData("ui", "timeScale");
+			var frame_start = dataStore.getData("ui", "scrollTime");
 			currentX = ((e.clientX - bounds.left)/dpr + (frame_start * time_scale));
 			currentY = (e.clientY - bounds.top)/dpr;
 			hit = false;
@@ -1835,7 +1834,7 @@ function effectHandler(dataStore, renderItems, canvas, dpr, overwriteCursor, bou
 						renderEffectView(type, renderItems[i]);
 						hit = true;
 
-						if (type != "delete"){
+						if (type != "remove"){
 							canvas.removeEventListener('click', audioSelectCallback, false);
 						}
 					}
@@ -2444,7 +2443,6 @@ var Settings = require("./settings");
 	menu = require("./menu.js");
 	audio = require("./audio.js");
 	AudioItem = audio.AudioItem;
-//Import settings/functions from other files
 
 var tickMark1;
 var tickMark2;

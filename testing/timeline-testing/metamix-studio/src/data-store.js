@@ -80,8 +80,17 @@ function DataStore() {
 		}
 	}
 
+	this.deleteData = function deleteData(id){
+		for (var i in this.data){
+			if (this.data[i].id == id){
+				this.data.splice(i, 1);
+			}
+		}
+	}
+
 	this.fetchWaveFormData = function fetchWaveFormData(){
 		var dataTmp = this;
+		console.log('Fetching wave form data');
 
 		for (var i=0; i<this.data.length; i++){
 			if (this.data[i].wave_form != null){

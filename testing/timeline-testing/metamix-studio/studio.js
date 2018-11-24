@@ -1406,6 +1406,251 @@ module.exports={
   "version": "0.0.1"
 }
 },{}],10:[function(require,module,exports){
+var utils = require("./utils");
+	Theme = require("./theme");
+	effectUtils = require("./effects.js");
+
+//AudioItem class? which is used to draw each audio item + x/y containing operations 
+//AudioItem code should be moved to its own file - its getting huge and cluttering this file
+function AudioItem() {
+	
+}
+
+//Set variables for audio item
+//This should be refactored to accept AudioItem object and then this variables set from getting values from this object - much cleaner than sending a bunch of paramters
+AudioItem.prototype.setWaveForm = function(rawWaveForm, y, y2, x, x2, time_scale, frame_start, offset, dpr){
+	this.rawWaveForm = rawWaveForm;
+	this.rawWaveFormMin = [];
+	this.rawWaveFormMax = [];
+	this.y = y;
+	this.y2 = y2;
+	this.x = x;
+	this.x2 = x2;
+	this.xNormalized = this.x + (frame_start * time_scale);
+	this.x2Normalized = this.x2 + (frame_start * time_scale);
+	this.size = this.x2Normalized - this.xNormalized;
+
+	if (this.rawWaveForm != null){
+		const y = utils.interpolateHeight(this.y2-16);
+		this.rawWaveForm = this.rawWaveForm.resample({ width: this.size })
+
+		// for(var i=0; i<this.rawWaveForm.min.length; i++){
+		// 	this.rawWaveFormMin.push([i + 0.5, y(this.rawWaveForm.min[i]) + 0.5])
+		// }
+		this.rawWaveForm.min.forEach((val, x) => {
+		  this.rawWaveFormMin.push([x + 0.5, y(val)+8])
+		});
+		// this.rawWaveForm.max = this.rawWaveForm.max.reverse()
+		// for(var i=0; i<this.rawWaveForm.max.length; i++){
+		// 	this.rawWaveFormMax.push([(this.rawWaveForm.offset_length - y) + 0.5, y(this.rawWaveForm.max[i]) + 0.5]);
+		// }
+		this.rawWaveForm.max.reverse().forEach((val, x) => {
+			this.rawWaveFormMax.push([(this.rawWaveForm.offset_length - x) + 0.5, y(val)+8]);
+		});
+
+	}
+}
+
+AudioItem.prototype.set = function(x, y, x2, y2, color, audioName, id, track, time_scale, frame_start, barMarkers, effects) {
+	this.x = x;
+	this.y = y;
+	this.x2 = x2;
+	this.y2 = y2;
+	this.color = color;
+	this.audioName = audioName;
+	this.id = id;
+	this.track = track;
+	this.xNormalized = x + (frame_start * time_scale);
+	this.x2Normalized = x2 + (frame_start * time_scale);
+	this.size = this.x2Normalized - this.xNormalized;
+	this.ySize = this.y2 - this.y;
+	this.xMiddle = this.xNormalized + ((this.size) / 2);
+	this.effects = effects;
+	this.barMarkers = barMarkers;
+	this.time_scale = time_scale;
+	this.frame_start = frame_start;
+	this.xOffset = this.frame_start * this.time_scale;
+	this.ratio = this.y2 / 100;
+	this.curveValues = [];
+	this.drawSelectGlow = false;
+
+	this.rounded1X = utils.round(this.xNormalized, 0.25);
+	this.rounded1X2 = utils.round(this.x2Normalized, 0.25);
+
+	this.rounded2X = utils.round(this.xNormalized, 0.5);
+	this.rounded2X2 = utils.round(this.x2Normalized, 0.5);
+
+	this.rounded3X = utils.round(this.xNormalized, 1);
+	this.rounded3X2 = utils.round(this.x2Normalized, 1);
+};
+
+AudioItem.prototype.updateBars = function(startX, draggingx){
+	this.barMarkersX, this.barMarkersXRounded = utils.increaseArray(this.barMarkersX, (startX-draggingx), true);
+}
+
+AudioItem.prototype.createBarDiff = function(){
+	this.barMarkerDiff = {};
+	for (var i=0; i<this.barMarkersX.length; i++){
+		this.barMarkerDiff[this.barMarkersX[i]] = [this.barMarkersX[i]-this.xNormalized, this.x2Normalized-this.barMarkersX[i]];
+	}
+}
+
+AudioItem.prototype.paintWaveform = function(ctx){
+	if (this.rawWaveForm != undefined){
+		// //console.log(this.rawWaveForm)
+		//lets add some checking to this rendering which will check if X value is greater/less than canvas width -> if so then dont render only render what is in view
+		//pre rendering?
+		ctx.beginPath();
+		// from 0 to 100
+		//compute waveform min/max upon the setWaveForm function - so we dont need to recompute for each iteration over the min/max values
+		for (var i=0; i<this.rawWaveFormMin.length; i++){
+			ctx.lineTo(this.xNormalized+this.rawWaveFormMin[i][0] - this.xOffset, this.y+this.rawWaveFormMin[i][1])
+		}
+		// this.rawWaveForm.min.forEach((val, x) => {
+		//   ctx.lineTo(x + 0.5, y(val) + 0.5);
+		// });
+
+		for (var i=0; i<this.rawWaveFormMax.length; i++){
+			ctx.lineTo(this.xNormalized+this.rawWaveFormMax[i][0] - this.xOffset, this.y+this.rawWaveFormMax[i][1])
+		}
+		// then looping back from 100 to 0
+		// this.rawWaveForm.max.reverse().forEach((val, x) => {
+		//   ctx.lineTo((this.rawWaveForm.offset_length - x) + 0.5, y(val) + 0.5);
+		// });
+
+		ctx.closePath();
+		ctx.stroke();
+		ctx.fill();
+	}
+}
+
+AudioItem.prototype.effectGlow = function(){
+	this.drawSelectGlow = true;
+}
+
+AudioItem.prototype.paintEffects = function(ctx) {
+	//Iterate over effects and paint them on the audio item - in theme define some basic temporary colour scheme/symbols which can signify different effects
+	//So for example yellow = eq, red = volume. etc. Currently only two supported strength_curves on backend: continous and linear - just build these for now
+	//Y position on the audio item should indicate the start/target values of the effect
+	for (var i=0; i<this.effects.length; i++){
+		effect = this.effects[i];
+		if (effect["endX"] - effect["startX"] > 5){
+			//currently start/target only works for phase 1 of effect - this should be able to handle effects which have multiple start/targets - 
+			//maybe this means drawing multiple curves?
+			var effectStartRatio, effectEndRatio;
+			out = effectUtils.computeHighLow(effect["params"]["start"], effect["params"]["target"], effect["type"]);
+			effectStartRatio = out[0];
+			effectEndRatio = out[1];
+			effectStartY = this.y + this.y2 - effectStartRatio * this.ratio;
+			effectEndY = this.y + this.y2 - effectEndRatio * this.ratio;
+
+			ctx.strokeStyle = Theme.effectColours[effect["type"]];
+			ctx.beginPath();
+			ctx.moveTo(effect["startX"], this.y);
+			ctx.lineTo(effect["startX"], this.y+this.y2);
+			ctx.stroke();
+			ctx.moveTo(effect["endX"], this.y);
+			ctx.lineTo(effect["endX"], this.y+this.y2);
+			ctx.stroke();
+
+			if (effect["params"]["strength_curve"] == "linear"){
+				this.curveValues.push({x0: effect["startX"], y0: effectStartY, x1: effect["endX"], y1: effectEndY});
+				ctx.moveTo(effect["startX"], effectStartY);
+				ctx.lineTo(effect["endX"], effectEndY)
+				ctx.stroke();
+
+			} else if (effect["params"]["strength_curve"] == "continous"){
+				this.curveValues.push({x0: effect["startX"], y0: effectStartY, x1: effect["endX"], y1: effectEndY});
+				ctx.moveTo(effect["startX"], effectEndY);
+				ctx.lineTo(effect["endX"], effectEndY)
+				ctx.stroke();
+			}
+		}
+	}
+}
+
+AudioItem.prototype.paintBarMarkers = function(ctx) {
+	this.barMarkersX = [];
+	this.barMarkersXRounded = [];
+	ctx.strokeStyle = "grey";
+
+	for (var i=0; i<this.barMarkers.length; i++){
+		if (i % 4 == 0){ ctx.lineWidth = 2; } else { ctx.lineWidth = 1;}
+
+		time = utils.time_to_x(this.barMarkers[i], this.time_scale, this.frame_start) + this.xNormalized;
+		this.barMarkersX.push(time);
+		this.barMarkersXRounded.push(utils.round(time, 0.5));
+		ctx.beginPath();
+		ctx.moveTo(time, this.y+1);
+		ctx.lineTo(time, this.y+this.y2);
+		ctx.fillText(i+1, time+5, this.y+this.y2-1);
+		ctx.stroke();
+	}
+	this.createBarDiff();
+	ctx.lineWidth = 1.0;
+}
+
+//Paint audio item in canvas
+AudioItem.prototype.paint = function(ctx, outlineColor) {
+	ctx.fillStyle = outlineColor;
+	ctx.beginPath();
+	ctx.rect(this.x, this.y, this.x2-this.x, this.y2);
+	ctx.fill();
+	if (this.drawSelectGlow == true){
+		ctx.strokeStyle = "red";
+	} else {
+		ctx.strokeStyle = "black";
+	}
+	ctx.stroke();
+	ctx.fillStyle = "black";
+	txtWidth = ctx.measureText(this.audioName).width;
+	if (txtWidth < this.x2-this.x){ctx.fillText(this.audioName, this.x+txtWidth, this.y+10);}
+	this.paintWaveform(ctx);
+	this.paintBarMarkers(ctx);
+	this.paintEffects(ctx);
+};
+
+//Check if mouse at x/y is contained in audio
+AudioItem.prototype.contains = function(x, y, time_scale, frame_start) {
+	// console.log("X", this.x, "Y", this.y, "X2", this.x2, "y2", this.y2)
+	// console.log("Comparison", x ," >= ", (this.x + (frame_start * time_scale)), y, " >= ", this.y, x, " <= ", (this.x2 + (frame_start * time_scale)), y, "<= ", this.y + this.y2, this.id)
+	//X & X2 values of audio item are normalized in accordance with the timescale and framestart so we can effectively care againsy mouse position no matter where the scroll wheel is
+	return x >= this.xNormalized && y >= this.y  && x <= this.x2Normalized && y <= this.y + this.y2;
+};
+
+AudioItem.prototype.containsEffect = function(x, y){
+	for (var i=0; i<this.curveValues.length; i++){
+		line = this.curveValues[i];
+		// mouseX=parseInt(e.clientX-offsetX);
+		// mouseY=parseInt(e.clientY-offsetY);
+		if(x<line.x0 || y>line.x1){
+		  return;          
+		}
+		var linepoint=utils.linepointNearestMouse(line,x,y);
+		var dx=x-linepoint.x;
+		var dy=y-linepoint.y;
+		var distance=Math.abs(Math.sqrt(dx*dx+dy*dy));
+		tolerance = 3;
+		if(distance<tolerance){
+			return true;
+
+		} else {
+			return false;
+		}
+	}
+	return false;
+}
+
+//Change outline to red to notify user that they cannot slide audio over item in same track
+AudioItem.prototype.alert = function(ctx, outlineColor){
+	this.paint(ctx, outlineColor);
+}
+
+module.exports = {
+	AudioItem: AudioItem
+}
+
+},{"./effects.js":13,"./theme":17,"./utils":22}],11:[function(require,module,exports){
 var package_json = require('../package.json'),
 	Settings = require('./settings'),
 	Do = require('do.js');
@@ -1488,8 +1733,17 @@ function DataStore() {
 		}
 	}
 
+	this.deleteData = function deleteData(id){
+		for (var i in this.data){
+			if (this.data[i].id == id){
+				this.data.splice(i, 1);
+			}
+		}
+	}
+
 	this.fetchWaveFormData = function fetchWaveFormData(){
 		var dataTmp = this;
+		console.log('Fetching wave form data');
 
 		for (var i=0; i<this.data.length; i++){
 			if (this.data[i].wave_form != null){
@@ -1512,7 +1766,7 @@ function DataStore() {
 
 module.exports = DataStore;
 
-},{"../package.json":9,"./settings":14,"./utils":21,"do.js":1,"waveform-data":8}],11:[function(require,module,exports){
+},{"../package.json":9,"./settings":15,"./utils":22,"do.js":1,"waveform-data":8}],12:[function(require,module,exports){
 /**************************/
 // Dispatcher
 /**************************/
@@ -1548,43 +1802,119 @@ function Dispatcher() {
 }
 
 module.exports = Dispatcher;
-},{}],12:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 var Settings = require("./settings");
+	utils = require("./utils");
 
-function effectClicker(type){
-	console.log(type);
-}
+function effectHandler(dataStore, renderItems, canvas, dpr, overwriteCursor, bounds){
+	function makeCursorChange(type){
+		switch (type){
+			case "remove":
+				canvas.style.cursor = "not-allowed";
+				overwriteCursor = true;
+		}
+	}
 
-function eqEffect(){
+	function effectClicker(type){
+		var time_scale = dataStore.getData("ui", "timeScale");
+		var frame_start = dataStore.getData("ui", "scrollTime");
 
-}
+		htmlElement = document.getElementById("removeI");
+		htmlElement.setAttribute("text-shadow", "5px 5px 5px #ccc");
+		makeCursorChange(type);
 
-function volumeEffect(){
+		audioSelectCallback = function(e) {
+			currentX = ((e.clientX - bounds.left)/dpr + (frame_start * time_scale));
+			currentY = (e.clientY - bounds.top)/dpr;
+			hit = false;
 
-}
+			if (type != "cut"){
+				for (var i=0; i<renderItems.length; i++){
+					if (renderItems[i].contains(currentX, currentY, time_scale, frame_start)){
+						renderItems[i].effectGlow();
+						renderEffectView(type, renderItems[i]);
+						hit = true;
 
-function highPassEffect(){
+						if (type != "delete"){
+							canvas.removeEventListener('click', audioSelectCallback, false);
+						}
+					}
+				}
+				if (hit == false){
+					canvas.removeEventListener('click', audioSelectCallback, false);
+					canvas.style.cursor = "default";
+					overwriteCursor = false;
+				}
 
-}
+			} else {
+				effectHandler.renderEffectView(type, null)
+			}
+		}
+		canvas.addEventListener("click", audioSelectCallback, false);
+	}
 
-function lowPassEffect(){
+	function renderEffectView(type, audioItem){
+		switch(type){
+			case "cut":
+				cutEffect(audioItem);
 
-}
+			case "eq":
+				break;
 
-function pitchEffect(){
+			case "highPass":
+				break;
 
-}
+			case "lowPass":
+				break;
 
-function tempoEffect(){
+			case "pitch":
+				break;
 
-}
+			case "tempo":
+				break;
 
-function cutEffect(){
+			case "remove":
+				removeAudio(audioItem); 
+		}
 
-}
+	}
 
-function removeAudio(){
+	function eqEffect(){
 
+	}
+
+	function volumeEffect(){
+
+	}
+
+	function highPassEffect(){
+
+	}
+
+	function lowPassEffect(){
+
+	}
+
+	function pitchEffect(){
+
+	}
+
+	function tempoEffect(){
+
+	}
+
+	function cutEffect(){
+		//this should render any modal -> instead it should change cursor to sisors and split the track at highlighted position -> creating two tracks
+		//cursor should snap to bar markers inside tracks
+	}
+
+	function removeAudio(audio){
+		console.log("Removing audio with ID", audio.id);
+		dataStore.deleteData(audio.id);
+		renderItems = utils.removeFromArrayById(renderItems, audio.id);
+	}
+	this.renderEffectView = renderEffectView;
+	this.effectClicker = effectClicker;
 }
 
 function computeHighLow(start, end, type){
@@ -1626,9 +1956,9 @@ function computeEffectsX(effects, startX, time_scale, frame_start){
 module.exports = {
 	computeHighLow: computeHighLow,
 	computeEffectsX: computeEffectsX,
-	effectClicker: effectClicker
+	effectHandler: effectHandler
 }
-},{"./settings":14}],13:[function(require,module,exports){
+},{"./settings":15,"./utils":22}],14:[function(require,module,exports){
 function itemClick (itemName) {
     switch(itemName) {
       case "test1":
@@ -1774,7 +2104,7 @@ module.exports = {
 
 // // Starts the lib
 // window.addEventListener("load", __menuConf.startMenu, false);
-},{}],14:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 //Time scale definitions
 var DEFAULT_TIME_SCALE = 60;
 
@@ -1824,7 +2154,7 @@ module.exports = {
     effectBounds: effectBounds
 };
 
-},{}],15:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 var ui = require("./ui"),
 	Dispatcher = require("./dispatcher"),
 	dataStore = require("./data-store"),
@@ -1895,7 +2225,7 @@ function Studio(audio){
 }
 
 window.Studio = Studio;
-},{"./data-store":10,"./dispatcher":11,"./settings":14,"./ui":20,"./ui-main-timeline":18,"./ui-scroll":19}],16:[function(require,module,exports){
+},{"./data-store":11,"./dispatcher":12,"./settings":15,"./ui":21,"./ui-main-timeline":19,"./ui-scroll":20}],17:[function(require,module,exports){
 module.exports = {
 	// photoshop colors
 	a: '#343434',
@@ -1907,11 +2237,10 @@ module.exports = {
 					"tempo": "#FF33BB", "gain": "#FF3333", "flanger": "#1DFF2B", "echo": "#1DC8FF", "phaser": "#AD1DFF", 
 					"reverb": "#FF1DA6"}
 };
-},{}],17:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 var Settings = require("./settings");
 	utils = require("./utils");
 	Theme = require("./theme");
-	effectUtils = require("./effects");
 
 function Rect() {
 	
@@ -2037,51 +2366,59 @@ function trackCanvas(dataStore, dispatcher){
 	}
 }
 
-function effectMenu(){
+//Function which renders effect icons and their wrapping divs
+function effectMenu(effectHandler){
 	var effectDiv = document.getElementById("top-toolbar");
 	effectDiv.style.backgroundColor = Theme.a;
 	effectDiv.classList.add("flex-container");
-	
+
 	var cutDiv = document.createElement('div');
-	cutDiv.id = "cutDiv";
-	cutDiv.onclick = function() {effectUtils.effectClicker("cut")};
+	cutDiv.id = "cut";
+	cutDiv.onclick = function() {effectHandler.effectClicker("cut")};
 	cutDiv.classList.add("flex-item");
 	cutDiv.innerHTML = '<i class="material-icons" style="font-size: 5rem">content_cut</i><p>Cut</p>';
 
 	var eqDiv = document.createElement('div');
-	eqDiv.onclick = function() {effectUtils.effectClicker("eq")};
+	eqDiv.id = "eq";
+	eqDiv.onclick = function() {effectHandler.effectClicker("eq")};
 	eqDiv.classList.add("flex-item");
 	eqDiv.innerHTML = '<i class="material-icons" style="font-size: 5rem">tune</i><p>EQ</p>';
 
 	var volumeDiv = document.createElement('div');
-	volumeDiv.onclick = function() {effectUtils.effectClicker("volume")};
+	volumeDiv.id = "volume";
+	volumeDiv.onclick = function() {effectHandler.effectClicker("volume")};
 	volumeDiv.classList.add("flex-item");
 	volumeDiv.innerHTML = '<i class="material-icons" style="font-size: 5rem">volume_up</i><p>Volume Modulation</p>';
 
 	var highPassDiv = document.createElement('div');
-	highPassDiv.onclick = function() {effectUtils.effectClicker("highPass")};
+	highPassDiv.id = "highPass";
+	highPassDiv.onclick = function() {effectHandler.effectClicker("highPass")};
 	highPassDiv.classList.add("flex-item");
 	highPassDiv.innerHTML = '<i class="material-icons" style="font-size: 5rem">blur_linear</i><p>High Pass Filter</p>';
 
 	var lowPassDiv = document.createElement('div');
-	lowPassDiv.onclick = function() {effectUtils.effectClicker("lowPass")};
+	lowPassDiv.id = "lowPass";
+	lowPassDiv.onclick = function() {effectHandler.effectClicker("lowPass")};
 	lowPassDiv.classList.add("flex-item");
 	lowPassDiv.innerHTML = '<i class="material-icons" style="font-size: 5rem; moz-transform: scaleX(-1); -o-transform: scaleX(-1); -webkit-transform: scaleX(-1); transform: scaleX(-1); filter: FlipH -ms-filter: "FlipH";">blur_linear</i><p>Low Pass Filter</p>';
 
 	var pitchDiv = document.createElement('div');
-	pitchDiv.onclick = function() {effectUtils.effectClicker("pitch")};
+	pitchDiv.id = "pitch";
+	pitchDiv.onclick = function() {effectHandler.effectClicker("pitch")};
 	pitchDiv.classList.add("flex-item");
 	pitchDiv.innerHTML = '<i class="material-icons" style="font-size: 5rem">trending_up</i><p>Pitch Shift</p>';
 
 	var tempoDiv = document.createElement('div');
-	tempoDiv.onclick = function() {effectUtils.effectClicker("tempo")};
+	tempoDiv.id = "tempo";
+	tempoDiv.onclick = function() {effectHandler.effectClicker("tempo")};
 	tempoDiv.classList.add("flex-item");
 	tempoDiv.innerHTML = '<i class="material-icons" style="font-size: 5rem">fast_rewind</i><i class="material-icons" style="font-size: 5rem">fast_forward</i><p>Tempo Modulation</p>';
 
 	var removeDiv = document.createElement('div');
-	removeDiv.onclick = function() {effectUtils.effectClicker("remove")};
+	removeDiv.id = "remove";
+	removeDiv.onclick = function() {effectHandler.effectClicker("remove")};
 	removeDiv.classList.add("flex-item");
-	removeDiv.innerHTML = '<i class="material-icons" style="font-size: 5rem">cancel</i><p>Remove Audio</p>';
+	removeDiv.innerHTML = '<i class="material-icons" style="font-size: 5rem" id="removeI">cancel</i><p>Remove Audio</p>';
 
 	effectDiv.appendChild(cutDiv);
 	effectDiv.appendChild(eqDiv);
@@ -2097,253 +2434,22 @@ module.exports = {
 	trackCanvas: trackCanvas,
 	effectMenu: effectMenu
 };
-},{"./effects":12,"./settings":14,"./theme":16,"./utils":21}],18:[function(require,module,exports){
+},{"./settings":15,"./theme":17,"./utils":22}],19:[function(require,module,exports){
 var Settings = require("./settings");
 	utils = require("./utils");
-	proxy_ctx = utils.proxy_ctx,
 	Theme = require("./theme");
 	timelineScroll = require("./ui-scroll");
 	uiExterior = require("./ui-exterior");
 	effectUtils = require("./effects.js");
 	menu = require("./menu.js");
+	audio = require("./audio.js");
+	AudioItem = audio.AudioItem;
 //Import settings/functions from other files
 
 var tickMark1;
 var tickMark2;
 var tickMark3;
 var frame_start;
-
-//AudioItem class? which is used to draw each audio item + x/y containing operations 
-//AudioItem code should be moved to its own file - its getting huge and cluttering this file
-function AudioItem() {
-	
-}
-
-const interpolateHeight = (total_height, offset) => {
-  const amplitude = 256;
-  return (size) => total_height - ((size + 128) * total_height) / amplitude;
-};
-
-//Set variables for audio item
-//This should be refactored to accept AudioItem object and then this variables set from getting values from this object - much cleaner than sending a bunch of paramters
-AudioItem.prototype.setWaveForm = function(rawWaveForm, y, y2, x, x2, time_scale, frame_start, offset, dpr){
-	this.rawWaveForm = rawWaveForm;
-	this.rawWaveFormMin = [];
-	this.rawWaveFormMax = [];
-	this.y = y;
-	this.y2 = y2;
-	this.x = x;
-	this.x2 = x2;
-	this.xNormalized = this.x + (frame_start * time_scale);
-	this.x2Normalized = this.x2 + (frame_start * time_scale);
-	this.size = this.x2Normalized - this.xNormalized;
-
-	if (this.rawWaveForm != null){
-		const y = interpolateHeight(this.y2-16);
-		this.rawWaveForm = this.rawWaveForm.resample({ width: this.size })
-
-		// for(var i=0; i<this.rawWaveForm.min.length; i++){
-		// 	this.rawWaveFormMin.push([i + 0.5, y(this.rawWaveForm.min[i]) + 0.5])
-		// }
-		this.rawWaveForm.min.forEach((val, x) => {
-		  this.rawWaveFormMin.push([x + 0.5, y(val)+8])
-		});
-		// this.rawWaveForm.max = this.rawWaveForm.max.reverse()
-		// for(var i=0; i<this.rawWaveForm.max.length; i++){
-		// 	this.rawWaveFormMax.push([(this.rawWaveForm.offset_length - y) + 0.5, y(this.rawWaveForm.max[i]) + 0.5]);
-		// }
-		this.rawWaveForm.max.reverse().forEach((val, x) => {
-			this.rawWaveFormMax.push([(this.rawWaveForm.offset_length - x) + 0.5, y(val)+8]);
-		});
-
-	}
-}
-
-AudioItem.prototype.set = function(x, y, x2, y2, color, audioName, id, track, time_scale, frame_start, barMarkers, effects) {
-	this.x = x;
-	this.y = y;
-	this.x2 = x2;
-	this.y2 = y2;
-	this.color = color;
-	this.audioName = audioName;
-	this.id = id;
-	this.track = track;
-	this.xNormalized = x + (frame_start * time_scale);
-	this.x2Normalized = x2 + (frame_start * time_scale);
-	this.size = this.x2Normalized - this.xNormalized;
-	this.ySize = this.y2 - this.y;
-	this.xMiddle = this.xNormalized + ((this.size) / 2);
-	this.effects = effects;
-	this.barMarkers = barMarkers;
-	this.time_scale = time_scale;
-	this.frame_start = frame_start;
-	this.xOffset = this.frame_start * this.time_scale;
-	this.ratio = this.y2 / 100;
-	this.curveValues = [];
-
-	this.rounded1X = utils.round(this.xNormalized, 0.25);
-	this.rounded1X2 = utils.round(this.x2Normalized, 0.25);
-
-	this.rounded2X = utils.round(this.xNormalized, 0.5);
-	this.rounded2X2 = utils.round(this.x2Normalized, 0.5);
-
-	this.rounded3X = utils.round(this.xNormalized, 1);
-	this.rounded3X2 = utils.round(this.x2Normalized, 1);
-};
-
-AudioItem.prototype.updateBars = function(startX, draggingx){
-	this.barMarkersX, this.barMarkersXRounded = utils.increaseArray(this.barMarkersX, (startX-draggingx), true);
-}
-
-AudioItem.prototype.createBarDiff = function(){
-	this.barMarkerDiff = {};
-	for (var i=0; i<this.barMarkersX.length; i++){
-		this.barMarkerDiff[this.barMarkersX[i]] = [this.barMarkersX[i]-this.xNormalized, this.x2Normalized-this.barMarkersX[i]];
-	}
-}
-
-AudioItem.prototype.paintWaveform = function(ctx){
-	if (this.rawWaveForm != undefined){
-		// //console.log(this.rawWaveForm)
-		//lets add some checking to this rendering which will check if X value is greater/less than canvas width -> if so then dont render only render what is in view
-		//pre rendering?
-		ctx.beginPath();
-		// from 0 to 100
-		//compute waveform min/max upon the setWaveForm function - so we dont need to recompute for each iteration over the min/max values
-		for (var i=0; i<this.rawWaveFormMin.length; i++){
-			ctx.lineTo(this.xNormalized+this.rawWaveFormMin[i][0] - this.xOffset, this.y+this.rawWaveFormMin[i][1])
-		}
-		// this.rawWaveForm.min.forEach((val, x) => {
-		//   ctx.lineTo(x + 0.5, y(val) + 0.5);
-		// });
-
-		for (var i=0; i<this.rawWaveFormMax.length; i++){
-			ctx.lineTo(this.xNormalized+this.rawWaveFormMax[i][0] - this.xOffset, this.y+this.rawWaveFormMax[i][1])
-		}
-		// then looping back from 100 to 0
-		// this.rawWaveForm.max.reverse().forEach((val, x) => {
-		//   ctx.lineTo((this.rawWaveForm.offset_length - x) + 0.5, y(val) + 0.5);
-		// });
-
-		ctx.closePath();
-		ctx.stroke();
-		ctx.fill();
-	}
-}
-
-AudioItem.prototype.paintEffects = function(ctx) {
-	//Iterate over effects and paint them on the audio item - in theme define some basic temporary colour scheme/symbols which can signify different effects
-	//So for example yellow = eq, red = volume. etc. Currently only two supported strength_curves on backend: continous and linear - just build these for now
-	//Y position on the audio item should indicate the start/target values of the effect
-	for (var i=0; i<this.effects.length; i++){
-		effect = this.effects[i];
-		if (effect["endX"] - effect["startX"] > 5){
-			//currently start/target only works for phase 1 of effect - this should be able to handle effects which have multiple start/targets - 
-			//maybe this means drawing multiple curves?
-			var effectStartRatio, effectEndRatio;
-			out = effectUtils.computeHighLow(effect["params"]["start"], effect["params"]["target"], effect["type"]);
-			effectStartRatio = out[0];
-			effectEndRatio = out[1];
-			effectStartY = this.y + this.y2 - effectStartRatio * this.ratio;
-			effectEndY = this.y + this.y2 - effectEndRatio * this.ratio;
-
-			ctx.strokeStyle = Theme.effectColours[effect["type"]];
-			ctx.beginPath();
-			ctx.moveTo(effect["startX"], this.y);
-			ctx.lineTo(effect["startX"], this.y+this.y2);
-			ctx.stroke();
-			ctx.moveTo(effect["endX"], this.y);
-			ctx.lineTo(effect["endX"], this.y+this.y2);
-			ctx.stroke();
-
-			if (effect["params"]["strength_curve"] == "linear"){
-				this.curveValues.push({x0: effect["startX"], y0: effectStartY, x1: effect["endX"], y1: effectEndY});
-				ctx.moveTo(effect["startX"], effectStartY);
-				ctx.lineTo(effect["endX"], effectEndY)
-				ctx.stroke();
-
-			} else if (effect["params"]["strength_curve"] == "continous"){
-				this.curveValues.push({x0: effect["startX"], y0: effectStartY, x1: effect["endX"], y1: effectEndY});
-				ctx.moveTo(effect["startX"], effectEndY);
-				ctx.lineTo(effect["endX"], effectEndY)
-				ctx.stroke();
-			}
-		}
-	}
-}
-
-AudioItem.prototype.paintBarMarkers = function(ctx) {
-	this.barMarkersX = [];
-	this.barMarkersXRounded = [];
-	ctx.strokeStyle = "grey";
-
-	for (var i=0; i<this.barMarkers.length; i++){
-		if (i % 4 == 0){ ctx.lineWidth = 2; } else { ctx.lineWidth = 1;}
-
-		time = utils.time_to_x(this.barMarkers[i], this.time_scale, this.frame_start) + this.xNormalized;
-		this.barMarkersX.push(time);
-		this.barMarkersXRounded.push(utils.round(time, 0.5));
-		ctx.beginPath();
-		ctx.moveTo(time, this.y+1);
-		ctx.lineTo(time, this.y+this.y2);
-		ctx.fillText(i+1, time+5, this.y+this.y2-1);
-		ctx.stroke();
-	}
-	this.createBarDiff();
-	ctx.lineWidth = 1.0;
-}
-
-//Paint audio item in canvas
-AudioItem.prototype.paint = function(ctx, outlineColor) {
-	ctx.fillStyle = outlineColor;
-	ctx.beginPath();
-	ctx.rect(this.x, this.y, this.x2-this.x, this.y2);
-	ctx.fill();
-	ctx.strokeStyle = "black";
-	ctx.stroke();
-	ctx.fillStyle = "black";
-	txtWidth = ctx.measureText(this.audioName).width;
-	if (txtWidth < this.x2-this.x){ctx.fillText(this.audioName, this.x+txtWidth, this.y+10);}
-	this.paintWaveform(ctx);
-	this.paintBarMarkers(ctx);
-	this.paintEffects(ctx);
-};
-
-//Check if mouse at x/y is contained in audio
-AudioItem.prototype.contains = function(x, y, time_scale, frame_start) {
-	// console.log("X", this.x, "Y", this.y, "X2", this.x2, "y2", this.y2)
-	// console.log("Comparison", x ," >= ", (this.x + (frame_start * time_scale)), y, " >= ", this.y, x, " <= ", (this.x2 + (frame_start * time_scale)), y, "<= ", this.y + this.y2, this.id)
-	//X & X2 values of audio item are normalized in accordance with the timescale and framestart so we can effectively care againsy mouse position no matter where the scroll wheel is
-	return x >= this.xNormalized && y >= this.y  && x <= this.x2Normalized && y <= this.y + this.y2;
-};
-
-AudioItem.prototype.containsEffect = function(x, y){
-	for (var i=0; i<this.curveValues.length; i++){
-		line = this.curveValues[i];
-		// mouseX=parseInt(e.clientX-offsetX);
-		// mouseY=parseInt(e.clientY-offsetY);
-		if(x<line.x0 || y>line.x1){
-		  return;          
-		}
-		var linepoint=utils.linepointNearestMouse(line,x,y);
-		var dx=x-linepoint.x;
-		var dy=y-linepoint.y;
-		var distance=Math.abs(Math.sqrt(dx*dx+dy*dy));
-		tolerance = 3;
-		if(distance<tolerance){
-			return true;
-
-		} else {
-			return false;
-		}
-	}
-	return false;
-}
-
-//Change outline to red to notify user that they cannot slide audio over item in same track
-AudioItem.prototype.alert = function(ctx, outlineColor){
-	this.paint(ctx, outlineColor);
-}
 
 //Gets the timescale values for each tick
 function time_scaled(time_scale) {
@@ -2380,7 +2486,10 @@ function timeline(dataStore, dispatcher) {
 	var time_scale = dataStore.getData("ui", "timeScale");
 	var lastTimeScale = time_scale;
 	var resetWaveForm = false;
-	var bounds = bounds = canvas.getBoundingClientRect();
+	var bounds = canvas.getBoundingClientRect();
+	overwriteCursor = false;
+	effectHandler = new effectUtils.effectHandler(dataStore, renderItems, canvas, dpr, overwriteCursor, bounds);
+	uiExterior.effectMenu(effectHandler);
 
 	//console.log("Before move data", dataStore.getData("data"));
 
@@ -2388,8 +2497,6 @@ function timeline(dataStore, dispatcher) {
 	for (var i=0; i<trackLayers; i++){
 		trackBounds[i] = [(offset + i*lineHeight)/dpr, (offset + (i+1)*lineHeight)/dpr];
 	}
-
-	uiExterior.effectMenu();
 
 	//Resize function called upon window resize - will resize canvas so that future paint operations can be correctly painted according to resize
 	function resize() {
@@ -2542,7 +2649,7 @@ function timeline(dataStore, dispatcher) {
 			ctx.lineTo(width, y);
 			ctx.stroke();
 		}
-
+		//console.log(audioData);
 		//Iterate over audioData and paint componenets on timeline - along will all effects associated on them
 		for (var i = 0; i < audioData.length; i++){
 			audioItem = audioData[i];
@@ -2795,14 +2902,19 @@ function timeline(dataStore, dispatcher) {
 		frame_start = dataStore.getData("ui", "scrollTime");
 		currentX = ((e.clientX - bounds.left)/dpr + (frame_start * time_scale));
 		currentY = (e.clientY - bounds.top)/dpr;
+		console.log(overwriteCursor);
 
 		for (var i = 0; i < renderItems.length; i++){
 			if (renderItems[i].contains(currentX, currentY, time_scale, frame_start)) {
-				canvas.style.cursor = 'pointer';
+				if (overwriteCursor == false){
+					canvas.style.cursor = 'pointer';
+				}
 				return;
 			}
 		}
-		canvas.style.cursor = 'default';
+		if (overwriteCursor == false){
+			canvas.style.cursor = 'default';
+		}
 	});
 
 
@@ -2852,14 +2964,18 @@ function timeline(dataStore, dispatcher) {
 		function down(e){
 			var time_scale = dataStore.getData("ui", "timeScale");
 			frame_start = dataStore.getData("ui", "scrollTime");
+			currentX = ((e.offsetx)/dpr + (frame_start * time_scale));
+			currentY = (e.offsety)/dpr;
 
 			for (var i = 0; i < renderItems.length; i++){
 				item = renderItems[i];
-				if (item.contains(((e.offsetx)/dpr + (frame_start * time_scale)), (e.offsety)/dpr, time_scale, frame_start)) {
-					if (item.containsEffect((e.offsetx)/dpr + (frame_start * time_scale), (e.offsety)/dpr) == false){
+				if (item.contains(currentX, currentY, time_scale, frame_start)) {
+					if (item.containsEffect(currentX, currentY) == false){
 						draggingx = item.x + frame_start * time_scale
 						currentDragging = item;
-						canvas.style.cursor = 'grabbing';
+						if (overwriteCursor == false){
+							canvas.style.cursor = 'grabbing';
+						}
 						return;
 
 					} else {
@@ -2913,7 +3029,9 @@ function timeline(dataStore, dispatcher) {
 			//Reset drag related variables
 			draggingx = null;
 			currentDragging = null;
-			canvas.style.cursor = 'pointer';
+			if (overwriteCursor == false){
+				canvas.style.cursor = 'pointer';
+			}
 			holdTick = 0;
 			block = false;
 			drawSnapMarker = false;
@@ -2924,7 +3042,7 @@ function timeline(dataStore, dispatcher) {
 module.exports = {
 	timeline: timeline
 };
-},{"./effects.js":12,"./menu.js":13,"./settings":14,"./theme":16,"./ui-exterior":17,"./ui-scroll":19,"./utils":21}],19:[function(require,module,exports){
+},{"./audio.js":10,"./effects.js":13,"./menu.js":14,"./settings":15,"./theme":17,"./ui-exterior":18,"./ui-scroll":20,"./utils":22}],20:[function(require,module,exports){
 var Theme = require("./theme")
 	utils = require("./utils")
 
@@ -3127,7 +3245,7 @@ function timelineScroll(dataStore, dispatcher){
 module.exports = {
 	timelineScroll: timelineScroll
 };
-},{"./theme":16,"./utils":21}],20:[function(require,module,exports){
+},{"./theme":17,"./utils":22}],21:[function(require,module,exports){
 var utils = require("./utils");
 	Theme = require("./theme")
 
@@ -3191,7 +3309,12 @@ module.exports = {
 	initCanvas: initCanvas,
 	paintTrackColumn: paintTrackColumn
 };
-},{"./theme":16,"./utils":21}],21:[function(require,module,exports){
+},{"./theme":17,"./utils":22}],22:[function(require,module,exports){
+const interpolateHeight = (total_height, offset) => {
+  const amplitude = 256;
+  return (size) => total_height - ((size + 128) * total_height) / amplitude;
+};
+
 function linepointNearestMouse(line,x,y) {
     //
     lerp=function(a,b,x){ return(a+x*(b-a)); };
@@ -3456,6 +3579,7 @@ module.exports = {
 	time_to_x: time_to_x,
 	increaseArray: increaseArray,
 	x_to_time: x_to_time,
-	linepointNearestMouse: linepointNearestMouse
+	linepointNearestMouse: linepointNearestMouse,
+	interpolateHeight: interpolateHeight
 };
-},{}]},{},[15]);
+},{}]},{},[16]);

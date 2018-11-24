@@ -1,39 +1,115 @@
 var Settings = require("./settings");
+	utils = require("./utils");
 
-function effectClicker(type){
-	console.log(type);
-}
+function effectHandler(dataStore, renderItems, canvas, dpr, overwriteCursor, bounds){
+	function makeCursorChange(type){
+		switch (type){
+			case "remove":
+				canvas.style.cursor = "not-allowed";
+				overwriteCursor = true;
+		}
+	}
 
-function eqEffect(){
+	function effectClicker(type){
+		var time_scale = dataStore.getData("ui", "timeScale");
+		var frame_start = dataStore.getData("ui", "scrollTime");
 
-}
+		htmlElement = document.getElementById("removeI");
+		htmlElement.setAttribute("text-shadow", "5px 5px 5px #ccc");
+		makeCursorChange(type);
 
-function volumeEffect(){
+		audioSelectCallback = function(e) {
+			currentX = ((e.clientX - bounds.left)/dpr + (frame_start * time_scale));
+			currentY = (e.clientY - bounds.top)/dpr;
+			hit = false;
 
-}
+			if (type != "cut"){
+				for (var i=0; i<renderItems.length; i++){
+					if (renderItems[i].contains(currentX, currentY, time_scale, frame_start)){
+						renderItems[i].effectGlow();
+						renderEffectView(type, renderItems[i]);
+						hit = true;
 
-function highPassEffect(){
+						if (type != "delete"){
+							canvas.removeEventListener('click', audioSelectCallback, false);
+						}
+					}
+				}
+				if (hit == false){
+					canvas.removeEventListener('click', audioSelectCallback, false);
+					canvas.style.cursor = "default";
+					overwriteCursor = false;
+				}
 
-}
+			} else {
+				effectHandler.renderEffectView(type, null)
+			}
+		}
+		canvas.addEventListener("click", audioSelectCallback, false);
+	}
 
-function lowPassEffect(){
+	function renderEffectView(type, audioItem){
+		switch(type){
+			case "cut":
+				cutEffect(audioItem);
 
-}
+			case "eq":
+				break;
 
-function pitchEffect(){
+			case "highPass":
+				break;
 
-}
+			case "lowPass":
+				break;
 
-function tempoEffect(){
+			case "pitch":
+				break;
 
-}
+			case "tempo":
+				break;
 
-function cutEffect(){
+			case "remove":
+				removeAudio(audioItem); 
+		}
 
-}
+	}
 
-function removeAudio(){
+	function eqEffect(){
 
+	}
+
+	function volumeEffect(){
+
+	}
+
+	function highPassEffect(){
+
+	}
+
+	function lowPassEffect(){
+
+	}
+
+	function pitchEffect(){
+
+	}
+
+	function tempoEffect(){
+
+	}
+
+	function cutEffect(){
+		//this should render any modal -> instead it should change cursor to sisors and split the track at highlighted position -> creating two tracks
+		//cursor should snap to bar markers inside tracks
+	}
+
+	function removeAudio(audio){
+		console.log("Removing audio with ID", audio.id);
+		dataStore.deleteData(audio.id);
+		renderItems = utils.removeFromArrayById(renderItems, audio.id);
+	}
+	this.renderEffectView = renderEffectView;
+	this.effectClicker = effectClicker;
 }
 
 function computeHighLow(start, end, type){
@@ -75,5 +151,5 @@ function computeEffectsX(effects, startX, time_scale, frame_start){
 module.exports = {
 	computeHighLow: computeHighLow,
 	computeEffectsX: computeEffectsX,
-	effectClicker: effectClicker
+	effectHandler: effectHandler
 }

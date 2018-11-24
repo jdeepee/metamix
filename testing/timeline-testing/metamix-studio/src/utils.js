@@ -1,3 +1,8 @@
+const interpolateHeight = (total_height, offset) => {
+  const amplitude = 256;
+  return (size) => total_height - ((size + 128) * total_height) / amplitude;
+};
+
 function linepointNearestMouse(line,x,y) {
     //
     lerp=function(a,b,x){ return(a+x*(b-a)); };
@@ -262,5 +267,6 @@ module.exports = {
 	time_to_x: time_to_x,
 	increaseArray: increaseArray,
 	x_to_time: x_to_time,
-	linepointNearestMouse: linepointNearestMouse
+	linepointNearestMouse: linepointNearestMouse,
+	interpolateHeight: interpolateHeight
 };

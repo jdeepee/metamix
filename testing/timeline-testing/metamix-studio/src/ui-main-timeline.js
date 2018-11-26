@@ -49,11 +49,20 @@ function timeline(dataStore, dispatcher) {
 	var lastTimeScale = time_scale;
 	var resetWaveForm = false;
 	var bounds = canvas.getBoundingClientRect();
-	overwriteCursor = false;
+	var overwriteCursor = false;
+	var draggingx = null;
+	var currentDragging = null;
+	var holdTick = 0; //Handles snapping of items on y axis to assist with moving tracks together
+	var block = false;
+	var lastX = 0;
+	var startX;
+	var endX;
+	var trackSave = null; //Saves state of audio items on timeline - to be used if audioItem Y position is put back to previous state - should save
+	var trackSave2 = null;
+	var blockNumber = 0;
+
 	effectHandler = new effectUtils.effectHandler(dataStore, renderItems, canvas, dpr, overwriteCursor, bounds);
 	uiExterior.effectMenu(effectHandler);
-
-	//console.log("Before move data", dataStore.getData("data"));
 
 	//Create array of objects which defines the pixel bounds for each track element
 	for (var i=0; i<trackLayers; i++){
@@ -431,10 +440,6 @@ function timeline(dataStore, dispatcher) {
 		return startX, endX, block, drawSnapMarker, blockNumber;
 	}
 
-
-	this.paint = paint;
-	this.resize = resize;
-
 	__menuConf = menu.__menuConf;
 	__menuConf.startMenu();
 
@@ -509,17 +514,6 @@ function timeline(dataStore, dispatcher) {
 
 		}
 	});
-
-	var draggingx = null;
-	var currentDragging = null;
-	var holdTick = 0; //Handles snapping of items on y axis to assist with moving tracks together
-	var block = false;
-	var lastX = 0;
-	var startX;
-	var endX;
-	var trackSave = null; //Saves state of audio items on timeline - to be used if audioItem Y position is put back to previous state - should save
-	var trackSave2 = null;
-	var blockNumber = 0;
 
 	//Handles dragging of movable items
 	utils.handleDrag(canvas,
@@ -599,6 +593,9 @@ function timeline(dataStore, dispatcher) {
 			drawSnapMarker = false;
 			blockNumber = 0;
 		});
+
+	this.paint = paint;
+	this.resize = resize;
 }
 
 module.exports = {

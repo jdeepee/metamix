@@ -188,6 +188,190 @@ function effectMenu(effectHandler){
 	effectDiv.appendChild(pitchDiv);
 	effectDiv.appendChild(tempoDiv);
 	effectDiv.appendChild(removeDiv);
+
+	var eqModal = document.createElement('div');
+	eqModal.id = "eqModal";
+	eqModal.classList.add("modal");
+
+	eqDragDiv = document.createElement('div');
+	eqDragDiv.id = "eqDragDiv";
+	eqDragDiv.classList.add("drag-div")
+
+	modalContent = document.createElement("div")
+	modalContent.classList.add("modal-content");
+	modalContent.id = "eqModalContent";
+	modalSpan = document.createElement("span");
+	modalSpan.innerHTML = "&times;"
+	modalSpan.classList.add("close")
+	modalSpan.onclick = function() {
+		eqModal.style.display = "none";
+	}
+
+	eqModal.appendChild(eqDragDiv);
+	modalContent.appendChild(modalSpan);
+	eqModal.appendChild(modalContent);
+
+	$( function() {
+		$( "#eqModal" ).draggable({handle: '#eqDragDiv'});
+  	});
+
+	titleDiv = document.createElement("div");
+	titleDiv.classList.add("titleDiv");
+
+	curveHeader = document.createElement("h3");
+	curveHeader.innerHTML = "Strength Curve";
+  	strengthCurve = document.createElement("select");
+  	strengthCurve.name = "Strength Curve";
+  	strengthCurve.innerHTML = "<option value=\"continous\">Continous</option><option value=\"linear\">Linear</option><br><br>";
+  	titleDiv.appendChild(curveHeader);
+  	titleDiv.appendChild(strengthCurve);
+  	modalContent.appendChild(titleDiv);
+
+	//
+
+	var volumeModal = document.createElement('div');
+	volumeModal.id = "volumeModal";
+	volumeModal.classList.add("modal");
+
+	modalContent = document.createElement("div")
+	modalContent.classList.add("modal-content");
+	modalSpan = document.createElement("span");
+	modalSpan.innerHTML = "&times;"
+	modalSpan.classList.add("close")
+	modalSpan.onclick = function() {
+		volumeModal.style.display = "none";
+	}
+	modalContent.appendChild(modalSpan);
+	volumeModal.appendChild(modalContent);
+
+	$( function() {
+    	$( "#volumeModal" ).draggable();
+  	});
+  	curveHeader = document.createElement("h3");
+	curveHeader.innerHTML = "Strength Curve";
+	modalContent.appendChild(curveHeader);
+  	strengthCurve = document.createElement("select");
+  	strengthCurve.name = "Strength Curve";
+  	strengthCurve.innerHTML = "<option value=\"continous\">Continous</option><option value=\"linear\">Linear</option>";
+  	modalContent.appendChild(strengthCurve);
+	//
+
+	var highPassModal = document.createElement('div');
+	highPassModal.id = "highPassModal";
+	highPassModal.classList.add("modal");
+
+	modalContent = document.createElement("div")
+	modalContent.classList.add("modal-content");
+	modalSpan = document.createElement("span");
+	modalSpan.innerHTML = "&times;"
+	modalSpan.classList.add("close")
+	modalSpan.onclick = function() {
+		highPassModal.style.display = "none";
+	}
+	modalContent.appendChild(modalSpan);
+	highPassModal.appendChild(modalContent);
+
+	$( function() {
+    	$( "#highPassModal" ).draggable();
+  	});
+  	curveHeader = document.createElement("h3");
+	curveHeader.innerHTML = "Strength Curve";
+	modalContent.appendChild(curveHeader);
+  	strengthCurve = document.createElement("select");
+  	strengthCurve.name = "Strength Curve";
+  	strengthCurve.innerHTML = "<option value=\"continous\">Continous</option><option value=\"linear\">Linear</option>";
+  	modalContent.appendChild(strengthCurve);
+
+	//
+
+	var lowPassModal = document.createElement('div');
+	lowPassModal.id = "lowPassModal";
+	lowPassModal.classList.add("modal");
+
+	modalContent = document.createElement("div")
+	modalContent.classList.add("modal-content");
+	modalSpan = document.createElement("span");
+	modalSpan.innerHTML = "&times;"
+	modalSpan.classList.add("close")
+	modalSpan.onclick = function() {
+		lowPassModal.style.display = "none";
+	}
+	modalContent.appendChild(modalSpan);
+	lowPassModal.appendChild(modalContent);
+
+	$( function() {
+    	$( "#lowPassModal" ).draggable();
+  	});
+  	curveHeader = document.createElement("h3");
+	curveHeader.innerHTML = "Strength Curve";
+	modalContent.appendChild(curveHeader);
+  	strengthCurve = document.createElement("select");
+  	strengthCurve.name = "Strength Curve";
+  	strengthCurve.innerHTML = "<option value=\"continous\">Continous</option><option value=\"linear\">Linear</option>";
+  	modalContent.appendChild(strengthCurve);
+
+	//
+
+	var pitchModal = document.createElement('div');
+	pitchModal.id = "pitchModal";
+	pitchModal.classList.add("modal");
+
+	modalContent = document.createElement("div")
+	modalContent.classList.add("modal-content");
+	modalSpan = document.createElement("span");
+	modalSpan.innerHTML = "&times;"
+	modalSpan.classList.add("close")
+	modalSpan.onclick = function() {
+		pitchModal.style.display = "none";
+	}
+	modalContent.appendChild(modalSpan);
+	pitchModal.appendChild(modalContent);
+
+	$( function() {
+    	$( "#pitchModal" ).draggable();
+  	});
+  	curveHeader = document.createElement("h3");
+	curveHeader.innerHTML = "Strength Curve";
+	modalContent.appendChild(curveHeader);
+  	strengthCurve = document.createElement("select");
+  	strengthCurve.name = "Strength Curve";
+  	strengthCurve.innerHTML = "<option value=\"continous\">Continous</option><option value=\"linear\">Linear</option>";
+  	modalContent.appendChild(strengthCurve);
+
+	//
+
+	var tempoModal = document.createElement('div');
+	tempoModal.id = "tempoModal";
+	tempoModal.classList.add("modal");
+
+	modalContent = document.createElement("div")
+	modalContent.classList.add("modal-content");
+	modalSpan = document.createElement("span");
+	modalSpan.innerHTML = "&times;"
+	modalSpan.classList.add("close")
+	modalSpan.onclick = function() {
+		tempoModal.style.display = "none";
+	}
+	modalContent.appendChild(modalSpan);
+	tempoModal.appendChild(modalContent);
+
+	$( function() {
+    	$( "#tempoModal" ).draggable();
+  	});
+  	curveHeader = document.createElement("h3");
+	curveHeader.innerHTML = "Strength Curve";
+	modalContent.appendChild(curveHeader);
+  	strengthCurve = document.createElement("select");
+  	strengthCurve.name = "Strength Curve";
+  	strengthCurve.innerHTML = "<option value=\"continous\">Continous</option><option value=\"linear\">Linear</option>";
+  	modalContent.appendChild(strengthCurve);
+
+	document.body.appendChild(eqModal);
+	document.body.appendChild(volumeModal);
+	document.body.appendChild(highPassModal);
+	document.body.appendChild(lowPassModal);
+	document.body.appendChild(pitchModal);
+	document.body.appendChild(tempoModal);
 }
 
 module.exports = {

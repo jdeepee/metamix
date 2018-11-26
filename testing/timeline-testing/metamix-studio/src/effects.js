@@ -1,5 +1,6 @@
 var Settings = require("./settings");
 	utils = require("./utils");
+	require("jquery-knob");
 
 function effectHandler(dataStore, renderItems, canvas, dpr, overwriteCursor, bounds){
 	function makeCursorChange(type){
@@ -11,9 +12,9 @@ function effectHandler(dataStore, renderItems, canvas, dpr, overwriteCursor, bou
 	}
 
 	function effectClicker(type){
-		htmlElement = document.getElementById("removeI");
-		htmlElement.setAttribute("text-shadow", "5px 5px 5px #ccc");
-		makeCursorChange(type);
+		// htmlElement = document.getElementById(type+"I");
+		// htmlElement.setAttribute("text-shadow", "5px 5px 5px #ccc");
+		// makeCursorChange(type);
 
 		audioSelectCallback = function(e) {
 			var time_scale = dataStore.getData("ui", "timeScale");
@@ -41,34 +42,135 @@ function effectHandler(dataStore, renderItems, canvas, dpr, overwriteCursor, bou
 				}
 
 			} else {
-				effectHandler.renderEffectView(type, null)
+				renderEffectView(type, null)
 			}
 		}
 		canvas.addEventListener("click", audioSelectCallback, false);
 	}
 
 	function renderEffectView(type, audioItem){
+		console.log('Render effect view', type);
 		switch(type){
 			case "cut":
 				cutEffect(audioItem);
+				break;
 
 			case "eq":
+				modal = document.getElementById("eqModal");
+				modal.style.display = "block";
+				modalContent = document.getElementById("eqModalContent");
+
+				eqContainer = document.createElement("div");
+				eqContainer.classList.add("knob-container");
+				heading = document.createElement('h4');
+				heading.innerHTML = "Highs";
+
+				start = document.createElement("input");
+				start.id = "eqStart";
+				start.innerHTML = "<br>"
+				eqContainer.appendChild(start);
+
+				end = document.createElement("input");
+				end.id = "eqEnd";
+				eqContainer.appendChild(end);
+
+				knob1 = document.createElement("input");
+				knob1.id = "knob1";
+				knob1.setAttribute("data-cursor", true);
+				knob1.setAttribute("value", 0);
+				knob1.setAttribute("data-thickness", 0.25);
+				eqContainer.append(heading);
+				eqContainer.appendChild(knob1);
+
+				heading = document.createElement('h4');
+				heading.innerHTML = "Mids";
+				knob2 = document.createElement("input");
+				knob2.id = "knob2";
+				knob2.setAttribute("data-cursor", true);
+				knob2.setAttribute("value", 0);
+				knob2.setAttribute("data-thickness", 0.25);
+				eqContainer.appendChild(heading);
+				eqContainer.appendChild(knob2);
+
+				heading = document.createElement('h4');
+				heading.innerHTML = "Lows";
+				knob3 = document.createElement("input");
+				knob3.id = "knob3";
+				knob3.setAttribute("data-cursor", true);
+				knob3.setAttribute("value", 0);
+				knob3.setAttribute("data-thickness", 0.25);
+				eqContainer.appendChild(heading);
+				eqContainer.appendChild(knob3);
+
+				modalContent.appendChild(eqContainer)
+				$("#knob1").knob({
+					'min':-2,
+					'max':2,
+					'step': 0.01,
+					'angleArc': 250,
+					'value': "0",
+					'angleOffset': -125,
+					'width': "50%",
+					'height': "50%",
+					'bgColor': "black",
+					'fgColor': '#4286f4'
+				});
+
+				$("#knob2").knob({
+					'min':-2,
+					'max':2,
+					'step': 0.01,
+					'angleArc': 250,
+					'value': "0",
+					'angleOffset': -125,
+					'width': "50%",
+					'height': "50%",
+					'bgColor': "black",
+					'fgColor': '#4286f4'
+				});
+
+				$("#knob3").knob({
+					'min':-2,
+					'max':2,
+					'step': 0.01,
+					'angleArc': 250,
+					'value': "0",
+					'angleOffset': -125,
+					'width': "50%",
+					'height': "50%",
+					'bgColor': "black",
+					'fgColor': '#4286f4'
+				});
+				break;
+
+			case "volume":
+				modal = document.getElementById("volumeModal");
+				modal.style.display = "block";
 				break;
 
 			case "highPass":
+				modal = document.getElementById("highPassModal");
+				modal.style.display = "block";
 				break;
 
 			case "lowPass":
+				modal = document.getElementById("lowPassModal");
+				modal.style.display = "block";
 				break;
 
 			case "pitch":
+				modal = document.getElementById("pitchModal");
+				modal.style.display = "block";
 				break;
 
 			case "tempo":
+				modal = document.getElementById("tempoModal");
+				modal.style.display = "block";
 				break;
 
 			case "remove":
 				removeAudio(audioItem); 
+				break;
 		}
 
 	}

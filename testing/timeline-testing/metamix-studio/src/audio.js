@@ -124,6 +124,7 @@ AudioItem.prototype.paintEffects = function(ctx) {
 	//Iterate over effects and paint them on the audio item - in theme define some basic temporary colour scheme/symbols which can signify different effects
 	//So for example yellow = eq, red = volume. etc. Currently only two supported strength_curves on backend: continous and linear - just build these for now
 	//Y position on the audio item should indicate the start/target values of the effect
+	ctx.lineWidth = 2;
 	for (var i=0; i<this.effects.length; i++){
 		effect = this.effects[i];
 		if (effect["endX"] - effect["startX"] > 5){
@@ -159,6 +160,7 @@ AudioItem.prototype.paintEffects = function(ctx) {
 			}
 		}
 	}
+	ctx.lineWidth = 1.0;
 }
 
 AudioItem.prototype.paintBarMarkers = function(ctx) {

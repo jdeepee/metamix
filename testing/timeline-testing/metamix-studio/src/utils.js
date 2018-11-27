@@ -1,3 +1,12 @@
+function guid() {
+  function s4() {
+    return Math.floor((1 + Math.random()) * 0x10000)
+      .toString(16)
+      .substring(1);
+  }
+  return s4() + s4() + '-' + s4() + '-' + s4() + '-' + s4() + '-' + s4() + s4() + s4();
+}
+
 const interpolateHeight = (total_height, offset) => {
   const amplitude = 256;
   return (size) => total_height - ((size + 128) * total_height) / amplitude;
@@ -268,5 +277,6 @@ module.exports = {
 	increaseArray: increaseArray,
 	x_to_time: x_to_time,
 	linepointNearestMouse: linepointNearestMouse,
-	interpolateHeight: interpolateHeight
+	interpolateHeight: interpolateHeight,
+	guid: guid
 };

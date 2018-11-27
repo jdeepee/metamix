@@ -39,7 +39,6 @@ function Studio(audio){
 	});
 
 	dispatcher.on("update.audioTime", function(id, start, end){
-		console.trace();
 		data.updateData(id, "start", start);
 		data.updateData(id, "end", end);
 	});

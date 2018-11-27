@@ -62,7 +62,7 @@ function timeline(dataStore, dispatcher) {
 	var blockNumber = 0;
 
 	effectHandler = new effectUtils.effectHandler(dataStore, renderItems, canvas, dpr, overwriteCursor, bounds);
-	uiExterior.effectMenu(effectHandler);
+	uiExterior.renderEffects(effectHandler, dataStore);
 
 	//Create array of objects which defines the pixel bounds for each track element
 	for (var i=0; i<trackLayers; i++){

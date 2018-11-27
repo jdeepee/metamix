@@ -1,6 +1,7 @@
 var Settings = require("./settings");
 	utils = require("./utils");
 	Theme = require("./theme");
+	uiEffect = require("./ui-effect");
 
 function Rect() {
 	
@@ -126,8 +127,9 @@ function trackCanvas(dataStore, dispatcher){
 	}
 }
 
-//Function which renders effect icons and their wrapping divs
-function effectMenu(effectHandler){
+//Function which renders effect icons and their modals
+function renderEffects(effectHandler, dataStore){
+	//Effect icons rendering
 	var effectDiv = document.getElementById("top-toolbar");
 	effectDiv.style.backgroundColor = Theme.a;
 	effectDiv.classList.add("flex-container");
@@ -189,46 +191,74 @@ function effectMenu(effectHandler){
 	effectDiv.appendChild(tempoDiv);
 	effectDiv.appendChild(removeDiv);
 
-	var eqModal = document.createElement('div');
+	//
+	//
+	//
+	//Effect modal rendering
+	//EQ Modal rendering
+	var eqModal = document.createElement('div'); //create core EQ Modal
 	eqModal.id = "eqModal";
 	eqModal.classList.add("modal");
+	document.body.appendChild(eqModal);
 
-	eqDragDiv = document.createElement('div');
+	eqDragDiv = document.createElement('div'); //create the drag div for the modal 
 	eqDragDiv.id = "eqDragDiv";
 	eqDragDiv.classList.add("drag-div")
 
-	modalContent = document.createElement("div")
+	modalContent = document.createElement("div") //Create modal content div
 	modalContent.classList.add("modal-content");
 	modalContent.id = "eqModalContent";
 	modalSpan = document.createElement("span");
 	modalSpan.innerHTML = "&times;"
-	modalSpan.classList.add("close")
+	modalSpan.classList.add("close");
+	modalSpan.id = "modalClose";
 	modalSpan.onclick = function() {
-		eqModal.style.display = "none";
+		eqModal.style.display = "none"; //On click of close put eqModal's style to none
+		targetDivContainer = document.getElementById("eqContainer2");
+		targetDivContainer.style.display = 'none'; //Set the display of the target container element to none so when modal is opened again on a fresh effect it has the correct view
 	}
 
-	eqModal.appendChild(eqDragDiv);
-	modalContent.appendChild(modalSpan);
-	eqModal.appendChild(modalContent);
+	eqModal.appendChild(eqDragDiv); //add drag div as child of eq modal
+	modalContent.appendChild(modalSpan); //add modal content of child of modal main
+	eqModal.appendChild(modalContent); //add modal content to eqModal main
 
 	$( function() {
-		$( "#eqModal" ).draggable({handle: '#eqDragDiv'});
+		$( "#eqModal" ).draggable({handle: '#eqDragDiv'}); //Make draggable div draggable - effects parent div
   	});
 
-	titleDiv = document.createElement("div");
+	titleDiv = document.createElement("div"); //Create title div to hold title, strength curve etc
 	titleDiv.classList.add("titleDiv");
-
-	curveHeader = document.createElement("h3");
+	eqHeader = document.createElement("h3"); //Create title of modal
+	eqHeader.innerHTML = "EQ Effect";
+	titleDiv.appendChild(eqHeader);
+	curveHeader = document.createElement("h4"); //Add curve text to explain what the drop down below does
 	curveHeader.innerHTML = "Strength Curve";
-  	strengthCurve = document.createElement("select");
+  	strengthCurve = document.createElement("select"); //Create strength curve select element
+  	strengthCurve.id = "strengthCurveEQ";
   	strengthCurve.name = "Strength Curve";
-  	strengthCurve.innerHTML = "<option value=\"continous\">Continous</option><option value=\"linear\">Linear</option><br><br>";
-  	titleDiv.appendChild(curveHeader);
+  	strengthCurve.innerHTML = "<option value=\"continous\">Continous</option><option value=\"linear\">Linear</option><br><br>"; //Set strength curve options
+  	strengthCurve.oninput = function() {
+  		div = document.getElementById("eqContainer2");
+  		effectHandler.updateStrengthCurve(this.audioId, this.effectId, this.value); //update strengthCurve for given effect and audio item
+  		if (this.value != "continous"){
+  			div.style.display = 'block';
+
+  		} else {
+			div.style.display = 'none';
+  		}
+  	}
+  	titleDiv.appendChild(curveHeader); 
   	titleDiv.appendChild(strengthCurve);
-  	modalContent.appendChild(titleDiv);
+  	modalContent.appendChild(titleDiv); //add title content to modal div
+
+  	knobWrapper = document.createElement("div"); //create wrapper for knobs
+  	knobWrapper.classList.add("knob-wrapper");
+  	modalContent.appendChild(knobWrapper); //add div to modal content
+  	uiEffect.renderEqView(0, 0, 0, 0, 0, 0, 0, 0, knobWrapper, effectHandler, dataStore); //render sub knob divs and their associated knobs
 
 	//
 
+	//Volume Modal
 	var volumeModal = document.createElement('div');
 	volumeModal.id = "volumeModal";
 	volumeModal.classList.add("modal");
@@ -366,7 +396,6 @@ function effectMenu(effectHandler){
   	strengthCurve.innerHTML = "<option value=\"continous\">Continous</option><option value=\"linear\">Linear</option>";
   	modalContent.appendChild(strengthCurve);
 
-	document.body.appendChild(eqModal);
 	document.body.appendChild(volumeModal);
 	document.body.appendChild(highPassModal);
 	document.body.appendChild(lowPassModal);
@@ -376,5 +405,5 @@ function effectMenu(effectHandler){
 
 module.exports = {
 	trackCanvas: trackCanvas,
-	effectMenu: effectMenu
+	renderEffects: renderEffects
 };

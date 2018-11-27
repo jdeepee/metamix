@@ -1,8 +1,26 @@
 /* Modal styles */
+#modalClose{
+    margin-left: auto;
+}
 
 h4{
     padding: 0px;
     margin: 2px;
+}
+
+.input-container{
+    width: 100%;
+    height: 5%;
+    display: flex;
+    justify-content: space-evenly;
+}
+
+.knob-wrapper{
+    width: 100%;
+    height: 90%;
+    display: flex;
+    justify-content: space-evenly;
+    flex-direction: column;
 }
 
 .drag-div{
@@ -12,12 +30,29 @@ h4{
     display:inline-block;
 }
 
+.knobs-container{
+    width: 100%;
+    height: 90%;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+}
+
 .knob-container{
-    width: 50%;
-    height: 80%;
+    width: 40%;
+    height: 90%;
     display:inline-block;
     vertical-align: middle;
     position: relative;
+}
+
+.knob-container-hidden{
+    width: 40%;
+    height: 90%;
+    display:inline-block;
+    vertical-align: middle;
+    position: relative;
+    display: none;
 }
 
 .modal {
@@ -26,7 +61,7 @@ h4{
     z-index: 1;
     left: 25%;
     top: 30%;
-    width: 50%; 
+    width: 30%; 
     height: 60%; 
     overflow: hidden;
     background-color: grey;
@@ -39,7 +74,9 @@ h4{
     height: 100%;
     width: 100%;
     text-align: center;
-    display:inline-block;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
 }
 
 /* The Close Button */

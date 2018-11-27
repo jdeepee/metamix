@@ -1654,7 +1654,7 @@ module.exports = {
 	AudioItem: AudioItem
 }
 
-},{"./effects.js":14,"./theme":18,"./utils":23}],12:[function(require,module,exports){
+},{"./effects.js":14,"./theme":18,"./utils":24}],12:[function(require,module,exports){
 var package_json = require('../package.json'),
 	Settings = require('./settings'),
 	Do = require('do.js');
@@ -1770,7 +1770,7 @@ function DataStore() {
 
 module.exports = DataStore;
 
-},{"../package.json":10,"./settings":16,"./utils":23,"do.js":1,"waveform-data":9}],13:[function(require,module,exports){
+},{"../package.json":10,"./settings":16,"./utils":24,"do.js":1,"waveform-data":9}],13:[function(require,module,exports){
 /**************************/
 // Dispatcher
 /**************************/
@@ -1809,7 +1809,6 @@ module.exports = Dispatcher;
 },{}],14:[function(require,module,exports){
 var Settings = require("./settings");
 	utils = require("./utils");
-	require("jquery-knob");
 
 function effectHandler(dataStore, renderItems, canvas, dpr, overwriteCursor, bounds){
 	function makeCursorChange(type){
@@ -1836,7 +1835,7 @@ function effectHandler(dataStore, renderItems, canvas, dpr, overwriteCursor, bou
 				for (var i=0; i<renderItems.length; i++){
 					if (renderItems[i].contains(currentX, currentY, time_scale, frame_start)){
 						renderItems[i].effectGlow();
-						renderEffectView(type, renderItems[i]);
+						renderEffectView(type, renderItems[i], null);
 						hit = true;
 
 						if (type != "remove"){
@@ -1851,105 +1850,91 @@ function effectHandler(dataStore, renderItems, canvas, dpr, overwriteCursor, bou
 				}
 
 			} else {
-				renderEffectView(type, null)
+				renderEffectView(type, null, null)
 			}
 		}
 		canvas.addEventListener("click", audioSelectCallback, false);
 	}
 
-	function renderEffectView(type, audioItem){
-		console.log('Render effect view', type);
+	function updateEqKnobs(value1, value2, value3, value21, value22, value23, id, audioId){
+		$('#eqKnob1').val(value1);
+		$('#eqKnob2').val(value2);
+		$('#eqKnob3').val(value3);
+		$('#eqKnob21').val(value21);
+		$('#eqKnob22').val(value22);
+		$('#eqKnob23').val(value23);
+		knob = document.getElementById("eqKnob1");
+		knob.effectId = id;
+		knob.audioId = audioId;
+		knob = document.getElementById("eqKnob2");
+		knob.effectId = id;
+		knob.audioId = audioId;
+		knob = document.getElementById("eqKnob3");
+		knob.effectId = id;
+		knob.audioId = audioId;
+		knob = document.getElementById("eqKnob21");
+		knob.effectId = id;
+		knob.audioId = audioId;
+		knob = document.getElementById("eqKnob22");
+		knob.effectId = id;
+		knob.audioId = audioId;
+		knob = document.getElementById("eqKnob23");
+		knob.effectId = id;
+		knob.audioId = audioId;
+	}
+
+	function renderEffectView(type, audioItem, effect){
 		switch(type){
 			case "cut":
-				cutEffect(audioItem);
+				cutEffect();
 				break;
 
 			case "eq":
 				modal = document.getElementById("eqModal");
 				modal.style.display = "block";
-				modalContent = document.getElementById("eqModalContent");
 
-				eqContainer = document.createElement("div");
-				eqContainer.classList.add("knob-container");
-				heading = document.createElement('h4');
-				heading.innerHTML = "Highs";
+				if (effect != null){
+					//Set inputs to values of effect 
+					updateEqKnobs(effect["high"]["start"], effect["mid"]["start"], effect["low"]["start"], 
+								  effect["high"]["target"], effect["mid"]["target"], effect["low"]["target"], 
+								  effect["id"], audioItem.id);
 
-				start = document.createElement("input");
-				start.id = "eqStart";
-				start.innerHTML = "<br>"
-				eqContainer.appendChild(start);
+					sc = document.getElementById("strengthCurveEQ");
+					sc.value = effect["strength_curve"];
+					sc.effectId = effect["id"];
+					sc.audioId = audioItem.id;
 
-				end = document.createElement("input");
-				end.id = "eqEnd";
-				eqContainer.appendChild(end);
+					start = document.getElementById("eqStart");
+					start.value = effect['start'];
+					start.effectId = effect["id"];
+					start.audioId = audioItem.id;
 
-				knob1 = document.createElement("input");
-				knob1.id = "knob1";
-				knob1.setAttribute("data-cursor", true);
-				knob1.setAttribute("value", 0);
-				knob1.setAttribute("data-thickness", 0.25);
-				eqContainer.append(heading);
-				eqContainer.appendChild(knob1);
+					end = document.getElementById("eqEnd");
+					end.value = effect['end'];
+					end.effectId = effect["id"];
+					end.audioId = audioItem.id;
 
-				heading = document.createElement('h4');
-				heading.innerHTML = "Mids";
-				knob2 = document.createElement("input");
-				knob2.id = "knob2";
-				knob2.setAttribute("data-cursor", true);
-				knob2.setAttribute("value", 0);
-				knob2.setAttribute("data-thickness", 0.25);
-				eqContainer.appendChild(heading);
-				eqContainer.appendChild(knob2);
+				} else {
+					//Refresh inputs - this is a fresh effect
+					var id = utils.guid();
+					updateEqKnobs(0, 0, 0, 0, 0, 0, id, audioItem.id);
 
-				heading = document.createElement('h4');
-				heading.innerHTML = "Lows";
-				knob3 = document.createElement("input");
-				knob3.id = "knob3";
-				knob3.setAttribute("data-cursor", true);
-				knob3.setAttribute("value", 0);
-				knob3.setAttribute("data-thickness", 0.25);
-				eqContainer.appendChild(heading);
-				eqContainer.appendChild(knob3);
+					sc = document.getElementById("strengthCurveEQ");
+					sc.value = "continous";
+					sc.effectId = id;
+					sc.audioId = audioItem.id;
 
-				modalContent.appendChild(eqContainer)
-				$("#knob1").knob({
-					'min':-2,
-					'max':2,
-					'step': 0.01,
-					'angleArc': 250,
-					'value': "0",
-					'angleOffset': -125,
-					'width': "50%",
-					'height': "50%",
-					'bgColor': "black",
-					'fgColor': '#4286f4'
-				});
+					start = document.getElementById("eqStart");
+					start.value = 0;
+					start.effectId = id;
+					start.audioId = audioItem.id;
 
-				$("#knob2").knob({
-					'min':-2,
-					'max':2,
-					'step': 0.01,
-					'angleArc': 250,
-					'value': "0",
-					'angleOffset': -125,
-					'width': "50%",
-					'height': "50%",
-					'bgColor': "black",
-					'fgColor': '#4286f4'
-				});
+					end = document.getElementById("eqEnd");
+					end.value = 0;
+					end.effectId = id;
+					end.audioId = audioItem.id;
+				}
 
-				$("#knob3").knob({
-					'min':-2,
-					'max':2,
-					'step': 0.01,
-					'angleArc': 250,
-					'value': "0",
-					'angleOffset': -125,
-					'width': "50%",
-					'height': "50%",
-					'bgColor': "black",
-					'fgColor': '#4286f4'
-				});
 				break;
 
 			case "volume":
@@ -1984,8 +1969,21 @@ function effectHandler(dataStore, renderItems, canvas, dpr, overwriteCursor, bou
 
 	}
 
-	function eqEffect(){
+	function updateEffectStart(audioId, effectId, start){
+		console.log("Effect update start req", audioId, effectId, start);
+	}
 
+	function updateEffectEnd(audioId, effectId, end){
+		console.log("Effect end req", audioId, effectId, end);
+
+	}
+
+	function updateStrengthCurve(audioId, effectId, strengthCurve){
+		console.log("Effect strengthCurve req", audioId, effectId, strengthCurve);
+	}
+
+	function eqEffect(audioId, effectId, value, type){
+		console.log("Effect Knob update", audioId, effectId, value, type);
 	}
 
 	function volumeEffect(){
@@ -2018,8 +2016,13 @@ function effectHandler(dataStore, renderItems, canvas, dpr, overwriteCursor, bou
 		dataStore.deleteData(audio.id);
 		renderItems = utils.removeFromArrayById(renderItems, audio.id);
 	}
+
 	this.renderEffectView = renderEffectView;
 	this.effectClicker = effectClicker;
+	this.eqEffect = eqEffect;
+	this.updateEffectStart = updateEffectStart;
+	this.updateEffectEnd = updateEffectEnd;
+	this.updateStrengthCurve = updateStrengthCurve;
 }
 
 function computeHighLow(start, end, type){
@@ -2063,7 +2066,7 @@ module.exports = {
 	computeEffectsX: computeEffectsX,
 	effectHandler: effectHandler
 }
-},{"./settings":16,"./utils":23,"jquery-knob":2}],15:[function(require,module,exports){
+},{"./settings":16,"./utils":24}],15:[function(require,module,exports){
 function itemClick (itemName) {
     switch(itemName) {
       case "test1":
@@ -2303,7 +2306,6 @@ function Studio(audio){
 	});
 
 	dispatcher.on("update.audioTime", function(id, start, end){
-		console.trace();
 		data.updateData(id, "start", start);
 		data.updateData(id, "end", end);
 	});
@@ -2332,7 +2334,7 @@ function Studio(audio){
 }
 
 window.Studio = Studio;
-},{"./data-store":12,"./dispatcher":13,"./settings":16,"./ui":22,"./ui-main-timeline":20,"./ui-scroll":21}],18:[function(require,module,exports){
+},{"./data-store":12,"./dispatcher":13,"./settings":16,"./ui":23,"./ui-main-timeline":21,"./ui-scroll":22}],18:[function(require,module,exports){
 module.exports = {
 	// photoshop colors
 	a: '#343434',
@@ -2345,9 +2347,149 @@ module.exports = {
 					"reverb": "#FF1DA6"}
 };
 },{}],19:[function(require,module,exports){
+require("jquery-knob");
+
+function renderEqView(start, end, value1, value2, value3, value21, value22, value23, wrapper, effectHandler, dataStore){
+	inputContainer = document.createElement("div");
+	inputContainer.id = "eqInputContainer";
+	inputContainer.classList.add("input-container");
+
+	knobContainer = document.createElement("div");
+	knobContainer.id = "knobsContainer";
+	knobContainer.classList.add("knobs-container");
+
+	eqContainer = document.createElement("div");
+	eqContainer.id = "eqContainer1";
+	eqContainer.classList.add("knob-container");
+
+	eqContainer2 = document.createElement("div");
+	eqContainer2.id = "eqContainer2";
+	eqContainer2.classList.add("knob-container-hidden");
+	knobContainer.appendChild(eqContainer);
+	knobContainer.appendChild(eqContainer2);
+
+	startInput = document.createElement("input");
+	startInput.id = "eqStart";
+	startInput.innerHTML = "<br>";
+	startInput.value = start;
+	startInput.oninput = function(){
+		effectHandler.updateEffectStart(this.audioId, this.effectId, this.value);
+		dataStore.updateUi("lastStart", this.value);
+	}
+	inputContainer.appendChild(startInput);
+
+	endInput = document.createElement("input");
+	endInput.id = "eqEnd";
+	endInput.value = end;
+	endInput.oninput = function(){
+		effectHandler.updateEffectEnd(this.audioId, this.effectId, this.value);
+		dataStore.updateUi("lastEnd", this.value);
+	}
+	inputContainer.appendChild(endInput);
+	wrapper.appendChild(inputContainer);
+
+	heading = document.createElement('h4');
+	heading.innerHTML = "Highs";
+
+	knob1 = document.createElement("input");
+	knob1.id = "eqKnob1";
+	knob1.setAttribute("data-cursor", true);
+	knob1.setAttribute("value", value1);
+	knob1.setAttribute("data-thickness", 0.25);
+	// knob1.setAttribute("data-font", "Advanced LED Board-7")
+	eqContainer.append(heading);
+	eqContainer.appendChild(knob1);
+
+	heading = document.createElement('h4');
+	heading.innerHTML = "Mids";
+	knob2 = document.createElement("input");
+	knob2.id = "eqKnob2";
+	knob2.setAttribute("data-cursor", true);
+	knob2.setAttribute("value", value2);
+	knob2.setAttribute("data-thickness", 0.25);
+	eqContainer.appendChild(heading);
+	eqContainer.appendChild(knob2);
+
+	heading = document.createElement('h4');
+	heading.innerHTML = "Lows";
+	knob3 = document.createElement("input");
+	knob3.id = "eqKnob3";
+	knob3.setAttribute("data-cursor", true);
+	knob3.setAttribute("value", value3);
+	knob3.setAttribute("data-thickness", 0.25);
+	eqContainer.appendChild(heading);
+	eqContainer.appendChild(knob3);
+
+	heading = document.createElement('h4');
+	heading.innerHTML = "Highs";
+	knob1 = document.createElement("input");
+	knob1.id = "eqKnob21";
+	knob1.setAttribute("data-cursor", true);
+	knob1.setAttribute("value", value21);
+	knob1.setAttribute("data-thickness", 0.25);
+	eqContainer2.append(heading);
+	eqContainer2.appendChild(knob1);
+
+	heading = document.createElement('h4');
+	heading.innerHTML = "Mids";
+	knob2 = document.createElement("input");
+	knob2.id = "eqKnob22";
+	knob2.setAttribute("data-cursor", true);
+	knob2.setAttribute("value", value22);
+	knob2.setAttribute("data-thickness", 0.25);
+	eqContainer2.appendChild(heading);
+	eqContainer2.appendChild(knob2);
+
+	heading = document.createElement('h4');
+	heading.innerHTML = "Lows";
+	knob3 = document.createElement("input");
+	knob3.id = "eqKnob23";
+	knob3.setAttribute("data-cursor", true);
+	knob3.setAttribute("value", value23);
+	knob3.setAttribute("data-thickness", 0.25);
+	eqContainer2.appendChild(heading);
+	eqContainer2.appendChild(knob3);
+	wrapper.appendChild(knobContainer);
+
+	knobParams = {
+		'min':-2,
+		'max':2,
+		'step': 0.01,
+		'angleArc': 250,
+		'angleOffset': -125,
+		'width': "300%",
+		'height': "300%",
+		'bgColor': "black",
+		'fgColor': '#4286f4',
+		'release' : function (v) { effectHandler.eqEffect(this.$.context.audioId, this.$.context.effectId, v, "highs")}
+	}
+
+	$("#eqKnob1").knob(knobParams);
+	delete knobParams["release"];
+	knobParams['release'] = function(v){ effectHandler.eqEffect(this.$.context.audioId, this.$.context.effectId, v, "mids")};
+	$("#eqKnob2").knob(knobParams);
+	delete knobParams["release"];
+	knobParams['release'] = function(v){ effectHandler.eqEffect(this.$.context.audioId, this.$.context.effectId, v, "lows")};
+	$("#eqKnob3").knob(knobParams);
+	delete knobParams['release'];
+	knobParams['release'] = function(v){ effectHandler.eqEffect(this.$.context.audioId, this.$.context.effectId, v, "highsTarget")};
+	$("#eqKnob21").knob(knobParams);
+	delete knobParams['release'];
+	knobParams['release'] = function(v){ effectHandler.eqEffect(this.$.context.audioId, this.$.context.effectId, v, "midsTarget")};
+	$("#eqKnob22").knob(knobParams);
+	delete knobParams['release']
+	knobParams['release'] = function(v){ effectHandler.eqEffect(this.$.context.audioId, this.$.context.effectId, v, "lowsTarget")};
+	$("#eqKnob23").knob(knobParams);
+}
+
+module.exports = {
+	renderEqView: renderEqView
+}
+},{"jquery-knob":2}],20:[function(require,module,exports){
 var Settings = require("./settings");
 	utils = require("./utils");
 	Theme = require("./theme");
+	uiEffect = require("./ui-effect");
 
 function Rect() {
 	
@@ -2473,8 +2615,9 @@ function trackCanvas(dataStore, dispatcher){
 	}
 }
 
-//Function which renders effect icons and their wrapping divs
-function effectMenu(effectHandler){
+//Function which renders effect icons and their modals
+function renderEffects(effectHandler, dataStore){
+	//Effect icons rendering
 	var effectDiv = document.getElementById("top-toolbar");
 	effectDiv.style.backgroundColor = Theme.a;
 	effectDiv.classList.add("flex-container");
@@ -2536,46 +2679,74 @@ function effectMenu(effectHandler){
 	effectDiv.appendChild(tempoDiv);
 	effectDiv.appendChild(removeDiv);
 
-	var eqModal = document.createElement('div');
+	//
+	//
+	//
+	//Effect modal rendering
+	//EQ Modal rendering
+	var eqModal = document.createElement('div'); //create core EQ Modal
 	eqModal.id = "eqModal";
 	eqModal.classList.add("modal");
+	document.body.appendChild(eqModal);
 
-	eqDragDiv = document.createElement('div');
+	eqDragDiv = document.createElement('div'); //create the drag div for the modal 
 	eqDragDiv.id = "eqDragDiv";
 	eqDragDiv.classList.add("drag-div")
 
-	modalContent = document.createElement("div")
+	modalContent = document.createElement("div") //Create modal content div
 	modalContent.classList.add("modal-content");
 	modalContent.id = "eqModalContent";
 	modalSpan = document.createElement("span");
 	modalSpan.innerHTML = "&times;"
-	modalSpan.classList.add("close")
+	modalSpan.classList.add("close");
+	modalSpan.id = "modalClose";
 	modalSpan.onclick = function() {
-		eqModal.style.display = "none";
+		eqModal.style.display = "none"; //On click of close put eqModal's style to none
+		targetDivContainer = document.getElementById("eqContainer2");
+		targetDivContainer.style.display = 'none'; //Set the display of the target container element to none so when modal is opened again on a fresh effect it has the correct view
 	}
 
-	eqModal.appendChild(eqDragDiv);
-	modalContent.appendChild(modalSpan);
-	eqModal.appendChild(modalContent);
+	eqModal.appendChild(eqDragDiv); //add drag div as child of eq modal
+	modalContent.appendChild(modalSpan); //add modal content of child of modal main
+	eqModal.appendChild(modalContent); //add modal content to eqModal main
 
 	$( function() {
-		$( "#eqModal" ).draggable({handle: '#eqDragDiv'});
+		$( "#eqModal" ).draggable({handle: '#eqDragDiv'}); //Make draggable div draggable - effects parent div
   	});
 
-	titleDiv = document.createElement("div");
+	titleDiv = document.createElement("div"); //Create title div to hold title, strength curve etc
 	titleDiv.classList.add("titleDiv");
-
-	curveHeader = document.createElement("h3");
+	eqHeader = document.createElement("h3"); //Create title of modal
+	eqHeader.innerHTML = "EQ Effect";
+	titleDiv.appendChild(eqHeader);
+	curveHeader = document.createElement("h4"); //Add curve text to explain what the drop down below does
 	curveHeader.innerHTML = "Strength Curve";
-  	strengthCurve = document.createElement("select");
+  	strengthCurve = document.createElement("select"); //Create strength curve select element
+  	strengthCurve.id = "strengthCurveEQ";
   	strengthCurve.name = "Strength Curve";
-  	strengthCurve.innerHTML = "<option value=\"continous\">Continous</option><option value=\"linear\">Linear</option><br><br>";
-  	titleDiv.appendChild(curveHeader);
+  	strengthCurve.innerHTML = "<option value=\"continous\">Continous</option><option value=\"linear\">Linear</option><br><br>"; //Set strength curve options
+  	strengthCurve.oninput = function() {
+  		div = document.getElementById("eqContainer2");
+  		effectHandler.updateStrengthCurve(this.audioId, this.effectId, this.value); //update strengthCurve for given effect and audio item
+  		if (this.value != "continous"){
+  			div.style.display = 'block';
+
+  		} else {
+			div.style.display = 'none';
+  		}
+  	}
+  	titleDiv.appendChild(curveHeader); 
   	titleDiv.appendChild(strengthCurve);
-  	modalContent.appendChild(titleDiv);
+  	modalContent.appendChild(titleDiv); //add title content to modal div
+
+  	knobWrapper = document.createElement("div"); //create wrapper for knobs
+  	knobWrapper.classList.add("knob-wrapper");
+  	modalContent.appendChild(knobWrapper); //add div to modal content
+  	uiEffect.renderEqView(0, 0, 0, 0, 0, 0, 0, 0, knobWrapper, effectHandler, dataStore); //render sub knob divs and their associated knobs
 
 	//
 
+	//Volume Modal
 	var volumeModal = document.createElement('div');
 	volumeModal.id = "volumeModal";
 	volumeModal.classList.add("modal");
@@ -2713,7 +2884,6 @@ function effectMenu(effectHandler){
   	strengthCurve.innerHTML = "<option value=\"continous\">Continous</option><option value=\"linear\">Linear</option>";
   	modalContent.appendChild(strengthCurve);
 
-	document.body.appendChild(eqModal);
 	document.body.appendChild(volumeModal);
 	document.body.appendChild(highPassModal);
 	document.body.appendChild(lowPassModal);
@@ -2723,9 +2893,9 @@ function effectMenu(effectHandler){
 
 module.exports = {
 	trackCanvas: trackCanvas,
-	effectMenu: effectMenu
+	renderEffects: renderEffects
 };
-},{"./settings":16,"./theme":18,"./utils":23}],20:[function(require,module,exports){
+},{"./settings":16,"./theme":18,"./ui-effect":19,"./utils":24}],21:[function(require,module,exports){
 var Settings = require("./settings");
 	utils = require("./utils");
 	Theme = require("./theme");
@@ -2790,7 +2960,7 @@ function timeline(dataStore, dispatcher) {
 	var blockNumber = 0;
 
 	effectHandler = new effectUtils.effectHandler(dataStore, renderItems, canvas, dpr, overwriteCursor, bounds);
-	uiExterior.effectMenu(effectHandler);
+	uiExterior.renderEffects(effectHandler, dataStore);
 
 	//Create array of objects which defines the pixel bounds for each track element
 	for (var i=0; i<trackLayers; i++){
@@ -3329,7 +3499,7 @@ function timeline(dataStore, dispatcher) {
 module.exports = {
 	timeline: timeline
 };
-},{"./audio.js":11,"./effects.js":14,"./menu.js":15,"./settings":16,"./theme":18,"./ui-exterior":19,"./ui-scroll":21,"./utils":23}],21:[function(require,module,exports){
+},{"./audio.js":11,"./effects.js":14,"./menu.js":15,"./settings":16,"./theme":18,"./ui-exterior":20,"./ui-scroll":22,"./utils":24}],22:[function(require,module,exports){
 var Theme = require("./theme")
 	utils = require("./utils")
 
@@ -3532,7 +3702,7 @@ function timelineScroll(dataStore, dispatcher){
 module.exports = {
 	timelineScroll: timelineScroll
 };
-},{"./theme":18,"./utils":23}],22:[function(require,module,exports){
+},{"./theme":18,"./utils":24}],23:[function(require,module,exports){
 var utils = require("./utils");
 	Theme = require("./theme")
 
@@ -3596,7 +3766,16 @@ module.exports = {
 	initCanvas: initCanvas,
 	paintTrackColumn: paintTrackColumn
 };
-},{"./theme":18,"./utils":23}],23:[function(require,module,exports){
+},{"./theme":18,"./utils":24}],24:[function(require,module,exports){
+function guid() {
+  function s4() {
+    return Math.floor((1 + Math.random()) * 0x10000)
+      .toString(16)
+      .substring(1);
+  }
+  return s4() + s4() + '-' + s4() + '-' + s4() + '-' + s4() + '-' + s4() + s4() + s4();
+}
+
 const interpolateHeight = (total_height, offset) => {
   const amplitude = 256;
   return (size) => total_height - ((size + 128) * total_height) / amplitude;
@@ -3867,6 +4046,7 @@ module.exports = {
 	increaseArray: increaseArray,
 	x_to_time: x_to_time,
 	linepointNearestMouse: linepointNearestMouse,
-	interpolateHeight: interpolateHeight
+	interpolateHeight: interpolateHeight,
+	guid: guid
 };
 },{}]},{},[17]);

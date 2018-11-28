@@ -439,28 +439,79 @@ function timeline(dataStore, dispatcher) {
 		}
 		return startX, endX, block, drawSnapMarker, blockNumber;
 	}
+	menuItems = [
+	  {
+	    "text": "Copy Item"
+	  },
+	  {
+	    "type": menu.ContextMenu.DIVIDER 
+	  },
+	  {
+	    "text": "Add Effect",
+	   	"sub": [
+	      {
+	        "text": "EQ",
+	        "events": {
+	        	"click": function(e){
+	        		effectHandler.renderEffectView("eq", self.currentAudio, null);
+	        	}
+	        }
+	      },
+	      {
+	        "text": "Volume Modulation"
+	      },
+	      {
+	      	"text": "High Pass Filter"
+	      },
+	      {
+	      	"text": "Low Pass Filter"
+	      },
+	      {
+	      	"text": "Pitch Shift"
+	      },
+	      {
+	      	"text": "Tempo Modulation"
+	      }
+	    ]
+	  },
+	  {
+	    "type": menu.ContextMenu.DIVIDER 
+	  },
+	  {
+	  	"text": "Create Clip"
+	  },
+	  {
+	    "type": menu.ContextMenu.DIVIDER 
+	  },
+	  {
+	  	"text": "Delete Audio",
+	  	"events": {
+	  		"click": function(e){
+	  			effectHandler.removeAudio(self.currentAudio);
+	  		}
+	  	}
+	  },
+	  {
+	    "type": menu.ContextMenu.DIVIDER 
+	  },
+	  {
+	  	"text": "Adjust Bar Markers"
+	  }
+	];
 
-	__menuConf = menu.__menuConf;
-	__menuConf.startMenu();
-
+	var menuItem = new menu.ContextMenu(menuItems);
 	// Contextmenu-eventlistener
 	canvas.addEventListener("contextmenu", function(e){
+		console.log("Content menu");
 		currentX = ((e.clientX - bounds.left)/dpr + (frame_start * time_scale));
 		currentY = (e.clientY - bounds.top)/dpr;
 
 		for (var i = 0; i < renderItems.length; i++){
 			if (renderItems[i].contains(currentX, currentY, time_scale, frame_start)) {
-			    e.preventDefault();
-			    __menuConf.menuState = !__menuConf.menuState;
-			    __menuConf.menuEvent(e, renderItems[i].id);
+				self.currentAudio = renderItems[i];
+				menuItem.display(e, undefined);
 			}
 		}
-	}, false);
-
-	// Click-eventlistener
-	document.addEventListener("click", () => {
-	    __menuConf.menuState = false;
-	    menu.closeMenu(); //lets move this function insde __menuConf
 	}, false);
 
 	//mousemove eventListener to handle cursor changing to pointer upon hovering over a draggable item

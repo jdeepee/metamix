@@ -120,6 +120,45 @@ AudioItem.prototype.effectGlow = function(){
 	this.drawSelectGlow = true;
 }
 
+AudioItem.prototype.drawEffectCurve = function(ctx, start, target, type, startX, endX, strengthCurve){
+		//currently start/target only works for phase 1 of effect - this should be able to handle effects which have multiple start/targets - 
+	//maybe this means drawing multiple curves?
+	if (start != 0 && target != 0){
+		console.log("Inputs", start, target);
+		var effectStartRatio, effectEndRatio;
+		out = effectUtils.computeHighLow(start, target, type);
+		effectStartRatio = out[0];
+		effectEndRatio = out[1];
+		console.log("Ratio out", out);
+		effectStartY = this.y + this.y2 - effectStartRatio * this.ratio;
+		effectEndY = this.y + this.y2 - effectEndRatio * this.ratio;
+		console.log("Y values", effectStartY, effectEndY);
+
+		ctx.strokeStyle = Theme.effectColours[effect["type"]];
+		ctx.beginPath();
+		ctx.moveTo(effect["startX"], this.y);
+		ctx.lineTo(effect["startX"], this.y+this.y2);
+		ctx.stroke();
+		ctx.moveTo(effect["endX"], this.y);
+		ctx.lineTo(effect["endX"], this.y+this.y2);
+		ctx.stroke();
+
+		if (strengthCurve == "linear"){
+			console.log("Drawing linear effect");
+			this.curveValues.push({x0: startX, y0: effectStartY, x1: endX, y1: effectEndY});
+			ctx.moveTo(effect["startX"], effectStartY);
+			ctx.lineTo(effect["endX"], effectEndY)
+			ctx.stroke();
+
+		} else if (strengthCurve == "continous"){
+			this.curveValues.push({x0: startX, y0: effectStartY, x1: endX, y1: effectEndY});
+			ctx.moveTo(startX, effectEndY);
+			ctx.lineTo(endX, effectEndY)
+			ctx.stroke();
+		}
+	}
+}
+
 AudioItem.prototype.paintEffects = function(ctx) {
 	//Iterate over effects and paint them on the audio item - in theme define some basic temporary colour scheme/symbols which can signify different effects
 	//So for example yellow = eq, red = volume. etc. Currently only two supported strength_curves on backend: continous and linear - just build these for now
@@ -128,35 +167,22 @@ AudioItem.prototype.paintEffects = function(ctx) {
 	for (var i=0; i<this.effects.length; i++){
 		effect = this.effects[i];
 		if (effect["endX"] - effect["startX"] > 5){
-			//currently start/target only works for phase 1 of effect - this should be able to handle effects which have multiple start/targets - 
-			//maybe this means drawing multiple curves?
-			var effectStartRatio, effectEndRatio;
-			out = effectUtils.computeHighLow(effect["params"]["start"], effect["params"]["target"], effect["type"]);
-			effectStartRatio = out[0];
-			effectEndRatio = out[1];
-			effectStartY = this.y + this.y2 - effectStartRatio * this.ratio;
-			effectEndY = this.y + this.y2 - effectEndRatio * this.ratio;
+			if (effect["type"] != "eq"){
+				this.drawEffectCurve(ctx, effect["params"]["start"], effect["params"]["target"], effect["type"], effect["startX"], effect["endX"], effect["strength_curve"]);
 
-			ctx.strokeStyle = Theme.effectColours[effect["type"]];
-			ctx.beginPath();
-			ctx.moveTo(effect["startX"], this.y);
-			ctx.lineTo(effect["startX"], this.y+this.y2);
-			ctx.stroke();
-			ctx.moveTo(effect["endX"], this.y);
-			ctx.lineTo(effect["endX"], this.y+this.y2);
-			ctx.stroke();
-
-			if (effect["params"]["strength_curve"] == "linear"){
-				this.curveValues.push({x0: effect["startX"], y0: effectStartY, x1: effect["endX"], y1: effectEndY});
-				ctx.moveTo(effect["startX"], effectStartY);
-				ctx.lineTo(effect["endX"], effectEndY)
-				ctx.stroke();
-
-			} else if (effect["params"]["strength_curve"] == "continous"){
-				this.curveValues.push({x0: effect["startX"], y0: effectStartY, x1: effect["endX"], y1: effectEndY});
-				ctx.moveTo(effect["startX"], effectEndY);
-				ctx.lineTo(effect["endX"], effectEndY)
-				ctx.stroke();
+			} else {
+				if (effect["high"]["start"] != 0 && effect["high"]["target"] != 0){
+					console.log("Draw high curve");
+					this.drawEffectCurve(ctx, effect["high"]["start"], effect["high"]["target"], effect["type"], effect["startX"], effect["endX"], effect["strength_curve"]);
+				} 
+				if (effect["mid"]["start"] != 0 && effect["mid"]["target"] != 0){
+					console.log("Draw mid curve");
+					this.drawEffectCurve(ctx, effect["mid"]["start"], effect["mid"]["target"], effect["type"], effect["startX"], effect["endX"], effect["strength_curve"]);
+				}
+				if (effect["low"]["start"] != 0 && effect["low"]["target"] != 0){
+					console.log("Draw low curve");
+					this.drawEffectCurve(ctx, effect["low"]["start"], effect["low"]["target"], effect["type"], effect["startX"], effect["endX"], effect["strength_curve"]);
+				}
 			}
 		}
 	}

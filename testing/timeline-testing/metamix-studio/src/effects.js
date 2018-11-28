@@ -214,6 +214,7 @@ function effectHandler(dataStore, renderItems, canvas, dpr, overwriteCursor, bou
 	this.updateEffectStart = updateEffectStart;
 	this.updateEffectEnd = updateEffectEnd;
 	this.updateStrengthCurve = updateStrengthCurve;
+	this.removeAudio = removeAudio;
 }
 
 function computeHighLow(start, end, type){
@@ -224,12 +225,14 @@ function computeHighLow(start, end, type){
 	offset = 0;
 	bounds = Settings.effectBounds[type];
 	if (bounds["startMin"] <= 0){
-		offset = +bounds["startMin"]
+		offset = bounds["startMin"] * -1;
 	} else {
 		offset = -bounds["startMin"]
 	}
+	console.log(offset);
 
 	max = bounds["startMax"] + offset
+	console.log(max);
 	startOff = start + offset;
 	endOffset = end + offset;
 

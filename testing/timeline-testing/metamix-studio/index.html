@@ -20,11 +20,19 @@ audio = [
 				"start": 1,
 				"end": 5,
 				'type': "eq",
-				"params": {
-					"strength_curve": "linear",
-					"start": 0.1,
-					"target": 1.8
-				}
+				"high": {
+					"start": -2,
+					"target": -1
+				},
+				"mid": {
+					"start": 0,
+					"target": 0
+				},
+				"low": {
+					'start': 1,
+					'target': 1.5
+				},
+				"strength_curve": "linear"
 			}
 		],
 		"beat_markers": [1,5,10,15,20,24.3],

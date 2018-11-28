@@ -1530,6 +1530,45 @@ AudioItem.prototype.effectGlow = function(){
 	this.drawSelectGlow = true;
 }
 
+AudioItem.prototype.drawEffectCurve = function(ctx, start, target, type, startX, endX, strengthCurve){
+		//currently start/target only works for phase 1 of effect - this should be able to handle effects which have multiple start/targets - 
+	//maybe this means drawing multiple curves?
+	if (start != 0 && target != 0){
+		console.log("Inputs", start, target);
+		var effectStartRatio, effectEndRatio;
+		out = effectUtils.computeHighLow(start, target, type);
+		effectStartRatio = out[0];
+		effectEndRatio = out[1];
+		console.log("Ratio out", out);
+		effectStartY = this.y + this.y2 - effectStartRatio * this.ratio;
+		effectEndY = this.y + this.y2 - effectEndRatio * this.ratio;
+		console.log("Y values", effectStartY, effectEndY);
+
+		ctx.strokeStyle = Theme.effectColours[effect["type"]];
+		ctx.beginPath();
+		ctx.moveTo(effect["startX"], this.y);
+		ctx.lineTo(effect["startX"], this.y+this.y2);
+		ctx.stroke();
+		ctx.moveTo(effect["endX"], this.y);
+		ctx.lineTo(effect["endX"], this.y+this.y2);
+		ctx.stroke();
+
+		if (strengthCurve == "linear"){
+			console.log("Drawing linear effect");
+			this.curveValues.push({x0: startX, y0: effectStartY, x1: endX, y1: effectEndY});
+			ctx.moveTo(effect["startX"], effectStartY);
+			ctx.lineTo(effect["endX"], effectEndY)
+			ctx.stroke();
+
+		} else if (strengthCurve == "continous"){
+			this.curveValues.push({x0: startX, y0: effectStartY, x1: endX, y1: effectEndY});
+			ctx.moveTo(startX, effectEndY);
+			ctx.lineTo(endX, effectEndY)
+			ctx.stroke();
+		}
+	}
+}
+
 AudioItem.prototype.paintEffects = function(ctx) {
 	//Iterate over effects and paint them on the audio item - in theme define some basic temporary colour scheme/symbols which can signify different effects
 	//So for example yellow = eq, red = volume. etc. Currently only two supported strength_curves on backend: continous and linear - just build these for now
@@ -1538,35 +1577,22 @@ AudioItem.prototype.paintEffects = function(ctx) {
 	for (var i=0; i<this.effects.length; i++){
 		effect = this.effects[i];
 		if (effect["endX"] - effect["startX"] > 5){
-			//currently start/target only works for phase 1 of effect - this should be able to handle effects which have multiple start/targets - 
-			//maybe this means drawing multiple curves?
-			var effectStartRatio, effectEndRatio;
-			out = effectUtils.computeHighLow(effect["params"]["start"], effect["params"]["target"], effect["type"]);
-			effectStartRatio = out[0];
-			effectEndRatio = out[1];
-			effectStartY = this.y + this.y2 - effectStartRatio * this.ratio;
-			effectEndY = this.y + this.y2 - effectEndRatio * this.ratio;
+			if (effect["type"] != "eq"){
+				this.drawEffectCurve(ctx, effect["params"]["start"], effect["params"]["target"], effect["type"], effect["startX"], effect["endX"], effect["strength_curve"]);
 
-			ctx.strokeStyle = Theme.effectColours[effect["type"]];
-			ctx.beginPath();
-			ctx.moveTo(effect["startX"], this.y);
-			ctx.lineTo(effect["startX"], this.y+this.y2);
-			ctx.stroke();
-			ctx.moveTo(effect["endX"], this.y);
-			ctx.lineTo(effect["endX"], this.y+this.y2);
-			ctx.stroke();
-
-			if (effect["params"]["strength_curve"] == "linear"){
-				this.curveValues.push({x0: effect["startX"], y0: effectStartY, x1: effect["endX"], y1: effectEndY});
-				ctx.moveTo(effect["startX"], effectStartY);
-				ctx.lineTo(effect["endX"], effectEndY)
-				ctx.stroke();
-
-			} else if (effect["params"]["strength_curve"] == "continous"){
-				this.curveValues.push({x0: effect["startX"], y0: effectStartY, x1: effect["endX"], y1: effectEndY});
-				ctx.moveTo(effect["startX"], effectEndY);
-				ctx.lineTo(effect["endX"], effectEndY)
-				ctx.stroke();
+			} else {
+				if (effect["high"]["start"] != 0 && effect["high"]["target"] != 0){
+					console.log("Draw high curve");
+					this.drawEffectCurve(ctx, effect["high"]["start"], effect["high"]["target"], effect["type"], effect["startX"], effect["endX"], effect["strength_curve"]);
+				} 
+				if (effect["mid"]["start"] != 0 && effect["mid"]["target"] != 0){
+					console.log("Draw mid curve");
+					this.drawEffectCurve(ctx, effect["mid"]["start"], effect["mid"]["target"], effect["type"], effect["startX"], effect["endX"], effect["strength_curve"]);
+				}
+				if (effect["low"]["start"] != 0 && effect["low"]["target"] != 0){
+					console.log("Draw low curve");
+					this.drawEffectCurve(ctx, effect["low"]["start"], effect["low"]["target"], effect["type"], effect["startX"], effect["endX"], effect["strength_curve"]);
+				}
 			}
 		}
 	}
@@ -2023,6 +2049,7 @@ function effectHandler(dataStore, renderItems, canvas, dpr, overwriteCursor, bou
 	this.updateEffectStart = updateEffectStart;
 	this.updateEffectEnd = updateEffectEnd;
 	this.updateStrengthCurve = updateStrengthCurve;
+	this.removeAudio = removeAudio;
 }
 
 function computeHighLow(start, end, type){
@@ -2033,12 +2060,14 @@ function computeHighLow(start, end, type){
 	offset = 0;
 	bounds = Settings.effectBounds[type];
 	if (bounds["startMin"] <= 0){
-		offset = +bounds["startMin"]
+		offset = bounds["startMin"] * -1;
 	} else {
 		offset = -bounds["startMin"]
 	}
+	console.log(offset);
 
 	max = bounds["startMax"] + offset
+	console.log(max);
 	startOff = start + offset;
 	endOffset = end + offset;
 
@@ -2067,151 +2096,266 @@ module.exports = {
 	effectHandler: effectHandler
 }
 },{"./settings":16,"./utils":24}],15:[function(require,module,exports){
-function itemClick (itemName) {
-    switch(itemName) {
-      case "test1":
-        console.log("1")
-        break;
+function ContextMenu(menu, options){
+    var self = this;
+    var num = ContextMenu.count++;
+
+    this.menu = menu;
+    this.contextTarget = null;
+
+    if(!(menu instanceof Array)){
+        throw new Error("Parameter 1 must be of type Array");
     }
+
+    if(typeof options !== "undefined"){
+        if(typeof options !== "object"){
+            throw new Error("Parameter 2 must be of type object");
+        }
+    }else{
+        options = {};
+    }
+
+    window.addEventListener("resize", function(){
+        if(ContextUtil.getProperty(options, "close_on_resize", true)){
+            self.hide();
+        }
+    });
+
+    this.setOptions = function(_options){
+        if(typeof _options === "object"){
+            options = _options;
+        }else{
+            throw new Error("Parameter 1 must be of type object")
+        }
+    }
+
+    this.changeOption = function(option, value){
+        if(typeof option === "string"){
+            if(typeof value !== "undefined"){
+                options[option] = value;
+            }else{
+                throw new Error("Parameter 2 must be set");
+            }
+        }else{
+            throw new Error("Parameter 1 must be of type string");
+        }
+    }
+
+    this.getOptions = function(){
+        return options;
+    }
+
+    this.reload = function(){
+        if(document.getElementById('cm_' + num) == null){
+            var cnt = document.createElement("div");
+            cnt.className = "cm_container";
+            cnt.id = "cm_" + num;
+
+            document.body.appendChild(cnt);
+        }
+
+        var container = document.getElementById('cm_' + num);
+        container.innerHTML = "";
+
+        container.appendChild(renderLevel(menu));
+    }
+
+    function renderLevel(level){
+        var ul_outer = document.createElement("ul");
+
+        level.forEach(function(item){
+            var li = document.createElement("li");
+            li.menu = self;
+
+            if(typeof item.type === "undefined"){
+                var icon_span = document.createElement("span");
+                icon_span.className = 'cm_icon_span';
+
+                if(ContextUtil.getProperty(item, "icon", "") != ""){
+                    icon_span.innerHTML = ContextUtil.getProperty(item, "icon", "");
+                }else{
+                    icon_span.innerHTML = ContextUtil.getProperty(options, "default_icon", "");
+                }
+
+                var text_span = document.createElement("span");
+                text_span.className = 'cm_text';
+
+                if(ContextUtil.getProperty(item, "text", "") != ""){
+                    text_span.innerHTML = ContextUtil.getProperty(item, "text", "");
+                }else{
+                    text_span.innerHTML = ContextUtil.getProperty(options, "default_text", "item");
+                }
+
+                var sub_span = document.createElement("span");
+                sub_span.className = 'cm_sub_span';
+
+                if(typeof item.sub !== "undefined"){
+                    if(ContextUtil.getProperty(options, "sub_icon", "") != ""){
+                        sub_span.innerHTML = ContextUtil.getProperty(options, "sub_icon", "");
+                    }else{
+                        sub_span.innerHTML = '&#155;';
+                    }
+                }
+
+                li.appendChild(icon_span);
+                li.appendChild(text_span);
+                li.appendChild(sub_span);
+
+                if(!ContextUtil.getProperty(item, "enabled", true)){
+                    li.setAttribute("disabled", "");
+                }else{
+                    if(typeof item.events === "object"){
+                        var keys = Object.keys(item.events);
+
+                        for(var i = 0; i < keys.length; i++){
+                            li.addEventListener(keys[i], item.events[keys[i]]);
+                        }
+                    }
+
+                    if(typeof item.sub !== "undefined"){
+                        li.appendChild(renderLevel(item.sub));
+                    }
+                }
+            }else{
+                if(item.type == ContextMenu.DIVIDER){
+                    li.className = "cm_divider";
+                }
+            }
+
+            ul_outer.appendChild(li);
+        });
+
+        return ul_outer;
+    }
+
+    this.display = function(e, target){
+        if(typeof target !== "undefined"){
+            self.contextTarget = target;
+        }else{
+            self.contextTarget = e.target;
+        }
+
+        var menu = document.getElementById('cm_' + num);
+
+        var clickCoords = {x: e.clientX, y: e.clientY};
+        var clickCoordsX = clickCoords.x;
+        var clickCoordsY = clickCoords.y;
+
+        var menuWidth = menu.offsetWidth + 4;
+        var menuHeight = menu.offsetHeight + 4;
+
+        var windowWidth = window.innerWidth;
+        var windowHeight = window.innerHeight;
+
+        var mouseOffset = parseInt(ContextUtil.getProperty(options, "mouse_offset", 2));
+
+        if((windowWidth - clickCoordsX) < menuWidth){
+            menu.style.left = windowWidth - menuWidth + "px";
+        }else{
+            menu.style.left = (clickCoordsX + mouseOffset) + "px";
+        }
+
+        if((windowHeight - clickCoordsY) < menuHeight){
+            menu.style.top = windowHeight - menuHeight + "px";
+        }else{
+            menu.style.top = (clickCoordsY + mouseOffset) + "px";
+        }
+
+        var sizes = ContextUtil.getSizes(menu);
+
+        if((windowWidth - clickCoordsX) < sizes.width){
+            menu.classList.add("cm_border_right");
+        }else{
+            menu.classList.remove("cm_border_right");
+        }
+
+        if((windowHeight - clickCoordsY) < sizes.height){
+            menu.classList.add("cm_border_bottom");
+        }else{
+            menu.classList.remove("cm_border_bottom");
+        }
+
+        menu.classList.add("display");
+
+        if(ContextUtil.getProperty(options, "close_on_click", true)){
+            window.addEventListener("click", documentClick);
+        }
+
+        e.preventDefault();
+    }
+
+    this.hide = function(){
+        document.getElementById('cm_' + num).classList.remove("display");
+        window.removeEventListener("click", documentClick);
+    }
+
+    function documentClick(){
+        self.hide();
+    }
+
+    this.reload();
 }
 
-menuContent = [
-    {title: "Copy Item", name: "copyItem"},
-    "<hr>",
-    {title: "Add Effect", name: "addEffect"},
-    "<hr>",
-    {title: "Create Clip", name: "createClip"},
-    "<hr>",
-    {title: "Delete Audio", name: "deleteAudio"},
-    "<hr>",
-    {title: "Adjust Bar Markers", name: "adjustBarMarkers"}
-];
+ContextMenu.count = 0;
+ContextMenu.DIVIDER = "cm_divider";
 
-
-const __menuConf = {
-    "menu": undefined,
-    "item": undefined,
-    "menuState": false,
-    "oldContent": [],
-
-    // Style of menu
-    "menuStyle": {
-        display: "none",
-        fontFamily: "monospace",
-        width: "min-width",
-        height: "min-height",
-        padding: "8px 0 8px 0",
-        margin: 0,
-        borderRadius: "5px",
-        border: "1px solid #555",
-        backgroundColor: "#222",
-        position: "absolute",
-        top: 0,
-        left: 0,
-        userSelect: "none"
-    },
-
-    // Style menu items
-    "itemStyle": {
-        fontSize: "16px",
-        padding: "2px 11px 2px 10px",
-        margin: 0,
-        color: "#ccc"
-    },
-
-    // Add items to menu
-    "addContent": () => {
-        let temp;
-
-        if (!window.hasOwnProperty("menuContent")) {
-            window["menuContent"] = [{
-                title: "Empty",
-                name: "empty"
-            }];
-        }
-
-        __menuConf.oldContent = menuContent.map(a => {
-            return a
-        });
-        __menuConf.menu.innerHTML = "";
-
-        for (let i = 0; i < __menuConf.oldContent.length; i++) {
-            if (__menuConf.oldContent[i] !== "<hr>") {
-                temp = __menuConf.item;
-                temp.id = "__menuItem" + i;
-                temp.setAttribute("onmouseover", `this.style.color="#fff"; this.style.backgroundColor="#333"`);
-                temp.setAttribute("onmouseout", `this.style.color="#ccc"; this.style.backgroundColor="#222"`);
-                temp.setAttribute("onclick", `itemClick("${__menuConf.oldContent[i].name}")`);
-                temp.innerHTML = __menuConf.oldContent[i].title;
-                __menuConf.menu.innerHTML += temp.outerHTML;
-            } else {
-                __menuConf.menu.innerHTML += `<hr style="border: none; height: 1px; background-color: #444">`;
-            }
+const ContextUtil = {
+    getProperty: function(options, opt, def){
+        if(typeof options[opt] !== "undefined"){
+            return options[opt];
+        }else{
+            return def;
         }
     },
 
-    // Run at lib-start
-    "startMenu": () => {
-        __menuConf.menu = document.createElement("div");
-        Object.assign(__menuConf.menu.style, __menuConf.menuStyle);
-        __menuConf.menuEvent();
+    getSizes: function(obj){
+        var lis = obj.getElementsByTagName('li');
 
-        __menuConf.item = document.createElement("p");
-        Object.assign(__menuConf.item.style, __menuConf.itemStyle);
+        var width_def = 0;
+        var height_def = 0;
 
-        __menuConf.addContent();
-        document.body.appendChild(__menuConf.menu);
+        for(var i = 0; i < lis.length; i++){
+            var li = lis[i];
 
-        if (!window.hasOwnProperty("itemClick")) {
-            // Triggered on click of an item
-            window["itemClick"] = (name) => {
-                itemClick(name);
-                console.warn(`( Menu.js ):\nMenu-item ${name} was clicked.\n***`);
-            }
-        }
-    },
-
-    // Triggered on contextmenu event
-    "menuEvent": (e, audioId) => {
-        this.audioId = audioId;
-        if (!window.hasOwnProperty("__menuEnabled")) {
-            window["__menuEnabled"] = true;
-        }
-
-        if (__menuEnabled) {
-            if (__menuConf.oldContent !== menuContent) {
-                __menuConf.oldContent = menuContent.splice();
+            if(li.offsetWidth > width_def){
+                width_def = li.offsetWidth;
             }
 
-            if (__menuConf.menuState) {
-                //add check here that will confirm if mouse is over audio item
-                openMenu(e);
-            } else {
-                closeMenu();
+            if(li.offsetHeight > height_def){
+                height_def = li.offsetHeight;
             }
         }
-    },
+
+        var width = width_def;
+        var height = height_def;
+
+        for(var i = 0; i < lis.length; i++){
+            var li = lis[i];
+
+            var ul = li.getElementsByTagName('ul');
+            if(typeof ul[0] !== "undefined"){
+                var ul_size = ContextUtil.getSizes(ul[0]);
+
+                if(width_def + ul_size.width > width){
+                    width = width_def + ul_size.width;
+                }
+
+                if(height_def + ul_size.height > height){
+                    height = height_def + ul_size.height;
+                }
+            }
+        }
+
+        return {
+            "width": width,
+            "height": height
+        };
+    }
 };
 
-// Open the menu
-function openMenu(e) {
-    __menuConf.menu.style.display = "block";
-    __menuConf.menu.style.top = e.clientY + "px";
-    __menuConf.menu.style.left = e.clientX + "px";
-}
-
-// Cleses the menu
-function closeMenu() {
-    __menuConf.menu.style.display = "none";
-}
-
 module.exports = {
-    __menuConf: __menuConf,
-    closeMenu: closeMenu
+    ContextMenu: ContextMenu
 }
-
-// // Starts the lib
-// window.addEventListener("load", __menuConf.startMenu, false);
 },{}],16:[function(require,module,exports){
 //Time scale definitions
 var DEFAULT_TIME_SCALE = 60;
@@ -3337,28 +3481,79 @@ function timeline(dataStore, dispatcher) {
 		}
 		return startX, endX, block, drawSnapMarker, blockNumber;
 	}
+	menuItems = [
+	  {
+	    "text": "Copy Item"
+	  },
+	  {
+	    "type": menu.ContextMenu.DIVIDER 
+	  },
+	  {
+	    "text": "Add Effect",
+	   	"sub": [
+	      {
+	        "text": "EQ",
+	        "events": {
+	        	"click": function(e){
+	        		effectHandler.renderEffectView("eq", self.currentAudio, null);
+	        	}
+	        }
+	      },
+	      {
+	        "text": "Volume Modulation"
+	      },
+	      {
+	      	"text": "High Pass Filter"
+	      },
+	      {
+	      	"text": "Low Pass Filter"
+	      },
+	      {
+	      	"text": "Pitch Shift"
+	      },
+	      {
+	      	"text": "Tempo Modulation"
+	      }
+	    ]
+	  },
+	  {
+	    "type": menu.ContextMenu.DIVIDER 
+	  },
+	  {
+	  	"text": "Create Clip"
+	  },
+	  {
+	    "type": menu.ContextMenu.DIVIDER 
+	  },
+	  {
+	  	"text": "Delete Audio",
+	  	"events": {
+	  		"click": function(e){
+	  			effectHandler.removeAudio(self.currentAudio);
+	  		}
+	  	}
+	  },
+	  {
+	    "type": menu.ContextMenu.DIVIDER 
+	  },
+	  {
+	  	"text": "Adjust Bar Markers"
+	  }
+	];
 
-	__menuConf = menu.__menuConf;
-	__menuConf.startMenu();
-
+	var menuItem = new menu.ContextMenu(menuItems);
 	// Contextmenu-eventlistener
 	canvas.addEventListener("contextmenu", function(e){
+		console.log("Content menu");
 		currentX = ((e.clientX - bounds.left)/dpr + (frame_start * time_scale));
 		currentY = (e.clientY - bounds.top)/dpr;
 
 		for (var i = 0; i < renderItems.length; i++){
 			if (renderItems[i].contains(currentX, currentY, time_scale, frame_start)) {
-			    e.preventDefault();
-			    __menuConf.menuState = !__menuConf.menuState;
-			    __menuConf.menuEvent(e, renderItems[i].id);
+				self.currentAudio = renderItems[i];
+				menuItem.display(e, undefined);
 			}
 		}
-	}, false);
-
-	// Click-eventlistener
-	document.addEventListener("click", () => {
-	    __menuConf.menuState = false;
-	    menu.closeMenu(); //lets move this function insde __menuConf
 	}, false);
 
 	//mousemove eventListener to handle cursor changing to pointer upon hovering over a draggable item

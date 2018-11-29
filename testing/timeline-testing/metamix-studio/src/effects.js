@@ -75,6 +75,30 @@ function effectHandler(dataStore, renderItems, canvas, dpr, overwriteCursor, bou
 		$('#eqKnob23').val(value23).trigger('change');
 	}
 
+	function refreshBarMarkers(markers){
+		button = document.getElementById("barDownStart");
+		button.barMarkers = markers;
+		button.counter = 0;
+
+		button = document.getElementById("barUpStart");
+		button.barMarkers = markers;
+		button.counter = 0;
+
+		button = document.getElementById("barDownEnd");
+		button.barMarkers = markers;
+		button.counter = 0;
+
+		button = document.getElementById("barUpEnd");
+		button.barMarkers = markers;
+		button.counter = 0;
+
+		counterStart = document.getElementById("barStartCounter");
+		counterStart.innerHTML = 0;
+
+		counterEnd = document.getElementById("barEndCounter");
+		counterEnd.innerHTML = 0;
+	}
+
 	function renderEffectView(type, audioItem, effect){
 		switch(type){
 			case "cut":
@@ -91,6 +115,7 @@ function effectHandler(dataStore, renderItems, canvas, dpr, overwriteCursor, bou
 					updateEqKnobs(effect["high"]["start"], effect["mid"]["start"], effect["low"]["start"], 
 								  effect["high"]["target"], effect["mid"]["target"], effect["low"]["target"], 
 								  effect["id"], audioItem.id);
+					refreshBarMarkers(audioItem.barMarkers);
 
 					sc = document.getElementById("strengthCurveEQ");
 					sc.value = effect["strength_curve"];
@@ -120,6 +145,7 @@ function effectHandler(dataStore, renderItems, canvas, dpr, overwriteCursor, bou
 								   "low": {'start': null, 'target': 0}, "strength_curve": "continous"})
 
 					updateEqKnobs(0, 0, 0, 0, 0, 0, id, audioItem.id);
+					refreshBarMarkers(audioItem.barMarkers);
 
 					sc = document.getElementById("strengthCurveEQ");
 					sc.value = "continous";

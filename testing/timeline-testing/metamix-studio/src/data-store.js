@@ -45,7 +45,6 @@ function DataStore() {
 		for (var i in this.data) 
 			if (this.data[i].id == audioId){
 				this.data[i]["effects"].push(effectObject)
-				console.log("new effect data", this.data[i])
 				break;
 			}
 	}

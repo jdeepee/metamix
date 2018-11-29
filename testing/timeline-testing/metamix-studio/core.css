@@ -1,4 +1,8 @@
 /* Modal styles */
+.column-input-container{
+  display: flex;
+  flex-direction: column;
+}
 
 .cm_container{
   position: fixed;

@@ -1533,7 +1533,14 @@ AudioItem.prototype.effectGlow = function(){
 AudioItem.prototype.drawEffectCurve = function(ctx, start, target, type, startX, endX, strengthCurve, id){
 		//currently start/target only works for phase 1 of effect - this should be able to handle effects which have multiple start/targets - 
 	//maybe this means drawing multiple curves?
-	if (start != 0 && target != 0){
+	//console.log("Draw effect curve for", start, target)
+	if (start != null || target != null){
+		if ((target == null || target == 0) && strengthCurve == "continous"){
+			target = start;
+
+		} else if (target == null || target == 0 && strengthCurve != "continous"){
+			target = 0;
+		}
 		var effectStartRatio, effectEndRatio;
 		out = effectUtils.computeHighLow(start, target, type);
 		effectStartRatio = out[0];
@@ -1552,7 +1559,6 @@ AudioItem.prototype.drawEffectCurve = function(ctx, start, target, type, startX,
 
 		if (strengthCurve == "linear"){
 			this.curveValues.push({x0: startX, y0: effectStartY, x1: endX, y1: effectEndY, id: id, type: type});
-			console.log(this.curveValues)
 			ctx.moveTo(effect["startX"], effectStartY);
 			ctx.lineTo(effect["endX"], effectEndY)
 			ctx.stroke();
@@ -1569,8 +1575,8 @@ AudioItem.prototype.drawEffectCurve = function(ctx, start, target, type, startX,
 AudioItem.prototype.paintEffects = function(ctx) {
 	//Iterate over effects and paint them on the audio item - in theme define some basic temporary colour scheme/symbols which can signify different effects
 	//So for example yellow = eq, red = volume. etc. Currently only two supported strength_curves on backend: continous and linear - just build these for now
-	//Y position on the audio item should indicate the start/target values of the effect
-	ctx.lineWidth = 2;
+	//Y position on the audio item should indicate the start/target values of the effects
+	//console.log("Effects", this.effects);
 	for (var i=0; i<this.effects.length; i++){
 		effect = this.effects[i];
 		if (effect["endX"] - effect["startX"] > 5){
@@ -1579,18 +1585,18 @@ AudioItem.prototype.paintEffects = function(ctx) {
 									 effect["startX"], effect["endX"], effect["strength_curve"], effect["id"]);
 
 			} else {
-				if (effect["high"]["start"] != 0 && effect["high"]["target"] != 0){
+				if (effect["high"]["start"] != 0 || effect["high"]["target"] != 0){
 					this.drawEffectCurve(ctx, effect["high"]["start"], effect["high"]["target"], effect["type"], 
 										 effect["startX"], effect["endX"], effect["strength_curve"], effect["id"]);
-				} 
-				if (effect["mid"]["start"] != 0 && effect["mid"]["target"] != 0){
+				}
+				if (effect["mid"]["start"] != 0 || effect["mid"]["target"] != 0){
 					this.drawEffectCurve(ctx, effect["mid"]["start"], effect["mid"]["target"], effect["type"], 
 										 effect["startX"], effect["endX"], effect["strength_curve"], effect["id"]);
 				}
-				if (effect["low"]["start"] != 0 && effect["low"]["target"] != 0){
+				if (effect["low"]["start"] != 0 || effect["low"]["target"] != 0){
 					this.drawEffectCurve(ctx, effect["low"]["start"], effect["low"]["target"], effect["type"], 
 										 effect["startX"], effect["endX"], effect["strength_curve"], effect["id"]);
-				}
+			}
 			}
 		}
 	}
@@ -1723,18 +1729,16 @@ function DataStore() {
 	this.addEffect = function addEffect(audioId, effectObject) {
 		for (var i in this.data) 
 			if (this.data[i].id == audioId){
-				this.data[i].effects.push(effectObject)
+				this.data[i]["effects"].push(effectObject)
 				break;
 			}
 	}
 
 	this.getEffect = function getEffect(audioId, effectId){
-		console.log("Getting effect on", audioId, effectId);
 		for (var i in this.data){
 			if (this.data[i].id == audioId){
 				for (var i2 in this.data[i]['effects']){
 					if (this.data[i]["effects"][i2].id == effectId){
-						console.log(this.data[i]["effects"][i2]);
 						return this.data[i].effects[i2];
 					}
 				}
@@ -1742,7 +1746,8 @@ function DataStore() {
 		}
 	}
 
-	this.updateEffect = function updateEffect(audioId, effectId, effectObject) {
+	this.updateEffect = function updateEffect(audioId, effectObject) {
+		effectId = effectObject.id;
 		for (var i in this.data){
 			if (this.data[i].id == audioId){
 				for (var i2 in this.data[i].effects){
@@ -1893,12 +1898,6 @@ function effectHandler(dataStore, renderItems, canvas, dpr, overwriteCursor, bou
 	}
 
 	function updateEqKnobs(value1, value2, value3, value21, value22, value23, id, audioId){
-		$('#eqKnob1').val(value1).trigger('change');
-		$('#eqKnob2').val(value2).trigger('change');
-		$('#eqKnob3').val(value3).trigger('change');
-		$('#eqKnob21').val(value21).trigger('change');
-		$('#eqKnob22').val(value22).trigger('change');
-		$('#eqKnob23').val(value23).trigger('change');
 		knob = document.getElementById("eqKnob1");
 		knob.effectId = id;
 		knob.audioId = audioId;
@@ -1917,6 +1916,37 @@ function effectHandler(dataStore, renderItems, canvas, dpr, overwriteCursor, bou
 		knob = document.getElementById("eqKnob23");
 		knob.effectId = id;
 		knob.audioId = audioId;
+
+		$('#eqKnob1').val(value1).trigger('change');
+		$('#eqKnob2').val(value2).trigger('change');
+		$('#eqKnob3').val(value3).trigger('change');
+		$('#eqKnob21').val(value21).trigger('change');
+		$('#eqKnob22').val(value22).trigger('change');
+		$('#eqKnob23').val(value23).trigger('change');
+	}
+
+	function addBarMarkers(markers){
+		button = document.getElementById("barDownStart");
+		button.barMarkers = markers;
+		button.counter = 0;
+
+		button = document.getElementById("barUpStart");
+		button.barMarkers = markers;
+		button.counter = 0;
+
+		button = document.getElementById("barDownEnd");
+		button.barMarkers = markers;
+		button.counter = 0;
+
+		button = document.getElementById("barUpEnd");
+		button.barMarkers = markers;
+		button.counter = 0;
+
+		counterStart = document.getElementById("barStartCounter");
+		counterStart.innerHTML = 0;
+
+		counterEnd = document.getElementById("barEndCounter");
+		counterEnd.innerHTML = 0;
 	}
 
 	function renderEffectView(type, audioItem, effect){
@@ -1935,6 +1965,7 @@ function effectHandler(dataStore, renderItems, canvas, dpr, overwriteCursor, bou
 					updateEqKnobs(effect["high"]["start"], effect["mid"]["start"], effect["low"]["start"], 
 								  effect["high"]["target"], effect["mid"]["target"], effect["low"]["target"], 
 								  effect["id"], audioItem.id);
+					addBarMarkers(audioItem.barMarkers);
 
 					sc = document.getElementById("strengthCurveEQ");
 					sc.value = effect["strength_curve"];
@@ -1959,7 +1990,12 @@ function effectHandler(dataStore, renderItems, canvas, dpr, overwriteCursor, bou
 				} else {
 					//Refresh inputs - this is a fresh effect
 					var id = utils.guid();
+					dataStore.addEffect(audioItem.id, {"id": id, "type": "eq", "start": 0, "end": 0, 
+								   "high": {"start": null, "target": 0}, "mid": {"start": null, "target": 0},
+								   "low": {'start': null, 'target': 0}, "strength_curve": "continous"})
+
 					updateEqKnobs(0, 0, 0, 0, 0, 0, id, audioItem.id);
+					addBarMarkers(audioItem.barMarkers);
 
 					sc = document.getElementById("strengthCurveEQ");
 					sc.value = "continous";
@@ -2012,20 +2048,31 @@ function effectHandler(dataStore, renderItems, canvas, dpr, overwriteCursor, bou
 	}
 
 	function updateEffectStart(audioId, effectId, start){
-		console.log("Effect update start req", audioId, effectId, start);
+		//console.log("Effect start update", audioId, effectId, start);
+		effect = dataStore.getEffect(audioId, effectId);
+		effect["start"] = start;
+		dataStore.updateEffect(audioId, effect);
 	}
 
 	function updateEffectEnd(audioId, effectId, end){
-		console.log("Effect end req", audioId, effectId, end);
-
+		//console.log("Effect end update", audioId, effectId, end);
+		effect = dataStore.getEffect(audioId, effectId);
+		effect["end"] = end;
+		dataStore.updateEffect(audioId, effect);
 	}
 
 	function updateStrengthCurve(audioId, effectId, strengthCurve){
-		console.log("Effect strengthCurve req", audioId, effectId, strengthCurve);
+		//console.log("Effect curve update", audioId, effectId, strengthCurve);
+		effect = dataStore.getEffect(audioId, effectId);
+		effect["strength_curve"] = strengthCurve;
+		dataStore.updateEffect(audioId, effect);
 	}
 
-	function eqEffect(audioId, effectId, value, type){
-		console.log("Effect Knob update", audioId, effectId, value, type);
+	function eqEffect(audioId, effectId, value, type, position){
+		//console.log("Effect data update", audioId, effectId, value, type, position);
+		effect = dataStore.getEffect(audioId, effectId);
+		effect[type][position] = value;
+		dataStore.updateEffect(audioId, effect);
 	}
 
 	function volumeEffect(){
@@ -2054,7 +2101,6 @@ function effectHandler(dataStore, renderItems, canvas, dpr, overwriteCursor, bou
 	}
 
 	function removeAudio(audio){
-		console.log("Removing audio with ID", audio.id);
 		dataStore.deleteData(audio.id);
 		renderItems = utils.removeFromArrayById(renderItems, audio.id);
 	}
@@ -2508,6 +2554,14 @@ module.exports = {
 require("jquery-knob");
 
 function renderEqView(start, end, value1, value2, value3, value21, value22, value23, wrapper, effectHandler, dataStore){
+	columnInputContainer = document.createElement("div");
+	columnInputContainer.id = "eqColumnInputContainer";
+	columnInputContainer.classList.add("column-input-container");
+
+	barInputContainer = document.createElement("div");
+	barInputContainer.id = "eqBarInputContainer";
+	barInputContainer.classList.add("input-container");
+
 	inputContainer = document.createElement("div");
 	inputContainer.id = "eqInputContainer";
 	inputContainer.classList.add("input-container");
@@ -2544,7 +2598,101 @@ function renderEqView(start, end, value1, value2, value3, value21, value22, valu
 		dataStore.updateUi("lastEnd", this.value);
 	}
 	inputContainer.appendChild(endInput);
-	wrapper.appendChild(inputContainer);
+
+	barDownStart = document.createElement("button");
+	barDownStart.innerHTML = "&#8595;"
+	barDownStart.counter = 0;
+	barDownStart.barMarkers = [];
+	barDownStart.id = "barDownStart";
+
+	barUpStart = document.createElement("button");
+	barUpStart.innerHTML = "&#8593;";
+	barUpStart.id = "barUpStart";
+	barUpStart.counter = 0;
+	barUpStart.barMarkers = [];
+
+	counter = document.createElement("p");
+	counter.id = "barStartCounter";
+	counter.innerHTML = 0;
+
+	barDownStart.onclick = function(){
+		barIndex = this.counter - 1;
+		barValue = this.barMarkers[barIndex];
+		if (barValue != undefined){
+			this.counter = barIndex;
+			barUpStart.counter = barIndex;
+
+			counter.innerHTML = barIndex;
+			startInput.value = barValue;
+			startInput.oninput();
+		}
+	}
+
+	barUpStart.onclick = function(){
+		barIndex = this.counter + 1;
+		barValue = this.barMarkers[barIndex-1];
+		if (barValue != undefined){
+			this.counter = barIndex;
+			barDownStart.counter = barIndex;
+
+			counter.innerHTML = barIndex;
+			startInput.value = barValue;
+			startInput.oninput();
+		}
+	}
+
+	barDownEnd = document.createElement("button");
+	barDownEnd.innerHTML = "&#8595;"
+	barDownEnd.counter = 0;
+	barDownEnd.barMarkers = [];
+	barDownEnd.id = "barDownEnd";
+
+	barUpEnd = document.createElement("button");
+	barUpEnd.innerHTML = "&#8593;";
+	barUpEnd.counter = 0;
+	barUpEnd.barMarkers = [];
+	barUpEnd.id = "barUpEnd";
+
+	counter2 = document.createElement("p");
+	counter2.id = "barEndCounter";
+	counter2.innerHTML = 0;
+
+	barDownEnd.onclick = function(){
+		barIndex = this.counter - 1;
+		barValue = this.barMarkers[barIndex];
+		if (barValue != undefined){
+			this.counter = barIndex;
+			barUpEnd.counter = barIndex;
+
+			counter2.innerHTML = barIndex;
+			endInput.value = barValue;
+			endInput.oninput();
+		}
+	}
+
+	barUpEnd.onclick = function(){
+		barIndex = this.counter + 1;
+		barValue = this.barMarkers[barIndex-1];
+		if (barValue != undefined){
+			this.counter = barIndex;
+			barDownEnd.counter = barIndex;
+
+			counter2.innerHTML = barIndex;
+			endInput.value = barValue;
+			endInput.oninput();
+		}
+	}
+
+	barInputContainer.appendChild(barDownStart);
+	barInputContainer.appendChild(counter);
+	barInputContainer.appendChild(barUpStart);
+	barInputContainer.appendChild(barDownEnd);
+	barInputContainer.appendChild(counter2);
+	barInputContainer.appendChild(barUpEnd);
+	columnInputContainer.appendChild(barInputContainer);
+	columnInputContainer.appendChild(inputContainer);
+
+	wrapper.appendChild(columnInputContainer);
 
 	heading = document.createElement('h4');
 	heading.innerHTML = "Highs";
@@ -2620,24 +2768,24 @@ function renderEqView(start, end, value1, value2, value3, value21, value22, valu
 		'bgColor': "black",
 		'fgColor': '#4286f4',
 		'dynamicDraw': true,   
-		'release' : function (v) { effectHandler.eqEffect(this.$.context.audioId, this.$.context.effectId, v, "highs")}
+		'release' : function (v) { effectHandler.eqEffect(this.$.context.audioId, this.$.context.effectId, v, "high", "start")}
 	}
 
 	$("#eqKnob1").knob(knobParams);
 	delete knobParams["release"];
-	knobParams['release'] = function(v){ effectHandler.eqEffect(this.$.context.audioId, this.$.context.effectId, v, "mids")};
+	knobParams['release'] = function(v){ effectHandler.eqEffect(this.$.context.audioId, this.$.context.effectId, v, "mid", "start")};
 	$("#eqKnob2").knob(knobParams);
 	delete knobParams["release"];
-	knobParams['release'] = function(v){ effectHandler.eqEffect(this.$.context.audioId, this.$.context.effectId, v, "lows")};
+	knobParams['release'] = function(v){ effectHandler.eqEffect(this.$.context.audioId, this.$.context.effectId, v, "low", "start")};
 	$("#eqKnob3").knob(knobParams);
 	delete knobParams['release'];
-	knobParams['release'] = function(v){ effectHandler.eqEffect(this.$.context.audioId, this.$.context.effectId, v, "highsTarget")};
+	knobParams['release'] = function(v){ effectHandler.eqEffect(this.$.context.audioId, this.$.context.effectId, v, "high", "target")};
 	$("#eqKnob21").knob(knobParams);
 	delete knobParams['release'];
-	knobParams['release'] = function(v){ effectHandler.eqEffect(this.$.context.audioId, this.$.context.effectId, v, "midsTarget")};
+	knobParams['release'] = function(v){ effectHandler.eqEffect(this.$.context.audioId, this.$.context.effectId, v, "mid", "target")};
 	$("#eqKnob22").knob(knobParams);
 	delete knobParams['release']
-	knobParams['release'] = function(v){ effectHandler.eqEffect(this.$.context.audioId, this.$.context.effectId, v, "lowsTarget")};
+	knobParams['release'] = function(v){ effectHandler.eqEffect(this.$.context.audioId, this.$.context.effectId, v, "low", "target")};
 	$("#eqKnob23").knob(knobParams);
 }
 

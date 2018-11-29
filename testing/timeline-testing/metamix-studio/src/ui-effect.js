@@ -1,6 +1,14 @@
 require("jquery-knob");
 
 function renderEqView(start, end, value1, value2, value3, value21, value22, value23, wrapper, effectHandler, dataStore){
+	columnInputContainer = document.createElement("div");
+	columnInputContainer.id = "eqColumnInputContainer";
+	columnInputContainer.classList.add("column-input-container");
+
+	barInputContainer = document.createElement("div");
+	barInputContainer.id = "eqBarInputContainer";
+	barInputContainer.classList.add("input-container");
+
 	inputContainer = document.createElement("div");
 	inputContainer.id = "eqInputContainer";
 	inputContainer.classList.add("input-container");
@@ -37,7 +45,101 @@ function renderEqView(start, end, value1, value2, value3, value21, value22, valu
 		dataStore.updateUi("lastEnd", this.value);
 	}
 	inputContainer.appendChild(endInput);
-	wrapper.appendChild(inputContainer);
+
+	barDownStart = document.createElement("button");
+	barDownStart.innerHTML = "&#8595;"
+	barDownStart.counter = 0;
+	barDownStart.barMarkers = [];
+	barDownStart.id = "barDownStart";
+
+	barUpStart = document.createElement("button");
+	barUpStart.innerHTML = "&#8593;";
+	barUpStart.id = "barUpStart";
+	barUpStart.counter = 0;
+	barUpStart.barMarkers = [];
+
+	counter = document.createElement("p");
+	counter.id = "barStartCounter";
+	counter.innerHTML = 0;
+
+	barDownStart.onclick = function(){
+		barIndex = this.counter - 1;
+		barValue = this.barMarkers[barIndex];
+		if (barValue != undefined){
+			this.counter = barIndex;
+			barUpStart.counter = barIndex;
+
+			counter.innerHTML = barIndex;
+			startInput.value = barValue;
+			startInput.oninput();
+		}
+	}
+
+	barUpStart.onclick = function(){
+		barIndex = this.counter + 1;
+		barValue = this.barMarkers[barIndex-1];
+		if (barValue != undefined){
+			this.counter = barIndex;
+			barDownStart.counter = barIndex;
+
+			counter.innerHTML = barIndex;
+			startInput.value = barValue;
+			startInput.oninput();
+		}
+	}
+
+	barDownEnd = document.createElement("button");
+	barDownEnd.innerHTML = "&#8595;"
+	barDownEnd.counter = 0;
+	barDownEnd.barMarkers = [];
+	barDownEnd.id = "barDownEnd";
+
+	barUpEnd = document.createElement("button");
+	barUpEnd.innerHTML = "&#8593;";
+	barUpEnd.counter = 0;
+	barUpEnd.barMarkers = [];
+	barUpEnd.id = "barUpEnd";
+
+	counter2 = document.createElement("p");
+	counter2.id = "barEndCounter";
+	counter2.innerHTML = 0;
+
+	barDownEnd.onclick = function(){
+		barIndex = this.counter - 1;
+		barValue = this.barMarkers[barIndex];
+		if (barValue != undefined){
+			this.counter = barIndex;
+			barUpEnd.counter = barIndex;
+
+			counter2.innerHTML = barIndex;
+			endInput.value = barValue;
+			endInput.oninput();
+		}
+	}
+
+	barUpEnd.onclick = function(){
+		barIndex = this.counter + 1;
+		barValue = this.barMarkers[barIndex-1];
+		if (barValue != undefined){
+			this.counter = barIndex;
+			barDownEnd.counter = barIndex;
+
+			counter2.innerHTML = barIndex;
+			endInput.value = barValue;
+			endInput.oninput();
+		}
+	}
+
+	barInputContainer.appendChild(barDownStart);
+	barInputContainer.appendChild(counter);
+	barInputContainer.appendChild(barUpStart);
+	barInputContainer.appendChild(barDownEnd);
+	barInputContainer.appendChild(counter2);
+	barInputContainer.appendChild(barUpEnd);
+	columnInputContainer.appendChild(barInputContainer);
+	columnInputContainer.appendChild(inputContainer);
+
+	wrapper.appendChild(columnInputContainer);
 
 	heading = document.createElement('h4');
 	heading.innerHTML = "Highs";

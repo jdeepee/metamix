@@ -44,7 +44,7 @@ function renderEqView(start, end, value1, value2, value3, value21, value22, valu
 
 	knob1 = document.createElement("input");
 	knob1.id = "eqKnob1";
-	knob1.setAttribute("data-cursor", true);
+	knob1.setAttribute("data-cursor", "10");
 	knob1.setAttribute("value", value1);
 	knob1.setAttribute("data-thickness", 0.25);
 	// knob1.setAttribute("data-font", "Advanced LED Board-7")
@@ -55,7 +55,7 @@ function renderEqView(start, end, value1, value2, value3, value21, value22, valu
 	heading.innerHTML = "Mids";
 	knob2 = document.createElement("input");
 	knob2.id = "eqKnob2";
-	knob2.setAttribute("data-cursor", true);
+	knob2.setAttribute("data-cursor", "10");
 	knob2.setAttribute("value", value2);
 	knob2.setAttribute("data-thickness", 0.25);
 	eqContainer.appendChild(heading);
@@ -65,7 +65,7 @@ function renderEqView(start, end, value1, value2, value3, value21, value22, valu
 	heading.innerHTML = "Lows";
 	knob3 = document.createElement("input");
 	knob3.id = "eqKnob3";
-	knob3.setAttribute("data-cursor", true);
+	knob3.setAttribute("data-cursor", "10");
 	knob3.setAttribute("value", value3);
 	knob3.setAttribute("data-thickness", 0.25);
 	eqContainer.appendChild(heading);
@@ -75,7 +75,7 @@ function renderEqView(start, end, value1, value2, value3, value21, value22, valu
 	heading.innerHTML = "Highs";
 	knob1 = document.createElement("input");
 	knob1.id = "eqKnob21";
-	knob1.setAttribute("data-cursor", true);
+	knob1.setAttribute("data-cursor", "10");
 	knob1.setAttribute("value", value21);
 	knob1.setAttribute("data-thickness", 0.25);
 	eqContainer2.append(heading);
@@ -85,7 +85,7 @@ function renderEqView(start, end, value1, value2, value3, value21, value22, valu
 	heading.innerHTML = "Mids";
 	knob2 = document.createElement("input");
 	knob2.id = "eqKnob22";
-	knob2.setAttribute("data-cursor", true);
+	knob2.setAttribute("data-cursor", "10");
 	knob2.setAttribute("value", value22);
 	knob2.setAttribute("data-thickness", 0.25);
 	eqContainer2.appendChild(heading);
@@ -95,7 +95,7 @@ function renderEqView(start, end, value1, value2, value3, value21, value22, valu
 	heading.innerHTML = "Lows";
 	knob3 = document.createElement("input");
 	knob3.id = "eqKnob23";
-	knob3.setAttribute("data-cursor", true);
+	knob3.setAttribute("data-cursor", "10");
 	knob3.setAttribute("value", value23);
 	knob3.setAttribute("data-thickness", 0.25);
 	eqContainer2.appendChild(heading);
@@ -112,24 +112,25 @@ function renderEqView(start, end, value1, value2, value3, value21, value22, valu
 		'height': "300%",
 		'bgColor': "black",
 		'fgColor': '#4286f4',
-		'release' : function (v) { effectHandler.eqEffect(this.$.context.audioId, this.$.context.effectId, v, "highs")}
+		'dynamicDraw': true,   
+		'release' : function (v) { effectHandler.eqEffect(this.$.context.audioId, this.$.context.effectId, v, "high", "start")}
 	}
 
 	$("#eqKnob1").knob(knobParams);
 	delete knobParams["release"];
-	knobParams['release'] = function(v){ effectHandler.eqEffect(this.$.context.audioId, this.$.context.effectId, v, "mids")};
+	knobParams['release'] = function(v){ effectHandler.eqEffect(this.$.context.audioId, this.$.context.effectId, v, "mid", "start")};
 	$("#eqKnob2").knob(knobParams);
 	delete knobParams["release"];
-	knobParams['release'] = function(v){ effectHandler.eqEffect(this.$.context.audioId, this.$.context.effectId, v, "lows")};
+	knobParams['release'] = function(v){ effectHandler.eqEffect(this.$.context.audioId, this.$.context.effectId, v, "low", "start")};
 	$("#eqKnob3").knob(knobParams);
 	delete knobParams['release'];
-	knobParams['release'] = function(v){ effectHandler.eqEffect(this.$.context.audioId, this.$.context.effectId, v, "highsTarget")};
+	knobParams['release'] = function(v){ effectHandler.eqEffect(this.$.context.audioId, this.$.context.effectId, v, "high", "target")};
 	$("#eqKnob21").knob(knobParams);
 	delete knobParams['release'];
-	knobParams['release'] = function(v){ effectHandler.eqEffect(this.$.context.audioId, this.$.context.effectId, v, "midsTarget")};
+	knobParams['release'] = function(v){ effectHandler.eqEffect(this.$.context.audioId, this.$.context.effectId, v, "mid", "target")};
 	$("#eqKnob22").knob(knobParams);
 	delete knobParams['release']
-	knobParams['release'] = function(v){ effectHandler.eqEffect(this.$.context.audioId, this.$.context.effectId, v, "lowsTarget")};
+	knobParams['release'] = function(v){ effectHandler.eqEffect(this.$.context.audioId, this.$.context.effectId, v, "low", "target")};
 	$("#eqKnob23").knob(knobParams);
 }
 

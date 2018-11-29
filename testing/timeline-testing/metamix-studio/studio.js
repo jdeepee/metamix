@@ -1530,19 +1530,16 @@ AudioItem.prototype.effectGlow = function(){
 	this.drawSelectGlow = true;
 }
 
-AudioItem.prototype.drawEffectCurve = function(ctx, start, target, type, startX, endX, strengthCurve){
+AudioItem.prototype.drawEffectCurve = function(ctx, start, target, type, startX, endX, strengthCurve, id){
 		//currently start/target only works for phase 1 of effect - this should be able to handle effects which have multiple start/targets - 
 	//maybe this means drawing multiple curves?
 	if (start != 0 && target != 0){
-		console.log("Inputs", start, target);
 		var effectStartRatio, effectEndRatio;
 		out = effectUtils.computeHighLow(start, target, type);
 		effectStartRatio = out[0];
 		effectEndRatio = out[1];
-		console.log("Ratio out", out);
 		effectStartY = this.y + this.y2 - effectStartRatio * this.ratio;
 		effectEndY = this.y + this.y2 - effectEndRatio * this.ratio;
-		console.log("Y values", effectStartY, effectEndY);
 
 		ctx.strokeStyle = Theme.effectColours[effect["type"]];
 		ctx.beginPath();
@@ -1554,14 +1551,14 @@ AudioItem.prototype.drawEffectCurve = function(ctx, start, target, type, startX,
 		ctx.stroke();
 
 		if (strengthCurve == "linear"){
-			console.log("Drawing linear effect");
-			this.curveValues.push({x0: startX, y0: effectStartY, x1: endX, y1: effectEndY});
+			this.curveValues.push({x0: startX, y0: effectStartY, x1: endX, y1: effectEndY, id: id, type: type});
+			console.log(this.curveValues)
 			ctx.moveTo(effect["startX"], effectStartY);
 			ctx.lineTo(effect["endX"], effectEndY)
 			ctx.stroke();
 
 		} else if (strengthCurve == "continous"){
-			this.curveValues.push({x0: startX, y0: effectStartY, x1: endX, y1: effectEndY});
+			this.curveValues.push({x0: startX, y0: effectStartY, x1: endX, y1: effectEndY, id: id, type: type});
 			ctx.moveTo(startX, effectEndY);
 			ctx.lineTo(endX, effectEndY)
 			ctx.stroke();
@@ -1578,20 +1575,21 @@ AudioItem.prototype.paintEffects = function(ctx) {
 		effect = this.effects[i];
 		if (effect["endX"] - effect["startX"] > 5){
 			if (effect["type"] != "eq"){
-				this.drawEffectCurve(ctx, effect["params"]["start"], effect["params"]["target"], effect["type"], effect["startX"], effect["endX"], effect["strength_curve"]);
+				this.drawEffectCurve(ctx, effect["params"]["start"], effect["params"]["target"], effect["type"], 
+									 effect["startX"], effect["endX"], effect["strength_curve"], effect["id"]);
 
 			} else {
 				if (effect["high"]["start"] != 0 && effect["high"]["target"] != 0){
-					console.log("Draw high curve");
-					this.drawEffectCurve(ctx, effect["high"]["start"], effect["high"]["target"], effect["type"], effect["startX"], effect["endX"], effect["strength_curve"]);
+					this.drawEffectCurve(ctx, effect["high"]["start"], effect["high"]["target"], effect["type"], 
+										 effect["startX"], effect["endX"], effect["strength_curve"], effect["id"]);
 				} 
 				if (effect["mid"]["start"] != 0 && effect["mid"]["target"] != 0){
-					console.log("Draw mid curve");
-					this.drawEffectCurve(ctx, effect["mid"]["start"], effect["mid"]["target"], effect["type"], effect["startX"], effect["endX"], effect["strength_curve"]);
+					this.drawEffectCurve(ctx, effect["mid"]["start"], effect["mid"]["target"], effect["type"], 
+										 effect["startX"], effect["endX"], effect["strength_curve"], effect["id"]);
 				}
 				if (effect["low"]["start"] != 0 && effect["low"]["target"] != 0){
-					console.log("Draw low curve");
-					this.drawEffectCurve(ctx, effect["low"]["start"], effect["low"]["target"], effect["type"], effect["startX"], effect["endX"], effect["strength_curve"]);
+					this.drawEffectCurve(ctx, effect["low"]["start"], effect["low"]["target"], effect["type"], 
+										 effect["startX"], effect["endX"], effect["strength_curve"], effect["id"]);
 				}
 			}
 		}
@@ -1654,7 +1652,7 @@ AudioItem.prototype.containsEffect = function(x, y){
 		// mouseX=parseInt(e.clientX-offsetX);
 		// mouseY=parseInt(e.clientY-offsetY);
 		if(x<line.x0 || y>line.x1){
-		  return;          
+		  	return;          
 		}
 		var linepoint=utils.linepointNearestMouse(line,x,y);
 		var dx=x-linepoint.x;
@@ -1662,10 +1660,8 @@ AudioItem.prototype.containsEffect = function(x, y){
 		var distance=Math.abs(Math.sqrt(dx*dx+dy*dy));
 		tolerance = 3;
 		if(distance<tolerance){
-			return true;
+			return line;
 
-		} else {
-			return false;
 		}
 	}
 	return false;
@@ -1730,6 +1726,20 @@ function DataStore() {
 				this.data[i].effects.push(effectObject)
 				break;
 			}
+	}
+
+	this.getEffect = function getEffect(audioId, effectId){
+		console.log("Getting effect on", audioId, effectId);
+		for (var i in this.data){
+			if (this.data[i].id == audioId){
+				for (var i2 in this.data[i]['effects']){
+					if (this.data[i]["effects"][i2].id == effectId){
+						console.log(this.data[i]["effects"][i2]);
+						return this.data[i].effects[i2];
+					}
+				}
+			}
+		}
 	}
 
 	this.updateEffect = function updateEffect(audioId, effectId, effectObject) {
@@ -1883,12 +1893,12 @@ function effectHandler(dataStore, renderItems, canvas, dpr, overwriteCursor, bou
 	}
 
 	function updateEqKnobs(value1, value2, value3, value21, value22, value23, id, audioId){
-		$('#eqKnob1').val(value1);
-		$('#eqKnob2').val(value2);
-		$('#eqKnob3').val(value3);
-		$('#eqKnob21').val(value21);
-		$('#eqKnob22').val(value22);
-		$('#eqKnob23').val(value23);
+		$('#eqKnob1').val(value1).trigger('change');
+		$('#eqKnob2').val(value2).trigger('change');
+		$('#eqKnob3').val(value3).trigger('change');
+		$('#eqKnob21').val(value21).trigger('change');
+		$('#eqKnob22').val(value22).trigger('change');
+		$('#eqKnob23').val(value23).trigger('change');
 		knob = document.getElementById("eqKnob1");
 		knob.effectId = id;
 		knob.audioId = audioId;
@@ -1921,6 +1931,7 @@ function effectHandler(dataStore, renderItems, canvas, dpr, overwriteCursor, bou
 
 				if (effect != null){
 					//Set inputs to values of effect 
+					effect = dataStore.getEffect(audioItem.id, effect.id)
 					updateEqKnobs(effect["high"]["start"], effect["mid"]["start"], effect["low"]["start"], 
 								  effect["high"]["target"], effect["mid"]["target"], effect["low"]["target"], 
 								  effect["id"], audioItem.id);
@@ -1929,6 +1940,11 @@ function effectHandler(dataStore, renderItems, canvas, dpr, overwriteCursor, bou
 					sc.value = effect["strength_curve"];
 					sc.effectId = effect["id"];
 					sc.audioId = audioItem.id;
+
+					if (effect["strength_curve"] != "continous"){
+						div = document.getElementById("eqContainer2");
+						div.style.display = "block";
+					}
 
 					start = document.getElementById("eqStart");
 					start.value = effect['start'];
@@ -2064,10 +2080,8 @@ function computeHighLow(start, end, type){
 	} else {
 		offset = -bounds["startMin"]
 	}
-	console.log(offset);
 
 	max = bounds["startMax"] + offset
-	console.log(max);
 	startOff = start + offset;
 	endOffset = end + offset;
 
@@ -2537,7 +2551,7 @@ function renderEqView(start, end, value1, value2, value3, value21, value22, valu
 
 	knob1 = document.createElement("input");
 	knob1.id = "eqKnob1";
-	knob1.setAttribute("data-cursor", true);
+	knob1.setAttribute("data-cursor", "10");
 	knob1.setAttribute("value", value1);
 	knob1.setAttribute("data-thickness", 0.25);
 	// knob1.setAttribute("data-font", "Advanced LED Board-7")
@@ -2548,7 +2562,7 @@ function renderEqView(start, end, value1, value2, value3, value21, value22, valu
 	heading.innerHTML = "Mids";
 	knob2 = document.createElement("input");
 	knob2.id = "eqKnob2";
-	knob2.setAttribute("data-cursor", true);
+	knob2.setAttribute("data-cursor", "10");
 	knob2.setAttribute("value", value2);
 	knob2.setAttribute("data-thickness", 0.25);
 	eqContainer.appendChild(heading);
@@ -2558,7 +2572,7 @@ function renderEqView(start, end, value1, value2, value3, value21, value22, valu
 	heading.innerHTML = "Lows";
 	knob3 = document.createElement("input");
 	knob3.id = "eqKnob3";
-	knob3.setAttribute("data-cursor", true);
+	knob3.setAttribute("data-cursor", "10");
 	knob3.setAttribute("value", value3);
 	knob3.setAttribute("data-thickness", 0.25);
 	eqContainer.appendChild(heading);
@@ -2568,7 +2582,7 @@ function renderEqView(start, end, value1, value2, value3, value21, value22, valu
 	heading.innerHTML = "Highs";
 	knob1 = document.createElement("input");
 	knob1.id = "eqKnob21";
-	knob1.setAttribute("data-cursor", true);
+	knob1.setAttribute("data-cursor", "10");
 	knob1.setAttribute("value", value21);
 	knob1.setAttribute("data-thickness", 0.25);
 	eqContainer2.append(heading);
@@ -2578,7 +2592,7 @@ function renderEqView(start, end, value1, value2, value3, value21, value22, valu
 	heading.innerHTML = "Mids";
 	knob2 = document.createElement("input");
 	knob2.id = "eqKnob22";
-	knob2.setAttribute("data-cursor", true);
+	knob2.setAttribute("data-cursor", "10");
 	knob2.setAttribute("value", value22);
 	knob2.setAttribute("data-thickness", 0.25);
 	eqContainer2.appendChild(heading);
@@ -2588,7 +2602,7 @@ function renderEqView(start, end, value1, value2, value3, value21, value22, valu
 	heading.innerHTML = "Lows";
 	knob3 = document.createElement("input");
 	knob3.id = "eqKnob23";
-	knob3.setAttribute("data-cursor", true);
+	knob3.setAttribute("data-cursor", "10");
 	knob3.setAttribute("value", value23);
 	knob3.setAttribute("data-thickness", 0.25);
 	eqContainer2.appendChild(heading);
@@ -2605,6 +2619,7 @@ function renderEqView(start, end, value1, value2, value3, value21, value22, valu
 		'height': "300%",
 		'bgColor': "black",
 		'fgColor': '#4286f4',
+		'dynamicDraw': true,   
 		'release' : function (v) { effectHandler.eqEffect(this.$.context.audioId, this.$.context.effectId, v, "highs")}
 	}
 
@@ -3562,7 +3577,6 @@ function timeline(dataStore, dispatcher) {
 		frame_start = dataStore.getData("ui", "scrollTime");
 		currentX = ((e.clientX - bounds.left)/dpr + (frame_start * time_scale));
 		currentY = (e.clientY - bounds.top)/dpr;
-		console.log(overwriteCursor);
 
 		for (var i = 0; i < renderItems.length; i++){
 			if (renderItems[i].contains(currentX, currentY, time_scale, frame_start)) {
@@ -3619,7 +3633,8 @@ function timeline(dataStore, dispatcher) {
 			for (var i = 0; i < renderItems.length; i++){
 				item = renderItems[i];
 				if (item.contains(currentX, currentY, time_scale, frame_start)) {
-					if (item.containsEffect(currentX, currentY) == false){
+					effect = item.containsEffect(currentX, currentY);
+					if (effect == false){
 						draggingx = item.x + frame_start * time_scale
 						currentDragging = item;
 						if (overwriteCursor == false){
@@ -3629,6 +3644,8 @@ function timeline(dataStore, dispatcher) {
 
 					} else {
 						//Open effect modal
+						console.log("effect clicked");
+						effectHandler.renderEffectView(effect.type, item, effect)
 						return;
 					}
 				}

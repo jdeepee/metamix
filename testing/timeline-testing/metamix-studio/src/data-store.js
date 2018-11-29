@@ -44,12 +44,26 @@ function DataStore() {
 	this.addEffect = function addEffect(audioId, effectObject) {
 		for (var i in this.data) 
 			if (this.data[i].id == audioId){
-				this.data[i].effects.push(effectObject)
+				this.data[i]["effects"].push(effectObject)
+				console.log("new effect data", this.data[i])
 				break;
 			}
 	}
 
-	this.updateEffect = function updateEffect(audioId, effectId, effectObject) {
+	this.getEffect = function getEffect(audioId, effectId){
+		for (var i in this.data){
+			if (this.data[i].id == audioId){
+				for (var i2 in this.data[i]['effects']){
+					if (this.data[i]["effects"][i2].id == effectId){
+						return this.data[i].effects[i2];
+					}
+				}
+			}
+		}
+	}
+
+	this.updateEffect = function updateEffect(audioId, effectObject) {
+		effectId = effectObject.id;
 		for (var i in this.data){
 			if (this.data[i].id == audioId){
 				for (var i2 in this.data[i].effects){

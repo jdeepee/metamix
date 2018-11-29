@@ -520,7 +520,6 @@ function timeline(dataStore, dispatcher) {
 		frame_start = dataStore.getData("ui", "scrollTime");
 		currentX = ((e.clientX - bounds.left)/dpr + (frame_start * time_scale));
 		currentY = (e.clientY - bounds.top)/dpr;
-		console.log(overwriteCursor);
 
 		for (var i = 0; i < renderItems.length; i++){
 			if (renderItems[i].contains(currentX, currentY, time_scale, frame_start)) {
@@ -577,7 +576,8 @@ function timeline(dataStore, dispatcher) {
 			for (var i = 0; i < renderItems.length; i++){
 				item = renderItems[i];
 				if (item.contains(currentX, currentY, time_scale, frame_start)) {
-					if (item.containsEffect(currentX, currentY) == false){
+					effect = item.containsEffect(currentX, currentY);
+					if (effect == false){
 						draggingx = item.x + frame_start * time_scale
 						currentDragging = item;
 						if (overwriteCursor == false){
@@ -587,6 +587,8 @@ function timeline(dataStore, dispatcher) {
 
 					} else {
 						//Open effect modal
+						console.log("effect clicked");
+						effectHandler.renderEffectView(effect.type, item, effect)
 						return;
 					}
 				}

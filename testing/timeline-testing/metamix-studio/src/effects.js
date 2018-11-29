@@ -48,12 +48,6 @@ function effectHandler(dataStore, renderItems, canvas, dpr, overwriteCursor, bou
 	}
 
 	function updateEqKnobs(value1, value2, value3, value21, value22, value23, id, audioId){
-		$('#eqKnob1').val(value1);
-		$('#eqKnob2').val(value2);
-		$('#eqKnob3').val(value3);
-		$('#eqKnob21').val(value21);
-		$('#eqKnob22').val(value22);
-		$('#eqKnob23').val(value23);
 		knob = document.getElementById("eqKnob1");
 		knob.effectId = id;
 		knob.audioId = audioId;
@@ -72,6 +66,13 @@ function effectHandler(dataStore, renderItems, canvas, dpr, overwriteCursor, bou
 		knob = document.getElementById("eqKnob23");
 		knob.effectId = id;
 		knob.audioId = audioId;
+
+		$('#eqKnob1').val(value1).trigger('change');
+		$('#eqKnob2').val(value2).trigger('change');
+		$('#eqKnob3').val(value3).trigger('change');
+		$('#eqKnob21').val(value21).trigger('change');
+		$('#eqKnob22').val(value22).trigger('change');
+		$('#eqKnob23').val(value23).trigger('change');
 	}
 
 	function renderEffectView(type, audioItem, effect){
@@ -86,6 +87,7 @@ function effectHandler(dataStore, renderItems, canvas, dpr, overwriteCursor, bou
 
 				if (effect != null){
 					//Set inputs to values of effect 
+					effect = dataStore.getEffect(audioItem.id, effect.id)
 					updateEqKnobs(effect["high"]["start"], effect["mid"]["start"], effect["low"]["start"], 
 								  effect["high"]["target"], effect["mid"]["target"], effect["low"]["target"], 
 								  effect["id"], audioItem.id);
@@ -94,6 +96,11 @@ function effectHandler(dataStore, renderItems, canvas, dpr, overwriteCursor, bou
 					sc.value = effect["strength_curve"];
 					sc.effectId = effect["id"];
 					sc.audioId = audioItem.id;
+
+					if (effect["strength_curve"] != "continous"){
+						div = document.getElementById("eqContainer2");
+						div.style.display = "block";
+					}
 
 					start = document.getElementById("eqStart");
 					start.value = effect['start'];
@@ -108,6 +115,10 @@ function effectHandler(dataStore, renderItems, canvas, dpr, overwriteCursor, bou
 				} else {
 					//Refresh inputs - this is a fresh effect
 					var id = utils.guid();
+					dataStore.addEffect(audioItem.id, {"id": id, "type": "eq", "start": 0, "end": 0, 
+								   "high": {"start": null, "target": 0}, "mid": {"start": null, "target": 0},
+								   "low": {'start': null, 'target': 0}, "strength_curve": "continous"})
+
 					updateEqKnobs(0, 0, 0, 0, 0, 0, id, audioItem.id);
 
 					sc = document.getElementById("strengthCurveEQ");
@@ -161,20 +172,31 @@ function effectHandler(dataStore, renderItems, canvas, dpr, overwriteCursor, bou
 	}
 
 	function updateEffectStart(audioId, effectId, start){
-		console.log("Effect update start req", audioId, effectId, start);
+		//console.log("Effect start update", audioId, effectId, start);
+		effect = dataStore.getEffect(audioId, effectId);
+		effect["start"] = start;
+		dataStore.updateEffect(audioId, effect);
 	}
 
 	function updateEffectEnd(audioId, effectId, end){
-		console.log("Effect end req", audioId, effectId, end);
-
+		//console.log("Effect end update", audioId, effectId, end);
+		effect = dataStore.getEffect(audioId, effectId);
+		effect["end"] = end;
+		dataStore.updateEffect(audioId, effect);
 	}
 
 	function updateStrengthCurve(audioId, effectId, strengthCurve){
-		console.log("Effect strengthCurve req", audioId, effectId, strengthCurve);
+		//console.log("Effect curve update", audioId, effectId, strengthCurve);
+		effect = dataStore.getEffect(audioId, effectId);
+		effect["strength_curve"] = strengthCurve;
+		dataStore.updateEffect(audioId, effect);
 	}
 
-	function eqEffect(audioId, effectId, value, type){
-		console.log("Effect Knob update", audioId, effectId, value, type);
+	function eqEffect(audioId, effectId, value, type, position){
+		//console.log("Effect data update", audioId, effectId, value, type, position);
+		effect = dataStore.getEffect(audioId, effectId);
+		effect[type][position] = value;
+		dataStore.updateEffect(audioId, effect);
 	}
 
 	function volumeEffect(){
@@ -203,7 +225,6 @@ function effectHandler(dataStore, renderItems, canvas, dpr, overwriteCursor, bou
 	}
 
 	function removeAudio(audio){
-		console.log("Removing audio with ID", audio.id);
 		dataStore.deleteData(audio.id);
 		renderItems = utils.removeFromArrayById(renderItems, audio.id);
 	}
@@ -229,10 +250,8 @@ function computeHighLow(start, end, type){
 	} else {
 		offset = -bounds["startMin"]
 	}
-	console.log(offset);
 
 	max = bounds["startMax"] + offset
-	console.log(max);
 	startOff = start + offset;
 	endOffset = end + offset;
 

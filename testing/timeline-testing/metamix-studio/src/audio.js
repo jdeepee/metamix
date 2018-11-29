@@ -120,19 +120,23 @@ AudioItem.prototype.effectGlow = function(){
 	this.drawSelectGlow = true;
 }
 
-AudioItem.prototype.drawEffectCurve = function(ctx, start, target, type, startX, endX, strengthCurve){
+AudioItem.prototype.drawEffectCurve = function(ctx, start, target, type, startX, endX, strengthCurve, id){
 		//currently start/target only works for phase 1 of effect - this should be able to handle effects which have multiple start/targets - 
 	//maybe this means drawing multiple curves?
-	if (start != 0 && target != 0){
-		console.log("Inputs", start, target);
+	//console.log("Draw effect curve for", start, target)
+	if (start != null || target != null){
+		if ((target == null || target == 0) && strengthCurve == "continous"){
+			target = start;
+
+		} else if (target == null || target == 0 && strengthCurve != "continous"){
+			target = 0;
+		}
 		var effectStartRatio, effectEndRatio;
 		out = effectUtils.computeHighLow(start, target, type);
 		effectStartRatio = out[0];
 		effectEndRatio = out[1];
-		console.log("Ratio out", out);
 		effectStartY = this.y + this.y2 - effectStartRatio * this.ratio;
 		effectEndY = this.y + this.y2 - effectEndRatio * this.ratio;
-		console.log("Y values", effectStartY, effectEndY);
 
 		ctx.strokeStyle = Theme.effectColours[effect["type"]];
 		ctx.beginPath();
@@ -144,14 +148,13 @@ AudioItem.prototype.drawEffectCurve = function(ctx, start, target, type, startX,
 		ctx.stroke();
 
 		if (strengthCurve == "linear"){
-			console.log("Drawing linear effect");
-			this.curveValues.push({x0: startX, y0: effectStartY, x1: endX, y1: effectEndY});
+			this.curveValues.push({x0: startX, y0: effectStartY, x1: endX, y1: effectEndY, id: id, type: type});
 			ctx.moveTo(effect["startX"], effectStartY);
 			ctx.lineTo(effect["endX"], effectEndY)
 			ctx.stroke();
 
 		} else if (strengthCurve == "continous"){
-			this.curveValues.push({x0: startX, y0: effectStartY, x1: endX, y1: effectEndY});
+			this.curveValues.push({x0: startX, y0: effectStartY, x1: endX, y1: effectEndY, id: id, type: type});
 			ctx.moveTo(startX, effectEndY);
 			ctx.lineTo(endX, effectEndY)
 			ctx.stroke();
@@ -162,27 +165,28 @@ AudioItem.prototype.drawEffectCurve = function(ctx, start, target, type, startX,
 AudioItem.prototype.paintEffects = function(ctx) {
 	//Iterate over effects and paint them on the audio item - in theme define some basic temporary colour scheme/symbols which can signify different effects
 	//So for example yellow = eq, red = volume. etc. Currently only two supported strength_curves on backend: continous and linear - just build these for now
-	//Y position on the audio item should indicate the start/target values of the effect
-	ctx.lineWidth = 2;
+	//Y position on the audio item should indicate the start/target values of the effects
+	//console.log("Effects", this.effects);
 	for (var i=0; i<this.effects.length; i++){
 		effect = this.effects[i];
 		if (effect["endX"] - effect["startX"] > 5){
 			if (effect["type"] != "eq"){
-				this.drawEffectCurve(ctx, effect["params"]["start"], effect["params"]["target"], effect["type"], effect["startX"], effect["endX"], effect["strength_curve"]);
+				this.drawEffectCurve(ctx, effect["params"]["start"], effect["params"]["target"], effect["type"], 
+									 effect["startX"], effect["endX"], effect["strength_curve"], effect["id"]);
 
 			} else {
-				if (effect["high"]["start"] != 0 && effect["high"]["target"] != 0){
-					console.log("Draw high curve");
-					this.drawEffectCurve(ctx, effect["high"]["start"], effect["high"]["target"], effect["type"], effect["startX"], effect["endX"], effect["strength_curve"]);
-				} 
-				if (effect["mid"]["start"] != 0 && effect["mid"]["target"] != 0){
-					console.log("Draw mid curve");
-					this.drawEffectCurve(ctx, effect["mid"]["start"], effect["mid"]["target"], effect["type"], effect["startX"], effect["endX"], effect["strength_curve"]);
+				if (effect["high"]["start"] != 0 || effect["high"]["target"] != 0){
+					this.drawEffectCurve(ctx, effect["high"]["start"], effect["high"]["target"], effect["type"], 
+										 effect["startX"], effect["endX"], effect["strength_curve"], effect["id"]);
 				}
-				if (effect["low"]["start"] != 0 && effect["low"]["target"] != 0){
-					console.log("Draw low curve");
-					this.drawEffectCurve(ctx, effect["low"]["start"], effect["low"]["target"], effect["type"], effect["startX"], effect["endX"], effect["strength_curve"]);
+				if (effect["mid"]["start"] != 0 || effect["mid"]["target"] != 0){
+					this.drawEffectCurve(ctx, effect["mid"]["start"], effect["mid"]["target"], effect["type"], 
+										 effect["startX"], effect["endX"], effect["strength_curve"], effect["id"]);
 				}
+				if (effect["low"]["start"] != 0 || effect["low"]["target"] != 0){
+					this.drawEffectCurve(ctx, effect["low"]["start"], effect["low"]["target"], effect["type"], 
+										 effect["startX"], effect["endX"], effect["strength_curve"], effect["id"]);
+			}
 			}
 		}
 	}
@@ -244,7 +248,7 @@ AudioItem.prototype.containsEffect = function(x, y){
 		// mouseX=parseInt(e.clientX-offsetX);
 		// mouseY=parseInt(e.clientY-offsetY);
 		if(x<line.x0 || y>line.x1){
-		  return;          
+		  	return;          
 		}
 		var linepoint=utils.linepointNearestMouse(line,x,y);
 		var dx=x-linepoint.x;
@@ -252,10 +256,8 @@ AudioItem.prototype.containsEffect = function(x, y){
 		var distance=Math.abs(Math.sqrt(dx*dx+dy*dy));
 		tolerance = 3;
 		if(distance<tolerance){
-			return true;
+			return line;
 
-		} else {
-			return false;
 		}
 	}
 	return false;

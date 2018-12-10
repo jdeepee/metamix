@@ -255,6 +255,4 @@ const ContextUtil = {
     }
 };
 
-module.exports = {
-    ContextMenu: ContextMenu
-}
+export default ContextMenu;

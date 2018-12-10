@@ -21,8 +21,13 @@ export const store = new Vuex.Store({
 							 "knobs": [{"name": "high", "title": "Highs", "start": 0, "target": 0, "max": 2, "min": -2, "step": 0.01, "precision": 2, "default": 0}, 
 							 		   {"name": "mid", "title": "Mids", "start": 0, "target": 0, "max": 2, "min": -2, "step": 0.01, "precision": 2, "default": 0}, 
 							 		   {"name": "low", "title": "Lows", "start": 0, "target": 0, "max": 2, "min": -2, "step": 0.01, "precision": 2, "default": 0}],
-							 "default_values": {"high": {"start": null, "target": null}, "mid": {"start": null, "target": null}, "low": {"start": null, "target": null}, "strength_curve": "continous"}}
-					}
+							 "default_values": {"high": {"start": null, "target": null}, "mid": {"start": null, "target": null}, "low": {"start": null, "target": null}, "strength_curve": "continuous"}},
+					  "remove": {"start": null, "end": null, "barCountStart": null, "barCountEnd": null, "strengthCurve": null, "title": "Remove", "knobs": [], "default_values": null, "strength_curve": null},
+					  "cut": {"start": null, "end": null, "barCountStart": null, "barCountEnd": null, "strengthCurve": null, "title": "Remove", "knobs": [], "default_values": null, "strength_curve": null},
+					  "volume": {"start": 0, "end": 0, "barCountStart": 0, "barCountEnd": 0, "strengthCurve": "continuous", "title": "Volume Modulation",
+					  		     "knobs": [{"name": "volume", "start": 0, "target": 0, "max": 2, "min": 0, "step": 0.01, "precision": 2, "default": 1}],
+					  		     "default_values": {"start": null, "target": null, "strength_curve": "continuous"}, "starting": 1}
+					} //This might not have to be here in Vuex - it might be possible to handle everything in the effect Vue
 		}
 	},
 	mutations: { //syncronous
@@ -66,12 +71,35 @@ export const store = new Vuex.Store({
 				}
 			}
 		},
+		deleteEffect(start, data){
+			for (let i in state.mixData){
+				if (state.mixData[i].id == data.audioId){
+					for (let i2 in state.mixData[i].effects){
+						if (state.mixData[i].effects[i2].id == data.id){
+							state.mixData[i].splice(i2);
+							break;
+						}
+					}
+				}
+			}
+		},
 		updateAudio(state, data){
 			for (let i in state.mixData){
 				if (state.mixData[i].id == data.id){
+					delete data["id"];
 					for (let key in data){
 						state.mixData[i][key] = data[key];
 					}
+				}
+			}
+		},
+		copyAudio(state, data){
+			for (let i in state.mixData){
+				if (state.mixData[i].id == data.copyId){
+					let newAudio = state.mixData[i]; //This is currently updating old audio rather than creating copy from old and then adding to the array as new value
+					newAudio["id"] = data["id"];
+					newAudio["name"] = state.mixData[i].name + " copy";
+					state.mixData.push(newAudio);
 				}
 			}
 		},

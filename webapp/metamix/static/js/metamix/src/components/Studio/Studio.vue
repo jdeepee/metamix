@@ -1,6 +1,7 @@
 <style type="text/css">
 @import './style.css';
 @import './effect-style.css';
+@import './menu.css';
 </style>
 
 <template>
@@ -44,7 +45,7 @@
 			<canvas id="timeline-canvas"></canvas>
 		</div>
 		<Exterior></Exterior>
-		<EffectModal></EffectModal>
+		<Effect></Effect>
 	</div>
 
 </template>
@@ -56,21 +57,23 @@
 	import AudioItem from "./src/audio.js"
 	import Scroll from "./Subcomponents/Scroll.vue"
 	import Exterior from "./Subcomponents/Exterior.vue"
-	import EffectModal from "./Subcomponents/EffectModal.vue"
+	import Effect from "./Subcomponents/Effect.vue"
+	import ContextMenu from "./src/menu.js"
 
 	export default {
 		name: "Timeline",
 		components:{
 			Scroll,
 			Exterior,
-			EffectModal
+			Effect
 		},
 		data(){
 			return {
 				canvas: undefined,//This can be accesed on self from either mounted or resize methods
 				audio: [
 					{
-						"id": "test song-id",
+						"id": "test song-id", //ID and song ID is required - id referes to ID in UI, the song_id is necassary so if a copy is made they can be differentiated by ID but also still link to the same song on the backend
+						"song_id": "test song-id",
 						"name": "Test song 1",
 						"effects": [
 							{
@@ -102,6 +105,7 @@
 					},
 					{
 						"id": "test song-id2",
+						"song_id": "test song-id",
 						"name": "Test song 2",
 						"effects": [],
 						"beat_markers": [1.5],
@@ -113,6 +117,7 @@
 					},
 					{
 						"id": "test song-id3",
+						"song_id": "test song-id",
 						"name": "Test song 3",
 						"effects": [],
 						"beat_markers": [],
@@ -124,6 +129,7 @@
 					},
 					{
 						"id": "test song-id4",
+						"song_id": "test song-id",
 						"name": "Test song 4",
 						"effects": [],
 						"beat_markers": [],
@@ -135,6 +141,7 @@
 					},
 					{
 						"id": "test song-id5",
+						"song_id": "test song-id",
 						"name": "Test song 5",
 						"effects": [],
 						"beat_markers": [],
@@ -146,6 +153,7 @@
 					},
 					{
 						"id": "test song-id6",
+						"song_id": "test song-id",
 						"name": "Test song 6",
 						"effects": [],
 						"beat_markers": [],
@@ -156,65 +164,55 @@
 						"end": 7
 					}//mock audio data
 				],
-				// menuItems: [
-				// 	  {
-				// 	    "text": "Copy Item"
-				// 	  },
-				// 	  {
-				// 	    "type": menu.ContextMenu.DIVIDER 
-				// 	  },
-				// 	  {
-				// 	    "text": "Add Effect",
-				// 	   	"sub": [
-				// 	      {
-				// 	        "text": "EQ",
-				// 	        "events": {
-				// 	        	"click": function(e){
-				// 	        		effectHandler.renderEffectView("eq", self.currentAudio, null);
-				// 	        	}
-				// 	        }
-				// 	      },
-				// 	      {
-				// 	        "text": "Volume Modulation"
-				// 	      },
-				// 	      {
-				// 	      	"text": "High Pass Filter"
-				// 	      },
-				// 	      {
-				// 	      	"text": "Low Pass Filter"
-				// 	      },
-				// 	      {
-				// 	      	"text": "Pitch Shift"
-				// 	      },
-				// 	      {
-				// 	      	"text": "Tempo Modulation"
-				// 	      }
-				// 	    ]
-				// 	  },
-				// 	  {
-				// 	    "type": menu.ContextMenu.DIVIDER 
-				// 	  },
-				// 	  {
-				// 	  	"text": "Create Clip"
-				// 	  },
-				// 	  {
-				// 	    "type": menu.ContextMenu.DIVIDER 
-				// 	  },
-				// 	  {
-				// 	  	"text": "Delete Audio",
-				// 	  	"events": {
-				// 	  		"click": function(e){
-				// 	  			effectHandler.removeAudio(self.currentAudio);
-				// 	  		}
-				// 	  	}
-				// 	  },
-				// 	  {
-				// 	    "type": menu.ContextMenu.DIVIDER 
-				// 	  },
-				// 	  {
-				// 	  	"text": "Adjust Bar Markers"
-				// 	  }
-				// ],
+				menuItems: [
+					  {
+					    "text": "Copy Item"
+					  },
+					  {
+					    "type": ContextMenu.DIVIDER 
+					  },
+					  {
+					    "text": "Add Effect",
+					   	"sub": [
+					      {
+					        "text": "EQ"
+					      },
+					      {
+					        "text": "Volume Modulation"
+					      },
+					      {
+					      	"text": "High Pass Filter"
+					      },
+					      {
+					      	"text": "Low Pass Filter"
+					      },
+					      {
+					      	"text": "Pitch Shift"
+					      },
+					      {
+					      	"text": "Tempo Modulation"
+					      }
+					    ]
+					  },
+					  {
+					    "type": ContextMenu.DIVIDER 
+					  },
+					  {
+					  	"text": "Create Clip"
+					  },
+					  {
+					    "type": ContextMenu.DIVIDER 
+					  },
+					  {
+					  	"text": "Delete Audio"
+					  },
+					  {
+					    "type": ContextMenu.DIVIDER 
+					  },
+					  {
+					  	"text": "Adjust Bar Markers"
+					  }
+				],
 				overwriteCursor: false,
 				draggingx: null,
 				currentDragging: null,
@@ -231,7 +229,8 @@
 				renderItems: [],
 				trackBounds: {},
 				resetWaveForm: false,
-				hit: false
+				hit: false,
+				cuttingAudio: false
 			}
 		},
 		methods:{
@@ -249,6 +248,9 @@
 				// htmlElement.setAttribute("text-shadow", "5px 5px 5px #ccc");
 				// makeCursorChange(type);
 				console.log("Effect clicked", type);
+				if (type == "cut"){
+					this.cuttingAudio = true;
+				}
 				let componentObj = this;
 				let audioSelectCallback = function(e) {
 					let currentUi = componentObj.$store.getters.getUi;
@@ -256,28 +258,30 @@
 					let frameStart = currentUi["scrollTime"];
 					let currentX = ((e.clientX - componentObj.bounds.left)/componentObj.dpr + (frameStart * timeScale));
 					let currentY = (e.clientY - componentObj.bounds.top)/componentObj.dpr;
-					componentObj.hit = false;
 
-					if (type != "cut"){
-						for (let i=0; i<componentObj.renderItems.length; i++){
-							if (componentObj.renderItems[i].contains(currentX, currentY, timeScale, frameStart)){
-								componentObj.renderItems[i].effectGlow();
-								componentObj.effectModal.renderEffectModal(type, componentObj.renderItems[i], null);
-								componentObj.hit = true;
+					for (let i=0; i<componentObj.renderItems.length; i++){
+						if (componentObj.renderItems[i].contains(currentX, currentY, timeScale, frameStart)){
+							componentObj.renderItems[i].effectGlow();
+							switch (type){
+								case "eq":
+									componentObj.effectHandler.renderEffectModal(type, componentObj.renderItems[i], null);
+									break;
 
-								if (type != "remove"){
-									componentObj.canvas.removeEventListener('click', audioSelectCallback, false);
-								}
+								case "remove":
+									componentObj.effectHandler.removeAudio(componentObj.renderItems[i].id);
+									break;
+
+								case "cut":
+									//If we cannot stop the X value accuractely when mouse is over a bar marker it is probably sensible to check if there is a block and if so take the drawsnapmarker position and use this as the currentX value
+									componentObj.effectHandler.cutAudio(componentObj.renderItems[i], currentX);
+									componentObj.cuttingAudio = false;
+									break;
+
+								case "volume":
+									componentObj.effectHandler.renderEffectModal(type, componentObj.renderItems[i], null);
 							}
-						}
-						if (componentObj.hit == false){
 							componentObj.canvas.removeEventListener('click', audioSelectCallback, false);
-							componentObj.canvas.style.cursor = "default";
-							// componentObj.overwriteCursor = false;
 						}
-
-					} else {
-						//Do cut rendering
 					}
 				}
 				this.canvas.addEventListener("click", audioSelectCallback, false);
@@ -498,7 +502,7 @@
 					if (this.renderedItems == false){
 						let AudioRect = new AudioItem();
 						AudioRect.setWaveForm(audioItem.raw_wave_form, y1, y2, x, x2, this.frameStart, this.timeScale, offset, this.dpr);
-						AudioRect.set(x, y1, x2, y2, Settings.theme.audioElement, audioItem.name, audioItem.id, audioItem.track, this.timeScale, this.frameStart, audioItem.beat_markers, audioItem.effects);
+						AudioRect.set(x, y1, x2, y2, Settings.theme.audioElement, audioItem.name, audioItem.id, audioItem.track, this.timeScale, this.frameStart, audioItem.beat_markers, audioItem.effects, audioItem.end);
 						AudioRect.paint(this.ctx, Settings.theme.audioElement);
 						this.renderItems.push(AudioRect);
 
@@ -507,7 +511,7 @@
 						if (audioItem.raw_wave_form != null && currentItem.rawWaveForm == undefined || this.lastTimeScale != this.timeScale || this.resetWaveForm == true){
 							currentItem.setWaveForm(audioItem.raw_wave_form, y1, y2, x, x2, this.frameStart, this.timeScale, offset, this.dpr);
 						}
-						currentItem.set(x, y1, x2, y2, Settings.theme.audioElement, audioItem.name, audioItem.id, audioItem.track, this.timeScale, this.frameStart, audioItem.beat_markers, audioItem.effects);
+						currentItem.set(x, y1, x2, y2, Settings.theme.audioElement, audioItem.name, audioItem.id, audioItem.track, this.timeScale, this.frameStart, audioItem.beat_markers, audioItem.effects, audioItem.end);
 						currentItem.paint(this.ctx, Settings.theme.audioElement);
 					}
 				}
@@ -639,24 +643,61 @@
 				let componentObj = this;
 				window.addEventListener('resize', this.resize);
 
-				this.canvas.addEventListener("mousemove", function(e){
+				// Contextmenu-eventlistener
+				this.canvas.addEventListener("contextmenu", function(e){
+					console.log("Content menu");
 					let currentUi = componentObj.$store.getters.getUi;
 					let timeScale = currentUi["timeScale"];
 					let frameStart = currentUi["scrollTime"];
 					let currentX = ((e.clientX - componentObj.bounds.left)/componentObj.dpr + (frameStart * timeScale));
 					let currentY = (e.clientY - componentObj.bounds.top)/componentObj.dpr;
+
 					for (let i = 0; i < componentObj.renderItems.length; i++){
 						if (componentObj.renderItems[i].contains(currentX, currentY, timeScale, frameStart)) {
-							if (componentObj.overwriteCursor == false){
-								componentObj.canvas.style.cursor = 'pointer';
-							}
-							return;
+							componentObj.currentAudio = componentObj.renderItems[i];
+							componentObj.menuItem.display(e, undefined);
 						}
 					}
-					// if (componentObj.overwriteCursor == false){
-					// 	componentObj.canvas.style.cursor = 'default';
-					// }
-					componentObj.canvas.style.cursor = 'default';
+				}, false);
+
+				this.canvas.addEventListener("mousemove", function(e){
+					if (componentObj.block == false){
+						let currentUi = componentObj.$store.getters.getUi;
+						let timeScale = currentUi["timeScale"];
+						let frameStart = currentUi["scrollTime"];
+						let currentX = ((e.clientX - componentObj.bounds.left)/componentObj.dpr + (frameStart * timeScale));
+						let currentY = (e.clientY - componentObj.bounds.top)/componentObj.dpr;
+						for (let i = 0; i < componentObj.renderItems.length; i++){
+							if (componentObj.renderItems[i].contains(currentX, currentY, timeScale, frameStart)) {
+								if (componentObj.cuttingAudio == true){
+									let barMatch = componentObj.renderItems[i].onBarMarker(currentX, frameStart, timeScale);
+									if (barMatch != false){
+										componentObj.drawSnapMarker = barMatch.x0;
+										componentObj.block = true;
+										componentObj.blockNumber = 4;
+									}
+								}
+								if (componentObj.overwriteCursor == false){
+									componentObj.canvas.style.cursor = 'pointer';
+								}
+								return;
+							}
+						}
+						// if (componentObj.overwriteCursor == false){
+						// 	componentObj.canvas.style.cursor = 'default';
+						// }
+						componentObj.canvas.style.cursor = 'default';
+					} else {
+						e.preventDefault(); //This doesnt work it should prevent the mouse from moving
+						if (componentObj.holdTick == componentObj.blockNumber){
+							componentObj.block = false;
+							componentObj.holdTick = 0;
+							componentObj.drawSnapMarker = false;
+
+						} else {
+							componentObj.holdTick += 1;
+						}
+					}
 				});
 
 				//Handles "wheel" zoom events - trackpad zoom or scroll wheel zoom - also includes scroll left and right
@@ -736,7 +777,7 @@
 
 								} else {
 									//Open effect modal
-									componentObj.effectModal.renderEffectModal(effect.type, item, effect);
+									componentObj.effectHandler.renderEffectModal(effect.type, item, effect);
 									return;
 								}
 							}
@@ -795,6 +836,18 @@
 						componentObj.drawSnapMarker = false;
 						componentObj.blockNumber = 0;
 					});
+
+				this.menuItems[2]["sub"][0]["events"] = { //Set eq click event
+															"click": function(e){
+																componentObj.effectHandler.renderEffectModal("eq", componentObj.currentAudio, null);
+															}
+														}
+
+				this.menuItems[6]["events"] = { //Set delete click event
+												"click": function(e){
+													componentObj.effectHandler.removeAudio(componentObj.currentAudio.id);
+												}
+											}
 			}
 		},
 		mounted() {
@@ -820,7 +873,7 @@
 
 				this.scrollCanvas = this.$children[0];
 				this.exterior = this.$children[1];
-				this.effectModal = this.$children[2];
+				this.effectHandler = this.$children[2];
 
 				//Create array of objects which defines the pixel bounds for each track element
 				for (let i=0; i<this.trackLayers; i++){
@@ -829,6 +882,8 @@
 
 				this.exterior.init();
 				this.registerListeners();
+				console.log(this.menuItems);
+				this.menuItem = new ContextMenu(this.menuItems);
 				this.paint();
 			})
 		}

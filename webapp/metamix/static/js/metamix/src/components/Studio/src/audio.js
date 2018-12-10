@@ -43,7 +43,7 @@ AudioItem.prototype.setWaveForm = function(rawWaveForm, y, y2, x, x2, time_scale
 	}
 }
 
-AudioItem.prototype.set = function(x, y, x2, y2, color, audioName, id, track, time_scale, frame_start, barMarkers, effects) {
+AudioItem.prototype.set = function(x, y, x2, y2, color, audioName, id, track, time_scale, frame_start, barMarkers, effects, end) {
 	this.x = x;
 	this.y = y;
 	this.x2 = x2;
@@ -65,6 +65,7 @@ AudioItem.prototype.set = function(x, y, x2, y2, color, audioName, id, track, ti
 	this.ratio = this.y2 / 100;
 	this.curveValues = [];
 	this.drawSelectGlow = false;
+	this.end = end;
 
 	this.rounded1X = utils.round(this.xNormalized, 0.25);
 	this.rounded1X2 = utils.round(this.x2Normalized, 0.25);
@@ -125,10 +126,10 @@ AudioItem.prototype.drawEffectCurve = function(ctx, start, target, type, startX,
 	//maybe this means drawing multiple curves?
 	//console.log("Draw effect curve for", start, target)
 	if (start != null || target != null){
-		if ((target == null || target == 0) && strengthCurve == "continous"){
+		if ((target == null || target == 0) && strengthCurve == "continuous"){
 			target = start;
 
-		} else if (target == null || target == 0 && strengthCurve != "continous"){
+		} else if ((target == null || target == 0) && strengthCurve != "continuous"){
 			target = 0;
 		}
 		let effectStartRatio, effectEndRatio;
@@ -153,7 +154,7 @@ AudioItem.prototype.drawEffectCurve = function(ctx, start, target, type, startX,
 			ctx.lineTo(endX, effectEndY)
 			ctx.stroke();
 
-		} else if (strengthCurve == "continous"){
+		} else if (strengthCurve == "continuous"){
 			this.curveValues.push({x0: startX, y0: effectStartY, x1: endX, y1: effectEndY, id: id, type: type});
 			ctx.moveTo(startX, effectEndY);
 			ctx.lineTo(endX, effectEndY)
@@ -171,9 +172,11 @@ AudioItem.prototype.paintEffects = function(ctx) {
 		let effect = this.effects[i];
 		if (effect["endX"] - effect["startX"] > 5){
 			if (effect["type"] != "eq"){
-				this.drawEffectCurve(ctx, effect["params"]["start"], effect["params"]["target"], effect["type"], 
-									 effect["startX"], effect["endX"], effect["strength_curve"], effect["id"]);
+				if (effect["effectStart"] != 0 || effect["effectTarget"] != 0){ //here it should be checking that the values are != default values not 0
+					this.drawEffectCurve(ctx, effect["effectStart"], effect["effectTarget"], effect["type"], 
+										 effect["startX"], effect["endX"], effect["strength_curve"], effect["id"]);
 
+				}
 			} else {
 				if (effect["high"]["start"] != 0 || effect["high"]["target"] != 0){
 					this.drawEffectCurve(ctx, effect["high"]["start"], effect["high"]["target"], effect["type"], 
@@ -245,6 +248,7 @@ AudioItem.prototype.contains = function(x, y, time_scale, frame_start) {
 AudioItem.prototype.containsEffect = function(x, y){
 	for (let i=0; i<this.curveValues.length; i++){
 		let line = this.curveValues[i];
+		console.log(line);
 		// mouseX=parseInt(e.clientX-offsetX);
 		// mouseY=parseInt(e.clientY-offsetY);
 		if(x<line.x0 || y>line.x1){
@@ -266,6 +270,19 @@ AudioItem.prototype.containsEffect = function(x, y){
 //Change outline to red to notify user that they cannot slide audio over item in same track
 AudioItem.prototype.alert = function(ctx, outlineColor){
 	this.paint(ctx, outlineColor);
+}
+
+AudioItem.prototype.onBarMarker = function(x, frameStart, timeScale){
+	for (let i=0; i<this.barMarkersX.length; i++){
+		let line = {"x0": this.barMarkersX[i] + frameStart * timeScale}
+
+		if((x<line.x0 || x>line.x0) == false){
+			if (x == line.x0){
+				return line;
+			}
+		}
+	}
+	return false;
 }
 
 export default AudioItem

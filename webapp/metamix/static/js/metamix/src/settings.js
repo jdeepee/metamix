@@ -18,7 +18,7 @@ var lineHeightProportion = 0.22 //This value should be worked out on size of stu
 var trackTimelineOffset = 40;
 
 //min/max bounds for start/end of effects - EQ is missing min/max bounds for start/target-decibels
-var effectBounds = {"volume": {"startMin": 0, "startMax": 1, "endMin": 0, "endMax": 1}, 
+var effectBounds = {"volume": {"startMin": 0, "startMax": 2, "endMin": 0, "endMax": 2}, 
                     "high_pass_filter": {"startMin": 20, "startMax": 15000, "endMin": 20, "endMax": 15000}, 
                     "low_pass_filter": {"startMin": 15000, "startMax": 20, "endMin": 15000, "endMax": 20}, 
                     "eq": {"startMin": -2, "startMax": 2, "endMin": -2, "endMax": 2}, 

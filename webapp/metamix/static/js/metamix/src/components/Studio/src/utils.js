@@ -36,7 +36,11 @@ function increaseArray(array, increase, roundFlag){
 		}
 		out.push(array[i]+increase)
 	}
-	return out, outRounded;
+	if (roundFlag == true){
+		return {x: out, xr: outRounded};
+	} else {
+		return out;
+	}
 }
 
 //Convert time in seconds to x value given a timescale

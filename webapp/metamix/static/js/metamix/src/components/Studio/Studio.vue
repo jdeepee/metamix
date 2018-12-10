@@ -144,7 +144,7 @@
 						"song_id": "test song-id",
 						"name": "Test song 5",
 						"effects": [],
-						"beat_markers": [],
+						"beat_markers": [3, 5, 7, 9, 11],
 						"wave_form": null,
 						"raw_wave_form": null,
 						"track": 3,
@@ -295,6 +295,7 @@
 			},
 			resize() {
 				let parentDiv = document.getElementById("timeline")
+				this.dpr = window.devicePixelRatio; 
 				this.height = parentDiv.offsetHeight;
 				this.width = parentDiv.offsetWidth;
 				this.canvas.height = this.height;
@@ -326,7 +327,6 @@
 			},
 			moveX(e){
 				let startX = (this.draggingx + e.dx/this.dpr); //tickOffset must be calculated based on diffence between current x value and last x value
-				this.currentDragging.updateBars(startX, this.draggingx);
 				let endX = (startX + this.currentDragging.size)
 				let rendX = utils.round(endX, 0.5);
 				let rstartX = utils.round(startX, 0.5);
@@ -398,7 +398,8 @@
 						} else {
 							if (startX >= item.xNormalized && startX <= item.x2Normalized || endX >= item.xNormalized && endX <= item.x2Normalized || item.xNormalized >= startX && item.x2Normalized <= endX){
 								if (item.barMarkersX.length > 0){
-									for (let i2=0; i2<item.barMarkersXRounded.length; i2++){
+									for (let i2=0; i2<item.barMarkersXRounded.length; i2++){ //bar marker matching seems to be very hit and miss - try and figure out why that is happening
+										console.log("Checkng", item.id, "marker ", item.barMarkersXRounded[i], "vs", rendX, rstartX);
 										if (rendX == item.barMarkersXRounded[i2]){ //end2start
 											this.block = true;
 											this.blockNumber = 4;
@@ -417,6 +418,7 @@
 
 										} else {
 											for (let bi=0; bi<this.currentDragging.barMarkersXRounded.length; bi++){
+												console.log("Checkng", item.id, "marker ", item.barMarkersXRounded[i], "vs", this.currentDragging.id, "vs marker", this.currentDragging.barMarkersXRounded[bi]);
 												if (this.currentDragging.barMarkersXRounded[bi] == item.barMarkersXRounded[i2]){
 													startX = item.barMarkersX[i2] - this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][0];
 													endX = item.barMarkersX[i2] + this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][1];
@@ -446,6 +448,7 @@
 									}
 								} else {
 									for (let bi=0; bi<this.currentDragging.barMarkersXRounded.length; bi++){
+										console.log("Checkng", item.id, "start ", item.rounded2X, "vs", this.currentDragging.id, "vs marker", this.currentDragging.barMarkersXRounded[bi]);
 										if (this.currentDragging.barMarkersXRounded[bi] == item.rounded2X) {
 											startX = item.xNormalized - this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][0];
 											endX = item.xNormalized + this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][1];
@@ -503,16 +506,25 @@
 						let AudioRect = new AudioItem();
 						AudioRect.setWaveForm(audioItem.raw_wave_form, y1, y2, x, x2, this.frameStart, this.timeScale, offset, this.dpr);
 						AudioRect.set(x, y1, x2, y2, Settings.theme.audioElement, audioItem.name, audioItem.id, audioItem.track, this.timeScale, this.frameStart, audioItem.beat_markers, audioItem.effects, audioItem.end);
-						AudioRect.paint(this.ctx, Settings.theme.audioElement);
+						AudioRect.paint(this.ctx, Settings.theme.audioElement, this.block);
 						this.renderItems.push(AudioRect);
 
 					} else {
 						let currentItem = this.renderItems[i];
-						if (audioItem.raw_wave_form != null && currentItem.rawWaveForm == undefined || this.lastTimeScale != this.timeScale || this.resetWaveForm == true){
-							currentItem.setWaveForm(audioItem.raw_wave_form, y1, y2, x, x2, this.frameStart, this.timeScale, offset, this.dpr);
+						if (currentItem != undefined){
+							if (audioItem.raw_wave_form != null && currentItem.rawWaveForm == undefined || this.lastTimeScale != this.timeScale || this.resetWaveForm == true){
+								currentItem.setWaveForm(audioItem.raw_wave_form, y1, y2, x, x2, this.frameStart, this.timeScale, offset, this.dpr);
+							}
+							currentItem.set(x, y1, x2, y2, Settings.theme.audioElement, audioItem.name, audioItem.id, audioItem.track, this.timeScale, this.frameStart, audioItem.beat_markers, audioItem.effects, audioItem.end);
+							currentItem.paint(this.ctx, Settings.theme.audioElement, this.block);
+						} else {
+							//New item has been inserted from copy/cut
+							let AudioRect = new AudioItem();
+							AudioRect.setWaveForm(audioItem.raw_wave_form, y1, y2, x, x2, this.frameStart, this.timeScale, offset, this.dpr);
+							AudioRect.set(x, y1, x2, y2, Settings.theme.audioElement, audioItem.name, audioItem.id, audioItem.track, this.timeScale, this.frameStart, audioItem.beat_markers, audioItem.effects, audioItem.end);
+							AudioRect.paint(this.ctx, Settings.theme.audioElement, this.block);
+							this.renderItems.push(AudioRect);
 						}
-						currentItem.set(x, y1, x2, y2, Settings.theme.audioElement, audioItem.name, audioItem.id, audioItem.track, this.timeScale, this.frameStart, audioItem.beat_markers, audioItem.effects, audioItem.end);
-						currentItem.paint(this.ctx, Settings.theme.audioElement);
 					}
 				}
 				this.lastTimeScale = this.timeScale;
@@ -595,7 +607,6 @@
 					this.ctx.lineTo(x, 5);
 					this.ctx.stroke();
 				}
-
 				this.drawAudioElements(); //Draw audio elements
 				this.ctx.restore();
 
@@ -766,6 +777,7 @@
 							let item = componentObj.renderItems[i];
 							if (item.contains(currentX, currentY, timeScale, frameStart)) {
 								let effect = item.containsEffect(currentX, currentY);
+								console.log(effect);
 								if (effect == false){
 									componentObj.draggingx = item.x + frameStart * timeScale;
 									componentObj.currentDragging = item;
@@ -802,7 +814,7 @@
 								componentObj.currentDragging.x2 = endX;
 								componentObj.currentDragging.xNormalized = startX;
 								componentObj.currentDragging.x2Normalized = endX;
-								componentObj.currentDragging.updateBars(startX, componentObj.draggingx);
+								componentObj.currentDragging.updateBars(1);
 								componentObj.lastX = startX;
 								let start = (startX / timeScale);
 								let end = (endX / timeScale);
@@ -882,7 +894,6 @@
 
 				this.exterior.init();
 				this.registerListeners();
-				console.log(this.menuItems);
 				this.menuItem = new ContextMenu(this.menuItems);
 				this.paint();
 			})

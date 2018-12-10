@@ -266,9 +266,6 @@ function effectHandler(dataStore, renderItems, canvas, dpr, overwriteCursor, bou
 
 function computeHighLow(start, end, type){
 	//Computes high/low ratio (0-100) of where the start/target of the effects are compared to possible min/max
-	//get min/max of start/end of given effect type
-	//normalize min/max so -> min = 0 , max = max + offset of min to get to 0
-	//then ratio will be max / (start/end) + offset of min to get to 0
 	let offset = 0;
 	let bounds = Settings.effectBounds[type];
 	if (bounds["startMin"] <= 0){

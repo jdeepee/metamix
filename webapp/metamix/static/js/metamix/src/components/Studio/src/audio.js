@@ -77,8 +77,11 @@ AudioItem.prototype.set = function(x, y, x2, y2, color, audioName, id, track, ti
 	this.rounded3X2 = utils.round(this.x2Normalized, 1);
 };
 
-AudioItem.prototype.updateBars = function(startX, draggingx){
-	this.barMarkersX, this.barMarkersXRounded = utils.increaseArray(this.barMarkersX, (startX-draggingx), true);
+AudioItem.prototype.updateBars = function(val){
+	//console.log("updating by", startX - draggingx, startX, draggingx)
+	let {x, xr} = utils.increaseArray(this.barMarkersX, val, true);
+	this.barMarkersX = x;
+	this.barMarkersXRounded = xr;
 }
 
 AudioItem.prototype.createBarDiff = function(){
@@ -196,29 +199,45 @@ AudioItem.prototype.paintEffects = function(ctx) {
 	ctx.lineWidth = 1.0;
 }
 
-AudioItem.prototype.paintBarMarkers = function(ctx) {
-	this.barMarkersX = [];
-	this.barMarkersXRounded = [];
-	ctx.strokeStyle = "grey";
+AudioItem.prototype.paintBarMarkers = function(ctx, block) {
+	if (block == false){
+		this.barMarkersX = [];
+		this.barMarkersXRounded = [];
+		ctx.strokeStyle = "grey";
 
-	for (let i=0; i<this.barMarkers.length; i++){
-		if (i % 4 == 0){ ctx.lineWidth = 2; } else { ctx.lineWidth = 1;}
+		for (let i=0; i<this.barMarkers.length; i++){
+			if (i % 4 == 0){ ctx.lineWidth = 2; } else { ctx.lineWidth = 1;}
 
-		let time = utils.time_to_x(this.barMarkers[i], this.time_scale, this.frame_start) + this.xNormalized;
-		this.barMarkersX.push(time);
-		this.barMarkersXRounded.push(utils.round(time, 0.5));
-		ctx.beginPath();
-		ctx.moveTo(time, this.y+1);
-		ctx.lineTo(time, this.y+this.y2);
-		ctx.fillText(i+1, time+5, this.y+this.y2-1);
-		ctx.stroke();
+			let time = utils.time_to_x(this.barMarkers[i], this.time_scale, this.frame_start) + this.xNormalized;
+			this.barMarkersX.push(time);
+			this.barMarkersXRounded.push(utils.round(time, 0.5));
+			ctx.beginPath();
+			ctx.moveTo(time, this.y+1);
+			ctx.lineTo(time, this.y+this.y2);
+			ctx.fillText(i+1, time+5, this.y+this.y2-1);
+			ctx.stroke();
+		}
+		this.createBarDiff();
+
+	} else {
+		ctx.strokeStyle = "grey";
+
+		for (let i=0; i<this.barMarkers.length; i++){
+			if (i % 4 == 0){ ctx.lineWidth = 2; } else { ctx.lineWidth = 1;}
+
+			let time = this.barMarkersX[i];
+			ctx.beginPath();
+			ctx.moveTo(time, this.y+1);
+			ctx.lineTo(time, this.y+this.y2);
+			ctx.fillText(i+1, time+5, this.y+this.y2-1);
+			ctx.stroke();
+		}
 	}
-	this.createBarDiff();
 	ctx.lineWidth = 1.0;
 }
 
 //Paint audio item in canvas
-AudioItem.prototype.paint = function(ctx, outlineColor) {
+AudioItem.prototype.paint = function(ctx, outlineColor, block) {
 	ctx.fillStyle = outlineColor;
 	ctx.beginPath();
 	ctx.rect(this.x, this.y, this.x2-this.x, this.y2);
@@ -233,7 +252,7 @@ AudioItem.prototype.paint = function(ctx, outlineColor) {
 	let txtWidth = ctx.measureText(this.audioName).width;
 	if (txtWidth < this.x2-this.x){ctx.fillText(this.audioName, this.x+txtWidth, this.y+10);}
 	this.paintWaveform(ctx);
-	this.paintBarMarkers(ctx);
+	this.paintBarMarkers(ctx, block);
 	this.paintEffects(ctx);
 };
 
@@ -248,11 +267,10 @@ AudioItem.prototype.contains = function(x, y, time_scale, frame_start) {
 AudioItem.prototype.containsEffect = function(x, y){
 	for (let i=0; i<this.curveValues.length; i++){
 		let line = this.curveValues[i];
-		console.log(line);
 		// mouseX=parseInt(e.clientX-offsetX);
 		// mouseY=parseInt(e.clientY-offsetY);
 		if(x<line.x0 || y>line.x1){
-		  	return;          
+		  	return false;          
 		}
 		let linepoint=utils.linepointNearestMouse(line,x,y);
 		let dx=x-linepoint.x;

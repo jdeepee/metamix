@@ -96,7 +96,7 @@ export const store = new Vuex.Store({
 		copyAudio(state, data){
 			for (let i in state.mixData){
 				if (state.mixData[i].id == data.copyId){
-					let newAudio = state.mixData[i]; //This is currently updating old audio rather than creating copy from old and then adding to the array as new value
+					let newAudio = JSON.parse(JSON.stringify(state.mixData[i])); //This is currently updating old audio rather than creating copy from old and then adding to the array as new value
 					newAudio["id"] = data["id"];
 					newAudio["name"] = state.mixData[i].name + " copy";
 					state.mixData.push(newAudio);
@@ -109,7 +109,15 @@ export const store = new Vuex.Store({
 					state.mixData.splice(i, 1);
 				}
 			}
-		}
+		},
+		deleteFromArray(state, data){
+			for (let i in state.mixData){
+				if (state.mixData[i].id == data.id){
+					console.log(state.mixData[i][data.key][data.index])
+					state.mixData[i][data.key].splice(data.index, 1)
+				}
+			}
+		},
 	},
 	actions: { //async
 
@@ -125,6 +133,15 @@ export const store = new Vuex.Store({
 								return state.mixData[i].effects[i2];
 							}
 						}
+					}
+				}
+			}
+		},
+		getAudio(state){
+			return function(id){
+				for (let i=0; i<state.mixData.length; i++){
+					if (state.mixData[i].id == id){
+						return state.mixData[i];
 					}
 				}
 			}

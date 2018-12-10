@@ -123,7 +123,7 @@
 					}
 				},
 				update(value, effectId, audioId, type, name){
-					console.log("Update", value, effectId, audioId, type, name, this.effectData);
+					// console.log("Update", value, effectId, audioId, type, name, this.effectData);
 					if (audioId != null){
 						value = this.knobRevert(value);
 						switch (this.currentEffect){
@@ -153,6 +153,12 @@
 					value = value.slice(0, -1);
 					return value/100;
 				},
+				resetKnobs(){
+					for (let i=0; i<this.effectDescriptor[this.currentEffect]["knobs"].length; i++){
+						this.effectDescriptor[this.currentEffect]["knobs"][i]["start"] = this.effectDescriptor[this.currentEffect]["knobs"][i]["default"];
+						this.effectDescriptor[this.currentEffect]["knobs"][i]["target"] = this.effectDescriptor[this.currentEffect]["knobs"][i]["default"];
+					}
+				},
 				updateEffect(effectData){
 					switch (this.currentEffect){ //Also likley that EQ is the only rendered effect that has difference in the way we store the effect paramters - if/else might work better than a switch statement here
 						case "eq":
@@ -166,15 +172,7 @@
 								this.effectDescriptor[this.currentEffect]["knobs"][2]["start"] = effectData["low"]["start"];
 								this.effectDescriptor[this.currentEffect]["knobs"][2]["target"] = effectData["low"]["target"];
 							} else {
-								this.effectDescriptor[this.currentEffect]["knobs"][0]["start"] = 0; //This can be broken out into a function which will get the default vaues for the current effect and use this to set the knobs - this doesnt need to be done per effect type
-								this.effectDescriptor[this.currentEffect]["knobs"][0]["target"] = 0;
-
-								this.effectDescriptor[this.currentEffect]["knobs"][1]["start"] = 0;
-								this.effectDescriptor[this.currentEffect]["knobs"][1]["target"] = 0;
-
-								this.effectDescriptor[this.currentEffect]["knobs"][2]["start"] = 0;
-								this.effectDescriptor[this.currentEffect]["knobs"][2]["target"] = 0;
-
+								this.resetKnobs();
 								this.effectData["high"] = {"start": 0, "target": 0};
 								this.effectData["mid"] = {"start": 0, "target": 0};
 								this.effectData["low"] = {"start": 0, "target": 0};
@@ -186,8 +184,7 @@
 								this.effectDescriptor[this.currentEffect]["knobs"][0]["start"] = effectData["effectStart"];
 								this.effectDescriptor[this.currentEffect]["knobs"][0]["target"] = effectData["effectTarget"];
 							} else {
-								this.effectDescriptor[this.currentEffect]["knobs"][0]["start"] = 1;
-								this.effectDescriptor[this.currentEffect]["knobs"][0]["target"] = 1;
+								this.resetKnobs();
 								this.effectData["effectStart"] = 1;
 								this.effectData["effectTarget"] = 1;
 							}
@@ -199,14 +196,55 @@
 				},
 				cutAudio(audioItem, currentX){
 					let currentUi = this.$store.getters.getUi;
-					let cutTime = utils.x_to_time(currentX, currentUi["timeScale"], currentUi["scrollTime"]);
+					let cutTime = currentX / currentUi["timeScale"];
 					this.$store.commit("updateAudio", {"id": audioItem.id, "end": cutTime});
 					let copyId = utils.guid();
 					this.$store.commit("copyAudio", {"copyId": audioItem.id, "id": copyId});
 					this.$store.commit("updateAudio", {"id": copyId, "start": cutTime, "end": audioItem.end});
 
-					//Add code to also split effect
+					let oldAudio = this.$store.getters.getAudio(audioItem.id);
+					let newAudio = this.$store.getters.getAudio(copyId);
+					let oldAudioLength = oldAudio["end"] - oldAudio["start"];
 
+					//Update effect curves
+					for (let i=0; i<oldAudio["effects"].length; i++){
+						if (oldAudio["effects"][i]["start"] < cutTime && oldAudio["effects"][i]["end"] > cutTime){ //currently this is just setting the end of the effect to the cut time - should instead cross the effect between the two audio items with correct start/target values
+							//Effect should be split between cut items
+							oldAudio["effects"][i]["end"] = cutTime;
+						}
+					}
+
+					for (let i=0; i<newAudio["effects"].length; i++){
+						if (newAudio["effects"][i]["end"] < newAudio["start"]){ //currently this is just setting the end of the effect to the cut time - should instead cross the effect between the two audio items with correct start/target values
+							//Effect should be split between cut items
+							this.$store.commit("deleteFromArray", {"id": copyId, "key": "effects", "index": i});
+						} else {
+							newAudio["effects"][i]["start"] = newAudio["effects"][i]["start"] - oldAudioLength;
+							newAudio["effects"][i]["end"] = newAudio["effects"][i]["end"] - oldAudioLength;
+						}
+					}
+
+					for (let i=0; i<oldAudio["effects"].length; i++){
+						if (oldAudio["effects"][i]["start"] > oldAudio["end"]){ //currently this is just setting the end of the effect to the cut time - should instead cross the effect between the two audio items with correct start/target values
+							//Effect should be split between cut items
+							this.$store.commit("deleteFromArray", {"id": audioItem.id, "key": "effects", "index": i});
+						}
+					}
+
+					//Update beat markers
+
+					for (let i=0; i<newAudio["beat_markers"].length; i++){ //Remove any bar markers before start of new audio cut segment (right side)
+						if (newAudio["beat_markers"][i] + oldAudio["start"] < newAudio["start"]){
+							delete newAudio["beat_markers"][i];
+						}
+						newAudio["beat_markers"][i] = newAudio["beat_markers"][i] - oldAudioLength;
+					}
+
+					for (let i=0; i<oldAudio["beat_markers"].length; i++){ //Remove any bar markers past new end of first audio cut segment (left side)
+						if (oldAudio["beat_markers"][i] + oldAudio["start"] > oldAudio["end"]){
+							delete oldAudio["beat_markers"][i];
+						}
+					}
 				},
 				renderEffectModal(type, audioItem, effect){
 					//Updates values in vuex and here so that the modal is rendered correctly with the correct ID's

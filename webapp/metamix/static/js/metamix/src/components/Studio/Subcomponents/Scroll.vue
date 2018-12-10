@@ -56,6 +56,7 @@
 				this.paint();
 			},
 			resize() {
+				this.dpr = window.devicePixelRatio;
 				this.canvas.width = this.parentDiv.offsetWidth;
 				this.canvas.height = this.parentDiv.offsetHeight;
 				this.height = this.canvas.height;

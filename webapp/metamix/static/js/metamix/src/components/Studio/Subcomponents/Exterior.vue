@@ -42,7 +42,8 @@
 				this.dragging = 0;
 			},
 			resize(){
-				let parentDiv = document.getElementById("left-column")
+				let parentDiv = document.getElementById("left-column");
+				this.dpr = window.devicePixelRatio;
 				this.canvas.width = parentDiv.offsetWidth;
 				this.canvas.height = parentDiv.offsetHeight;
 				this.width = parentDiv.offsetWidth;

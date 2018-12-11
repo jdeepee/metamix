@@ -268,6 +268,10 @@ function handleDrag(element, ondown, onmove, onup, down_criteria) {
 	};
 }
 
+function capitalizeFirstLetter(string) {
+    return string.charAt(0).toUpperCase() + string.slice(1);
+}
+
 let utils = {
 		style: style,
 		format_friendly_seconds: format_friendly_seconds,
@@ -282,7 +286,8 @@ let utils = {
 		x_to_time: x_to_time,
 		linepointNearestMouse: linepointNearestMouse,
 		interpolateHeight: interpolateHeight,
-		guid: guid
+		guid: guid,
+		capitalizeFirstLetter: capitalizeFirstLetter
 	}
 	
 export default utils;

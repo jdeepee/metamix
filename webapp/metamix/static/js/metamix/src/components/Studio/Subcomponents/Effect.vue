@@ -153,11 +153,17 @@
 					}
 				},
 				knobUpdate(value){ //Currently knob update and knob revert are created using manual precision values - in the future this should be computed per effect type
+					let multiplier;
 					switch (this.currentEffect){
 						case "eq":
-							let multiplier = Math.pow(10, 2 || 0); 
+							multiplier = Math.pow(10, 2 || 0); 
 							value = Math.round(value * multiplier) / multiplier;
 							return (value*100).toString() + "%";
+
+						case "volume":
+							multiplier = Math.pow(10, 2 || 0); 
+							value = Math.round(value * multiplier) / multiplier;
+							return (value*100).toString() + "%"; 
 
 						case "highPass":
 							return ">"+value.toString();
@@ -175,12 +181,10 @@
 				knobRevert(value){
 					switch (this.currentEffect){
 						case "eq":
-							value = value.slice(0, -1);
-							return value/100;
+							return value.slice(0, -1)/100;
 
 						case "volume":
-							value = value.slice(0, -1);
-							return value/100;
+							return value.slice(0, -1)/100;
 
 						case "lowPass":
 							return value.substring(1);
@@ -231,6 +235,12 @@
 				},
 				removeAudio(audioId){
 					this.$store.commit("deleteAudio", audioId);
+				},
+				copyAudio(audioId){
+					let copyId = utils.guid();
+					let oldAudio = this.$store.getters.getAudio(audioId);
+					this.$store.commit("copyAudio", {"copyId": audioId, "id": copyId});
+					this.$store.commit("updateAudio", {"id": copyId, "start": oldAudio["end"], "end": oldAudio["end"] + (oldAudio["end"] - oldAudio["start"])})
 				},
 				cutAudio(audioItem, currentX){
 					let currentUi = this.$store.getters.getUi;

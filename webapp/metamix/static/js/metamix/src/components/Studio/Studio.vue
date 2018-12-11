@@ -927,6 +927,12 @@
 													componentObj.effectHandler.removeAudio(componentObj.currentAudio.id);
 												}
 											}
+
+				this.menuItems[0]["events"] = { //Set copy click event
+												"click": function(e){
+													componentObj.effectHandler.copyAudio(componentObj.currentAudio.id);
+												}
+											}
 			}
 		},
 		mounted() {

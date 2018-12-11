@@ -146,6 +146,7 @@ AudioItem.prototype.drawEffectCurve = function(ctx, start, target, type, startX,
 		let effectEndY = this.y + this.y2 - effectEndRatio * this.ratio;
 
 		ctx.strokeStyle = Settings.theme.effectColours[type];
+		ctx.fillStyle = Settings.theme.effectColours[type];
 		ctx.beginPath();
 		ctx.moveTo(startX, this.y);
 		ctx.lineTo(startX, this.y+this.y2);
@@ -159,12 +160,22 @@ AudioItem.prototype.drawEffectCurve = function(ctx, start, target, type, startX,
 			ctx.moveTo(startX, effectStartY);
 			ctx.lineTo(endX, effectEndY)
 			ctx.stroke();
+			if (type == "eq"){
+				ctx.fillText("EQ", startX+(ctx.measureText(type).width/this.dpr), effectStartY-2);
+			} else {
+				ctx.fillText(utils.capitalizeFirstLetter(type), startX+(ctx.measureText(type).width/this.dpr), effectStartY-2);
+			}
 
 		} else if (strengthCurve == "continuous"){
 			this.curveValues.push({x0: startX, y0: effectStartY, x1: endX, y1: effectEndY, id: id, type: type});
 			ctx.moveTo(startX, effectEndY);
 			ctx.lineTo(endX, effectEndY)
 			ctx.stroke();
+			if (type == "eq"){
+				ctx.fillText("EQ", startX+(ctx.measureText(type).width/this.dpr), effectStartY-2);
+			} else {
+				ctx.fillText(utils.capitalizeFirstLetter(type), startX+(ctx.measureText(type).width/this.dpr), effectStartY-2);
+			}
 		}
 	}
 }

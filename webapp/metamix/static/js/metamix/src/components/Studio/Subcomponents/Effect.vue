@@ -33,13 +33,13 @@
 						<div id="start-knob-container" class="knob-container">
 							<template v-for="knob in effectDescriptor[currentEffect]['knobs']">
 								<h4>{{knob.title}}</h4>
-								<knob-control v-model="knob['start']" :min="knob['min']" :max="knob['max']" :stepSize="knob['step']" :value-display-function="knobUpdate" :updateFunction="update" :effectId="effectId" :audioId="audioId" :type="'start'" :name="knob['name']"></knob-control>
+								<knob-control v-model="knob['start']" :min="knob['min']" :max="knob['max']" :stepSize="knob['step']" :value-display-function="knobUpdate" :updateFunction="update" :effectId="effectId" :audioId="audioId" :type="'start'" :name="knob['name']" :primaryColor="knobColour"></knob-control>
 							</template>
 						</div>
 						<div id="end-knob-container" class="knob-container-hidden">
 							<template v-for="knob in effectDescriptor[currentEffect]['knobs']">
 								<h4>{{knob.title}}</h4>
-								<knob-control v-model="knob['target']" :min="knob['min']" :max="knob['max']" :stepSize="knob['step']" :value-display-function="knobUpdate" :updateFunction="update" :effectId="effectId" :audioId="audioId" :type="'target'" :name="knob['name']"></knob-control>
+								<knob-control v-model="knob['target']" :min="knob['min']" :max="knob['max']" :stepSize="knob['step']" :value-display-function="knobUpdate" :updateFunction="update" :effectId="effectId" :audioId="audioId" :type="'target'" :name="knob['name']" :primaryColor="knobColour"></knob-control>
 							</template>
 						</div>
 					</div>
@@ -51,6 +51,7 @@
 
 <script type="text/javascript">
 		import utils from "../src/utils.js"
+		import {Settings} from "../../../settings.js"
 		import VueDraggableResizable from 'vue-draggable-resizable'
 		import KnobControl from './KnobControl.vue'
 
@@ -64,9 +65,9 @@
 				return{
 					currentEffect: "eq",
 					out: 0,
-					dragWidth: 350,
-					dragHeight: 600,
-					dragX: 200,
+					dragWidth: 350, //same dynamic rendering should be done for width
+					dragHeight: 860, //Lets dynamically set this height in the future based on the required height of the effect - all effects other than EQ only require enough space for one knob
+ 					dragX: 200,
 					dragY: 200,
 					title: null,
 					effectDescriptor: this.$store.getters.getUi["effects"],
@@ -74,7 +75,8 @@
 					audioId: null,
 					counterStart: 0,
 					counterEnd: 0,
-					barMarkers: null
+					barMarkers: null,
+					knobColour: null
 				}
 			},
 			methods:{
@@ -306,6 +308,7 @@
 					this.barMarkers = audioItem.barMarkers;
 					this.counterStart = 0;
 					this.counterEnd = 0;
+					this.knobColour = Settings.theme.effectColours[this.currentEffect];
 
 					if (effect == null){
 						//Fresh effect

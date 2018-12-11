@@ -235,12 +235,13 @@
 				cutAudio(audioItem, currentX){
 					let currentUi = this.$store.getters.getUi;
 					let cutTime = currentX / currentUi["timeScale"];
+					let oldAudio = this.$store.getters.getAudio(audioItem.id);
 					this.$store.commit("updateAudio", {"id": audioItem.id, "end": cutTime});
 					let copyId = utils.guid();
 					this.$store.commit("copyAudio", {"copyId": audioItem.id, "id": copyId});
-					this.$store.commit("updateAudio", {"id": copyId, "start": cutTime, "end": audioItem.end});
+					this.$store.commit("updateAudio", {"id": copyId, "start": cutTime, "end": audioItem.end, "song_start":  oldAudio["song_start"] + (cutTime - oldAudio["start"])});
+					this.$store.commit("updateAudio", {"id": audioItem.id, "song_end": oldAudio["song_start"] + (cutTime - (oldAudio["start"]))});
 
-					let oldAudio = this.$store.getters.getAudio(audioItem.id);
 					let newAudio = this.$store.getters.getAudio(copyId);
 					let oldAudioLength = oldAudio["end"] - oldAudio["start"];
 
@@ -283,6 +284,8 @@
 							delete oldAudio["beat_markers"][i];
 						}
 					}
+
+					console.log("New values after cut", oldAudio, newAudio);
 				},
 				renderEffectModal(type, audioItem, effect){
 					//Updates values in vuex and here so that the modal is rendered correctly with the correct ID's

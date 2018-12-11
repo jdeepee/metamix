@@ -102,7 +102,9 @@
 						"track": 0,
 						"start": 0,
 						"end": 30.4,
-						"bpm": 175
+						"bpm": 175,
+						"song_start": 0,
+						"song_end": 30.4
 					},
 					{
 						"id": "test song-id2",
@@ -115,7 +117,9 @@
 						"track": 1,
 						"start": 0,
 						"end": 25.4,
-						"bpm": 175
+						"bpm": 175,
+						"song_start": 0,
+						"song_end": 25.4
 					},
 					{
 						"id": "test song-id3",
@@ -128,7 +132,9 @@
 						"track": 0,
 						"start": 30.4,
 						"end": 40,
-						"bpm": 175
+						"bpm": 175,
+						"song_start": 0,
+						"song_end": 9.6
 					},
 					{
 						"id": "test song-id4",
@@ -141,7 +147,9 @@
 						"track": 2,
 						"start": 20,
 						"end": 40.56,
-						"bpm": 175
+						"bpm": 175,
+						"song_start": 0,
+						"song_end": 20.56
 					},
 					{
 						"id": "test song-id5",
@@ -154,7 +162,9 @@
 						"track": 3,
 						"start": 20,
 						"end": 40.56,
-						"bpm": 175
+						"bpm": 175,
+						"song_start": 10,
+						"song_end": 30.56
 					},
 					{
 						"id": "test song-id6",
@@ -167,7 +177,9 @@
 						"track": 2,
 						"start": 2,
 						"end": 7,
-						"bpm": 175
+						"bpm": 175,
+						"song_start": 3,
+						"song_end": 8
 					}//mock audio data
 				],
 				menuItems: [

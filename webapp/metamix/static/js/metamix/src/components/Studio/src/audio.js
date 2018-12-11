@@ -254,40 +254,47 @@ AudioItem.prototype.paintBarMarkers = function(ctx, block) {
 
 //Paint audio item in canvas
 AudioItem.prototype.paint = function(ctx, outlineColor, block) {
-	if (this.x >= 0 || this.x2 >= 0){
-		if (this.x <= this.currentWidth){
-			ctx.fillStyle = outlineColor;
-			ctx.beginPath();
-			//console.log("Painting rectangle", this.x, this.x2-this.x)
-			ctx.rect(this.x, this.y, this.x2-this.x, this.y2);
-			ctx.fill();
-			if (this.drawSelectGlow == true){
-				ctx.strokeStyle = "red";
-			} else {
-				ctx.strokeStyle = "black";
-			}
-			ctx.stroke();
-			ctx.fillStyle = "black";
-			this.paintWaveform(ctx);
-			this.paintBarMarkers(ctx, block);
-			this.paintEffects(ctx);
+	if (this.isInsideWindow() == true){
+		ctx.fillStyle = outlineColor;
+		ctx.beginPath();
+		//console.log("Painting rectangle", this.x, this.x2-this.x)
+		ctx.rect(this.x, this.y, this.x2-this.x, this.y2);
+		ctx.fill();
+		if (this.drawSelectGlow == true){
+			ctx.strokeStyle = "red";
+		} else {
+			ctx.strokeStyle = "black";
+		}
+		ctx.stroke();
+		ctx.fillStyle = "black";
+		this.paintWaveform(ctx);
+		this.paintBarMarkers(ctx, block);
+		this.paintEffects(ctx);
 
-			let text = this.audioName + " | Original BPM: (" + this.bpm.toString() + ")";
-			let medText = this.audioName + "(" + this.bpm.toString() + ")";
-			let txtWidthFull = ctx.measureText(text).width;
-			let txtWidthMed = ctx.measureText(medText).width
-			let txtWidthShort = ctx.measureText(this.audioName).width;
-			if (txtWidthFull < this.size){
-				ctx.fillText(text, this.x+(txtWidthFull/this.dpr), this.y+10);
+		let text = this.audioName + " | Original BPM: (" + this.bpm.toString() + ")";
+		let medText = this.audioName + "(" + this.bpm.toString() + ")";
+		let txtWidthFull = ctx.measureText(text).width;
+		let txtWidthMed = ctx.measureText(medText).width
+		let txtWidthShort = ctx.measureText(this.audioName).width;
+		if (txtWidthFull < this.size){
+			ctx.fillText(text, this.x+(txtWidthFull/this.dpr), this.y+10);
 
-			} else if (txtWidthMed < this.size){
-				ctx.fillText(medText, this.x+(txtWidthMed/this.dpr), this.y+10);
+		} else if (txtWidthMed < this.size){
+			ctx.fillText(medText, this.x+(txtWidthMed/this.dpr), this.y+10);
 
-			} else if (txtWidthShort < this.size){
-				ctx.fillText(this.audioName, this.x+(txtWidthShort/this.dpr), this.y+10);
-			}
+		} else if (txtWidthShort < this.size){
+			ctx.fillText(this.audioName, this.x+(txtWidthShort/this.dpr), this.y+10);
 		}
 	}
+};
+
+AudioItem.prototype.isInsideWindow = function(){ //Checks if the audioitem is inside the width of the window - so that we can selectivly render/process audio items
+	if (this.x >= 0 || this.x2 >= 0){
+		if (this.x <= this.currentWidth){
+			return true;
+		}
+	}
+	return false;
 };
 
 //Check if mouse at x/y is contained in audio

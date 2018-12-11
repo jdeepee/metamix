@@ -344,8 +344,8 @@
 				this.bounds = this.canvas.getBoundingClientRect();
 
 				//Redefine track bounds after resize
-				for (let i=0; i<this.rackLayers; i++){
-					this.trackBounds[i] = [(this.offset + i*this.lineHeight)/this.dpr, (offset + i+1*this.lineHeight)/this.dpr];
+				for (let i=0; i<this.trackLayers; i++){
+					this.trackBounds[i] = [(this.offset + i*this.lineHeight)/this.dpr, (this.offset + i+1*this.lineHeight)/this.dpr];
 				}
 			},
 			moveY(yPosition){
@@ -371,136 +371,138 @@
 				audioItemLoop:
 				for (let i = 0; i < this.renderItems.length; i++){
 					let item = this.renderItems[i];
-					if (item.track == this.currentDragging.track && item.id != this.currentDragging.id){ //If to check if comparison items are on same track 
-						if (item.xNormalized >= this.currentDragging.xNormalized){ //If start of current comparison audio is before dragging audio start
-							if (endX >= item.xNormalized){ //Check that computed end is greater than comparison audio start 
-								if (e.offsetx/this.dpr <= item.x2){
-									endX = item.xNormalized;
-									startX = endX - this.currentDragging.size;
-								} else {
-									startX = item.x2Normalized;
-									endX = startX + this.currentDragging.size;
+					if (item.isInsideWindow() == true){
+						if (item.track == this.currentDragging.track && item.id != this.currentDragging.id){ //If to check if comparison items are on same track 
+							if (item.xNormalized >= this.currentDragging.xNormalized){ //If start of current comparison audio is before dragging audio start
+								if (endX >= item.xNormalized){ //Check that computed end is greater than comparison audio start 
+									if (e.offsetx/this.dpr <= item.x2){
+										endX = item.xNormalized;
+										startX = endX - this.currentDragging.size;
+									} else {
+										startX = item.x2Normalized;
+										endX = startX + this.currentDragging.size;
+									}
+								}
+							} else if (item.x2Normalized <= this.currentDragging.xNormalized){
+								if (startX <= item.x2Normalized){
+									if (e.offsetx/this.dpr >= item.x){
+										startX = item.x2Normalized;
+										endX = startX + this.currentDragging.size;
+
+									} else {
+										endX = item.xNormalized;
+										startX = endX - this.currentDragging.size;
+									}
 								}
 							}
-						} else if (item.x2Normalized <= this.currentDragging.xNormalized){
-							if (startX <= item.x2Normalized){
-								if (e.offsetx/this.dpr >= item.x){
-									startX = item.x2Normalized;
-									endX = startX + this.currentDragging.size;
+						} else if (item.id != this.currentDragging.id && this.lastX != 0) { //Run Y aligment - will hold currently dragged audio item at snapped location for x movement ticks
+							//Rounding values should change based on time_scale value - when we are far zoomed out 0.5 is too small each scroll steps much larger than 0.5
+							//Items should not be able to snap inside other pieces of audio by being close 
+							// console.log("Comparing", rstartX, rendX, "With", item.rounded2X, 
+							// 	item.rounded2X2, "ID", item.id, "and", currentDragging.id,
+							// 	"original values", startX, endX, item.xNormalized, item.x2Normalized)
+							if (rendX == item.rounded2X){ //end2start
+								this.block = true;
+								this.blockNumber = 10;
+								startX = item.xNormalized - this.currentDragging.size;
+								endX = item.xNormalized;
+								this.drawSnapMarker = item.xNormalized;
+								break audioItemLoop;
 
-								} else {
-									endX = item.xNormalized;
-									startX = endX - this.currentDragging.size;
-								}
-							}
-						}
-					} else if (item.id != this.currentDragging.id && this.lastX != 0) { //Run Y aligment - will hold currently dragged audio item at snapped location for x movement ticks
-						//Rounding values should change based on time_scale value - when we are far zoomed out 0.5 is too small each scroll steps much larger than 0.5
-						//Items should not be able to snap inside other pieces of audio by being close 
-						// console.log("Comparing", rstartX, rendX, "With", item.rounded2X, 
-						// 	item.rounded2X2, "ID", item.id, "and", currentDragging.id,
-						// 	"original values", startX, endX, item.xNormalized, item.x2Normalized)
-						if (rendX == item.rounded2X){ //end2start
-							this.block = true;
-							this.blockNumber = 10;
-							startX = item.xNormalized - this.currentDragging.size;
-							endX = item.xNormalized;
-							this.drawSnapMarker = item.xNormalized;
-							break audioItemLoop;
+							} else if (rendX == item.rounded2X2) { //end2end
+								this.block = true;
+								this.blockNumber = 10;
+								startX = item.x2Normalized - this.currentDragging.size;
+								endX = item.x2Normalized;
+								this.drawSnapMarker = item.x2Normalized;
+								break audioItemLoop;
 
-						} else if (rendX == item.rounded2X2) { //end2end
-							this.block = true;
-							this.blockNumber = 10;
-							startX = item.x2Normalized - this.currentDragging.size;
-							endX = item.x2Normalized;
-							this.drawSnapMarker = item.x2Normalized;
-							break audioItemLoop;
+							} else if (rstartX == item.rounded2X) { //start2/start
+								this.block = true;
+								this.blockNumber = 10;
+								startX = item.xNormalized;
+								endX = item.xNormalized + this.currentDragging.size;
+								this.drawSnapMarker = item.xNormalized;
+								break audioItemLoop;
 
-						} else if (rstartX == item.rounded2X) { //start2/start
-							this.block = true;
-							this.blockNumber = 10;
-							startX = item.xNormalized;
-							endX = item.xNormalized + this.currentDragging.size;
-							this.drawSnapMarker = item.xNormalized;
-							break audioItemLoop;
+							} else if (rstartX == item.rounded2X2) { //start2end
+								this.block = true;
+								this.blockNumber = 10;
+								startX = item.x2Normalized;
+								endX = item.x2Normalized + this.currentDragging.size;
+								this.drawSnapMarker = item.x2Normalized;
+								break audioItemLoop;
 
-						} else if (rstartX == item.rounded2X2) { //start2end
-							this.block = true;
-							this.blockNumber = 10;
-							startX = item.x2Normalized;
-							endX = item.x2Normalized + this.currentDragging.size;
-							this.drawSnapMarker = item.x2Normalized;
-							break audioItemLoop;
+							} else {
+								if (startX >= item.xNormalized && startX <= item.x2Normalized || endX >= item.xNormalized && endX <= item.x2Normalized || item.xNormalized >= startX && item.x2Normalized <= endX){
+									if (item.barMarkersX.length > 0){
+										for (let i2=0; i2<item.barMarkersXRounded.length; i2++){ //bar marker matching seems to be very hit and miss - try and figure out why that is happening
+											//console.log("Checkng", item.id, "marker ", item.barMarkersXRounded[i], "vs", rendX, rstartX);
+											if (rendX == item.barMarkersXRounded[i2]){ //end2start
+												this.block = true;
+												this.blockNumber = 4;
+												startX = item.barMarkersX[i2] - this.currentDragging.size;
+												endX = item.barMarkersX[i2];
+												this.drawSnapMarker = item.barMarkersX[i2];
+												break audioItemLoop;
 
-						} else {
-							if (startX >= item.xNormalized && startX <= item.x2Normalized || endX >= item.xNormalized && endX <= item.x2Normalized || item.xNormalized >= startX && item.x2Normalized <= endX){
-								if (item.barMarkersX.length > 0){
-									for (let i2=0; i2<item.barMarkersXRounded.length; i2++){ //bar marker matching seems to be very hit and miss - try and figure out why that is happening
-										//console.log("Checkng", item.id, "marker ", item.barMarkersXRounded[i], "vs", rendX, rstartX);
-										if (rendX == item.barMarkersXRounded[i2]){ //end2start
-											this.block = true;
-											this.blockNumber = 4;
-											startX = item.barMarkersX[i2] - this.currentDragging.size;
-											endX = item.barMarkersX[i2];
-											this.drawSnapMarker = item.barMarkersX[i2];
-											break audioItemLoop;
+											} else if (rstartX == item.barMarkersXRounded[i2]) { //start2/start
+												this.block = true;
+												this.blockNumber = 4;
+												startX = item.barMarkersX[i2];
+												endX = item.barMarkersX[i2] + this.currentDragging.size;
+												this.drawSnapMarker = item.barMarkersX[i2];
+												break audioItemLoop;
 
-										} else if (rstartX == item.barMarkersXRounded[i2]) { //start2/start
-											this.block = true;
-											this.blockNumber = 4;
-											startX = item.barMarkersX[i2];
-											endX = item.barMarkersX[i2] + this.currentDragging.size;
-											this.drawSnapMarker = item.barMarkersX[i2];
-											break audioItemLoop;
+											} else {
+												for (let bi=0; bi<this.currentDragging.barMarkersXRounded.length; bi++){
+													//console.log("Checkng", item.id, "marker ", item.barMarkersXRounded[i], "vs", this.currentDragging.id, "vs marker", this.currentDragging.barMarkersXRounded[bi]);
+													if (this.currentDragging.barMarkersXRounded[bi] == item.barMarkersXRounded[i2]){
+														startX = item.barMarkersX[i2] - this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][0];
+														endX = item.barMarkersX[i2] + this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][1];
+														this.block = true;
+														this.blockNumber = 4;
+														this.drawSnapMarker = item.barMarkersX[i2];
+														break audioItemLoop;
 
-										} else {
-											for (let bi=0; bi<this.currentDragging.barMarkersXRounded.length; bi++){
-												//console.log("Checkng", item.id, "marker ", item.barMarkersXRounded[i], "vs", this.currentDragging.id, "vs marker", this.currentDragging.barMarkersXRounded[bi]);
-												if (this.currentDragging.barMarkersXRounded[bi] == item.barMarkersXRounded[i2]){
-													startX = item.barMarkersX[i2] - this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][0];
-													endX = item.barMarkersX[i2] + this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][1];
-													this.block = true;
-													this.blockNumber = 4;
-													this.drawSnapMarker = item.barMarkersX[i2];
-													break audioItemLoop;
+													} else if (this.currentDragging.barMarkersXRounded[bi] == item.rounded2X) {
+														startX = item.xNormalized - this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][0];
+														endX = item.xNormalized + this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][1];
+														this.block = true;
+														this.blockNumber = 4;
+														this.drawSnapMarker = item.xNormalized;
+														break audioItemLoop;
 
-												} else if (this.currentDragging.barMarkersXRounded[bi] == item.rounded2X) {
-													startX = item.xNormalized - this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][0];
-													endX = item.xNormalized + this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][1];
-													this.block = true;
-													this.blockNumber = 4;
-													this.drawSnapMarker = item.xNormalized;
-													break audioItemLoop;
-
-												} else if (this.currentDragging.barMarkersXRounded[bi] == item.rounded2X2) {
-													startX = item.x2Normalized - this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][0];
-													endX = item.x2Normalized + this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][1];
-													this.block = true;
-													this.blockNumber = 4;
-													this.drawSnapMarker = item.x2Normalized;
-													break audioItemLoop;
+													} else if (this.currentDragging.barMarkersXRounded[bi] == item.rounded2X2) {
+														startX = item.x2Normalized - this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][0];
+														endX = item.x2Normalized + this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][1];
+														this.block = true;
+														this.blockNumber = 4;
+														this.drawSnapMarker = item.x2Normalized;
+														break audioItemLoop;
+													}
 												}
 											}
 										}
-									}
-								} else {
-									for (let bi=0; bi<this.currentDragging.barMarkersXRounded.length; bi++){
-										//console.log("Checkng", item.id, "start ", item.rounded2X, "vs", this.currentDragging.id, "vs marker", this.currentDragging.barMarkersXRounded[bi]);
-										if (this.currentDragging.barMarkersXRounded[bi] == item.rounded2X) {
-											startX = item.xNormalized - this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][0];
-											endX = item.xNormalized + this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][1];
-											this.block = true;
-											this.blockNumber = 4;
-											this.drawSnapMarker = item.xNormalized;
-											break audioItemLoop;
+									} else {
+										for (let bi=0; bi<this.currentDragging.barMarkersXRounded.length; bi++){
+											//console.log("Checkng", item.id, "start ", item.rounded2X, "vs", this.currentDragging.id, "vs marker", this.currentDragging.barMarkersXRounded[bi]);
+											if (this.currentDragging.barMarkersXRounded[bi] == item.rounded2X) {
+												startX = item.xNormalized - this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][0];
+												endX = item.xNormalized + this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][1];
+												this.block = true;
+												this.blockNumber = 4;
+												this.drawSnapMarker = item.xNormalized;
+												break audioItemLoop;
 
-										} else if (this.currentDragging.barMarkersXRounded[bi] == item.rounded2X2) {
-											startX = item.x2Normalized - this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][0];
-											endX = item.x2Normalized + this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][1];
-											this.block = true;
-											this.blockNumber = 4;
-											this.drawSnapMarker = item.x2Normalized;
-											break audioItemLoop;
+											} else if (this.currentDragging.barMarkersXRounded[bi] == item.rounded2X2) {
+												startX = item.x2Normalized - this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][0];
+												endX = item.x2Normalized + this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][1];
+												this.block = true;
+												this.blockNumber = 4;
+												this.drawSnapMarker = item.x2Normalized;
+												break audioItemLoop;
+											}
 										}
 									}
 								}

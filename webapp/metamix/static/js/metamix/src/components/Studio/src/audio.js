@@ -43,7 +43,7 @@ AudioItem.prototype.setWaveForm = function(rawWaveForm, y, y2, x, x2, time_scale
 	}
 }
 
-AudioItem.prototype.set = function(x, y, x2, y2, color, audioName, id, track, time_scale, frame_start, barMarkers, effects, end, bpm, dpr) {
+AudioItem.prototype.set = function(x, y, x2, y2, color, audioName, id, track, time_scale, frame_start, barMarkers, effects, end, bpm, dpr, currentWidth) {
 	this.x = x;
 	this.y = y;
 	this.x2 = x2;
@@ -68,6 +68,7 @@ AudioItem.prototype.set = function(x, y, x2, y2, color, audioName, id, track, ti
 	this.drawSelectGlow = false;
 	this.end = end;
 	this.dpr = dpr;
+	this.currentWidth = currentWidth;
 
 	this.rounded1X = utils.round(this.xNormalized, 0.25);
 	this.rounded1X2 = utils.round(this.x2Normalized, 0.25);
@@ -177,6 +178,7 @@ AudioItem.prototype.drawEffectCurve = function(ctx, start, target, type, startX,
 				ctx.fillText(utils.capitalizeFirstLetter(type), startX+(ctx.measureText(type).width/this.dpr), effectStartY-2);
 			}
 		}
+		ctx.fillStyle = "black";
 	}
 }
 
@@ -252,34 +254,40 @@ AudioItem.prototype.paintBarMarkers = function(ctx, block) {
 
 //Paint audio item in canvas
 AudioItem.prototype.paint = function(ctx, outlineColor, block) {
-	ctx.fillStyle = outlineColor;
-	ctx.beginPath();
-	ctx.rect(this.x, this.y, this.x2-this.x, this.y2);
-	ctx.fill();
-	if (this.drawSelectGlow == true){
-		ctx.strokeStyle = "red";
-	} else {
-		ctx.strokeStyle = "black";
-	}
-	ctx.stroke();
-	ctx.fillStyle = "black";
-	let text = this.audioName + " | Original BPM: (" + this.bpm.toString() + ")";
-	let medText = this.audioName + "(" + this.bpm.toString() + ")";
-	let txtWidthFull = ctx.measureText(text).width;
-	let txtWidthMed = ctx.measureText(medText).width
-	let txtWidthShort = ctx.measureText(this.audioName).width;
-	if (txtWidthFull < this.size){
-		ctx.fillText(text, this.x+(txtWidthFull/this.dpr), this.y+10);
+	if (this.x >= 0 || this.x2 >= 0){
+		if (this.x <= this.currentWidth){
+			ctx.fillStyle = outlineColor;
+			ctx.beginPath();
+			//console.log("Painting rectangle", this.x, this.x2-this.x)
+			ctx.rect(this.x, this.y, this.x2-this.x, this.y2);
+			ctx.fill();
+			if (this.drawSelectGlow == true){
+				ctx.strokeStyle = "red";
+			} else {
+				ctx.strokeStyle = "black";
+			}
+			ctx.stroke();
+			ctx.fillStyle = "black";
+			this.paintWaveform(ctx);
+			this.paintBarMarkers(ctx, block);
+			this.paintEffects(ctx);
 
-	} else if (txtWidthMed < this.size){
-		ctx.fillText(medText, this.x+(txtWidthMed/this.dpr), this.y+10);
+			let text = this.audioName + " | Original BPM: (" + this.bpm.toString() + ")";
+			let medText = this.audioName + "(" + this.bpm.toString() + ")";
+			let txtWidthFull = ctx.measureText(text).width;
+			let txtWidthMed = ctx.measureText(medText).width
+			let txtWidthShort = ctx.measureText(this.audioName).width;
+			if (txtWidthFull < this.size){
+				ctx.fillText(text, this.x+(txtWidthFull/this.dpr), this.y+10);
 
-	} else if (txtWidthShort < this.size){
-		ctx.fillText(this.audioName, this.x+(txtWidthShort/this.dpr), this.y+10);
+			} else if (txtWidthMed < this.size){
+				ctx.fillText(medText, this.x+(txtWidthMed/this.dpr), this.y+10);
+
+			} else if (txtWidthShort < this.size){
+				ctx.fillText(this.audioName, this.x+(txtWidthShort/this.dpr), this.y+10);
+			}
+		}
 	}
-	this.paintWaveform(ctx);
-	this.paintBarMarkers(ctx, block);
-	this.paintEffects(ctx);
 };
 
 //Check if mouse at x/y is contained in audio

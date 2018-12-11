@@ -436,7 +436,7 @@
 							if (startX >= item.xNormalized && startX <= item.x2Normalized || endX >= item.xNormalized && endX <= item.x2Normalized || item.xNormalized >= startX && item.x2Normalized <= endX){
 								if (item.barMarkersX.length > 0){
 									for (let i2=0; i2<item.barMarkersXRounded.length; i2++){ //bar marker matching seems to be very hit and miss - try and figure out why that is happening
-										console.log("Checkng", item.id, "marker ", item.barMarkersXRounded[i], "vs", rendX, rstartX);
+										//console.log("Checkng", item.id, "marker ", item.barMarkersXRounded[i], "vs", rendX, rstartX);
 										if (rendX == item.barMarkersXRounded[i2]){ //end2start
 											this.block = true;
 											this.blockNumber = 4;
@@ -455,7 +455,7 @@
 
 										} else {
 											for (let bi=0; bi<this.currentDragging.barMarkersXRounded.length; bi++){
-												console.log("Checkng", item.id, "marker ", item.barMarkersXRounded[i], "vs", this.currentDragging.id, "vs marker", this.currentDragging.barMarkersXRounded[bi]);
+												//console.log("Checkng", item.id, "marker ", item.barMarkersXRounded[i], "vs", this.currentDragging.id, "vs marker", this.currentDragging.barMarkersXRounded[bi]);
 												if (this.currentDragging.barMarkersXRounded[bi] == item.barMarkersXRounded[i2]){
 													startX = item.barMarkersX[i2] - this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][0];
 													endX = item.barMarkersX[i2] + this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][1];
@@ -485,7 +485,7 @@
 									}
 								} else {
 									for (let bi=0; bi<this.currentDragging.barMarkersXRounded.length; bi++){
-										console.log("Checkng", item.id, "start ", item.rounded2X, "vs", this.currentDragging.id, "vs marker", this.currentDragging.barMarkersXRounded[bi]);
+										//console.log("Checkng", item.id, "start ", item.rounded2X, "vs", this.currentDragging.id, "vs marker", this.currentDragging.barMarkersXRounded[bi]);
 										if (this.currentDragging.barMarkersXRounded[bi] == item.rounded2X) {
 											startX = item.xNormalized - this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][0];
 											endX = item.xNormalized + this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][1];
@@ -542,7 +542,7 @@
 					if (this.renderedItems == false){
 						let AudioRect = new AudioItem();
 						AudioRect.setWaveForm(audioItem.raw_wave_form, y1, y2, x, x2, this.frameStart, this.timeScale, offset);
-						AudioRect.set(x, y1, x2, y2, Settings.theme.audioElement, audioItem.name, audioItem.id, audioItem.track, this.timeScale, this.frameStart, audioItem.beat_markers, audioItem.effects, audioItem.end, audioItem.bpm, this.dpr);
+						AudioRect.set(x, y1, x2, y2, Settings.theme.audioElement, audioItem.name, audioItem.id, audioItem.track, this.timeScale, this.frameStart, audioItem.beat_markers, audioItem.effects, audioItem.end, audioItem.bpm, this.dpr, this.width);
 						AudioRect.paint(this.ctx, Settings.theme.audioElement, this.block);
 						this.renderItems.push(AudioRect);
 
@@ -552,13 +552,13 @@
 							if (audioItem.raw_wave_form != null && currentItem.rawWaveForm == undefined || this.lastTimeScale != this.timeScale || this.resetWaveForm == true){
 								currentItem.setWaveForm(audioItem.raw_wave_form, y1, y2, x, x2, this.frameStart, this.timeScale, offset);
 							}
-							currentItem.set(x, y1, x2, y2, Settings.theme.audioElement, audioItem.name, audioItem.id, audioItem.track, this.timeScale, this.frameStart, audioItem.beat_markers, audioItem.effects, audioItem.end, audioItem.bpm, this.dpr);
+							currentItem.set(x, y1, x2, y2, Settings.theme.audioElement, audioItem.name, audioItem.id, audioItem.track, this.timeScale, this.frameStart, audioItem.beat_markers, audioItem.effects, audioItem.end, audioItem.bpm, this.dpr, this.width);
 							currentItem.paint(this.ctx, Settings.theme.audioElement, this.block);
 						} else {
 							//New item has been inserted from copy/cut
 							let AudioRect = new AudioItem();
 							AudioRect.setWaveForm(audioItem.raw_wave_form, y1, y2, x, x2, this.frameStart, this.timeScale, offset);
-							AudioRect.set(x, y1, x2, y2, Settings.theme.audioElement, audioItem.name, audioItem.id, audioItem.track, this.timeScale, this.frameStart, audioItem.beat_markers, audioItem.effects, audioItem.end, audioItem.bpm, this.dpr);
+							AudioRect.set(x, y1, x2, y2, Settings.theme.audioElement, audioItem.name, audioItem.id, audioItem.track, this.timeScale, this.frameStart, audioItem.beat_markers, audioItem.effects, audioItem.end, audioItem.bpm, this.dpr, this.width);
 							AudioRect.paint(this.ctx, Settings.theme.audioElement, this.block);
 							this.renderItems.push(AudioRect);
 						}
@@ -766,14 +766,14 @@
 				document.addEventListener("keydown", function(e){
 					let currentUi = componentObj.$store.getters.getUi;
 					if (e.keyCode == 37){ //left arrow key
-						let out = currentUi["scrollTime"] -5;
+						let out = currentUi["scrollTime"] -1;
 						if (out < 0){
 							out = 0;
 						}
 						componentObj.$store.commit("updateUi", {"scrollTime": out});
 
 					} else if (e.keyCode == 39){ //right arrow key
-						componentObj.$store.commit("updateUi", {"scrollTime": currentUi["scrollTime"] +5});
+						componentObj.$store.commit("updateUi", {"scrollTime": currentUi["scrollTime"] +1});
 
 					} else if (e.keyCode == 38){ //up arrow key
 						let timeScale = currentUi["timeScale"];

@@ -5,6 +5,7 @@
 		</div>
 		<div id="zoom-column">
 			<input id="range-slider" v-model="rangeValue" type="range" min="1" max="150" step="0.5" v-on:mousemove="rangeUpdate" v-on:mousedown="rangeDown" v-on:mouseup="rangeUp">
+<!-- 			<input id="timeline-size-input" v-on:input="updateTimelineSize"> -->
 		</div>
 	</div>
 </template>
@@ -31,6 +32,10 @@
 					this.$nextTick(fn);
 				});
 			},
+			// updateTimelineSize(value){
+			// 	console.log("update")
+			// 	this.$store.commit("updateUi", {"totalTime": value});
+			// },
 			rangeUpdate(){
 				if (!this.dragging) return;
 				this.$store.commit("updateUi", {"timeScale": this.rangeValue});

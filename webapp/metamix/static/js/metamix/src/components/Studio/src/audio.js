@@ -168,8 +168,8 @@ AudioItem.prototype.drawEffectCurve = function(ctx, start, target, type, startX,
 
 		} else if (strengthCurve == "continuous"){
 			this.curveValues.push({x0: startX, y0: effectStartY, x1: endX, y1: effectEndY, id: id, type: type});
-			ctx.moveTo(startX, effectEndY);
-			ctx.lineTo(endX, effectEndY)
+			ctx.moveTo(startX, effectStartY);
+			ctx.lineTo(endX, effectStartY)
 			ctx.stroke();
 			if (type == "eq"){
 				ctx.fillText("EQ", startX+(ctx.measureText(type).width/this.dpr), effectStartY-2);

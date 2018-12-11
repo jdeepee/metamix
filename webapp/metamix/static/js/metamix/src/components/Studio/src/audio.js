@@ -10,7 +10,7 @@ function AudioItem() {
 
 //Set letiables for audio item
 //This should be refactored to accept AudioItem object and then this letiables set from getting values from this object - much cleaner than sending a bunch of paramters
-AudioItem.prototype.setWaveForm = function(rawWaveForm, y, y2, x, x2, time_scale, frame_start, offset, dpr){
+AudioItem.prototype.setWaveForm = function(rawWaveForm, y, y2, x, x2, time_scale, frame_start, offset){
 	this.rawWaveForm = rawWaveForm;
 	this.rawWaveFormMin = [];
 	this.rawWaveFormMax = [];
@@ -43,13 +43,14 @@ AudioItem.prototype.setWaveForm = function(rawWaveForm, y, y2, x, x2, time_scale
 	}
 }
 
-AudioItem.prototype.set = function(x, y, x2, y2, color, audioName, id, track, time_scale, frame_start, barMarkers, effects, end) {
+AudioItem.prototype.set = function(x, y, x2, y2, color, audioName, id, track, time_scale, frame_start, barMarkers, effects, end, bpm, dpr) {
 	this.x = x;
 	this.y = y;
 	this.x2 = x2;
 	this.y2 = y2;
 	this.color = color;
 	this.audioName = audioName;
+	this.bpm = bpm;
 	this.id = id;
 	this.track = track;
 	this.xNormalized = x + (frame_start * time_scale);
@@ -66,6 +67,7 @@ AudioItem.prototype.set = function(x, y, x2, y2, color, audioName, id, track, ti
 	this.curveValues = [];
 	this.drawSelectGlow = false;
 	this.end = end;
+	this.dpr = dpr;
 
 	this.rounded1X = utils.round(this.xNormalized, 0.25);
 	this.rounded1X2 = utils.round(this.x2Normalized, 0.25);
@@ -125,16 +127,17 @@ AudioItem.prototype.effectGlow = function(){
 }
 
 AudioItem.prototype.drawEffectCurve = function(ctx, start, target, type, startX, endX, strengthCurve, id){
-		//currently start/target only works for phase 1 of effect - this should be able to handle effects which have multiple start/targets - 
+	//currently start/target only works for phase 1 of effect - this should be able to handle effects which have multiple start/targets - 
 	//maybe this means drawing multiple curves?
 	//console.log("Draw effect curve for", start, target)
 	if (start != null || target != null){
-		if ((target == null || target == 0) && strengthCurve == "continuous"){
+		if ((target == null || target == Settings.effectBounds[type]["default"]) && strengthCurve == "continuous"){
 			target = start;
 
-		} else if ((target == null || target == 0) && strengthCurve != "continuous"){
+		} else if ((target == null || target == Settings.effectBounds[type]["default"]) && strengthCurve != "continuous"){
 			target = 0;
 		}
+		//console.log("Drawing", strengthCurve, start, target, type);
 		let effectStartRatio, effectEndRatio;
 		let out = effectUtils.computeHighLow(start, target, type);
 		effectStartRatio = out[0];
@@ -175,7 +178,7 @@ AudioItem.prototype.paintEffects = function(ctx) {
 		let effect = this.effects[i];
 		if (effect["endX"] - effect["startX"] > 5){
 			if (effect["type"] != "eq"){
-				if (effect["effectStart"] != 0 || effect["effectTarget"] != 0){ //here it should be checking that the values are != default values not 0
+				if (effect["effectStart"] != Settings.effectBounds[effect["type"]]["default"] || effect["effectTarget"] != Settings.effectBounds[effect["type"]]["default"]){ //here it should be checking that the values are != default values not 0
 					this.drawEffectCurve(ctx, effect["effectStart"], effect["effectTarget"], effect["type"], 
 										 effect["startX"], effect["endX"], effect["strength_curve"], effect["id"]);
 
@@ -249,8 +252,20 @@ AudioItem.prototype.paint = function(ctx, outlineColor, block) {
 	}
 	ctx.stroke();
 	ctx.fillStyle = "black";
-	let txtWidth = ctx.measureText(this.audioName).width;
-	if (txtWidth < this.x2-this.x){ctx.fillText(this.audioName, this.x+txtWidth, this.y+10);}
+	let text = this.audioName + " | Original BPM: (" + this.bpm.toString() + ")";
+	let medText = this.audioName + "(" + this.bpm.toString() + ")";
+	let txtWidthFull = ctx.measureText(text).width;
+	let txtWidthMed = ctx.measureText(medText).width
+	let txtWidthShort = ctx.measureText(this.audioName).width;
+	if (txtWidthFull < this.size){
+		ctx.fillText(text, this.x+(txtWidthFull/this.dpr), this.y+10);
+
+	} else if (txtWidthMed < this.size){
+		ctx.fillText(medText, this.x+(txtWidthMed/this.dpr), this.y+10);
+
+	} else if (txtWidthShort < this.size){
+		ctx.fillText(this.audioName, this.x+(txtWidthShort/this.dpr), this.y+10);
+	}
 	this.paintWaveform(ctx);
 	this.paintBarMarkers(ctx, block);
 	this.paintEffects(ctx);

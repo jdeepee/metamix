@@ -18,12 +18,12 @@ var lineHeightProportion = 0.22 //This value should be worked out on size of stu
 var trackTimelineOffset = 40;
 
 //min/max bounds for start/end of effects - EQ is missing min/max bounds for start/target-decibels
-var effectBounds = {"volume": {"startMin": 0, "startMax": 2, "endMin": 0, "endMax": 2}, 
-                    "high_pass_filter": {"startMin": 20, "startMax": 15000, "endMin": 20, "endMax": 15000}, 
-                    "low_pass_filter": {"startMin": 15000, "startMax": 20, "endMin": 15000, "endMax": 20}, 
-                    "eq": {"startMin": -2, "startMax": 2, "endMin": -2, "endMax": 2}, 
-                    "pitch": {"startMin": -12, "startMax": 12, "endMin": -12, "endMax": 12}, 
-                    "tempo": {"startMin": 0, "startMax": 250, "endMin": 0, "endMax": 250}}
+var effectBounds = {"volume": {"min": 0, "max": 2, "default": 1}, 
+                    "highPass": {"min": 20, "max": 15000, "default": 0}, 
+                    "lowPass": {"min": 15000, "max": 20, "default": 0}, 
+                    "eq": {"min": -2, "max": 2, "default": 0}, 
+                    "pitch": {"min": -12, "max": 12, "default": 0}, 
+                    "tempo": {"min": 0, "max": 250, "default": 0}}
                     // "gain": {"startMin": , "startMax": , "endMin": , "endMax": }, "flanger": {"startMin": , "startMax": , "endMin": , "endMax": }, 
                     // "echo": {"startMin": , "startMax": , "endMin": , "endMax": }, "phaser": {"startMin": , "startMax": , "endMin": , "endMax": }, 
                     // "reverb": {"startMin": , "startMax": , "endMin": , "endMax": }}

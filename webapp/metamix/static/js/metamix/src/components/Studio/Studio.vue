@@ -27,7 +27,7 @@
 				<i class="material-icons" id="low-pass">blur_linear</i>
 				<p>Low Pass Filter</p>
 			</div>
-			<div id="pitch" class="flex-item" @click="effectClick('pich')">
+			<div id="pitch" class="flex-item" @click="effectClick('pitch')">
 				<i class="material-icons" style="font-size: 5rem">trending_up</i>
 				<p>Pitch Shift</p>
 			</div>
@@ -101,7 +101,8 @@
 						"raw_wave_form": null,
 						"track": 0,
 						"start": 0,
-						"end": 30.4
+						"end": 30.4,
+						"bpm": 175
 					},
 					{
 						"id": "test song-id2",
@@ -113,7 +114,8 @@
 						"raw_wave_form": null,
 						"track": 1,
 						"start": 0,
-						"end": 25.4
+						"end": 25.4,
+						"bpm": 175
 					},
 					{
 						"id": "test song-id3",
@@ -125,7 +127,8 @@
 						"raw_wave_form": null,
 						"track": 0,
 						"start": 30.4,
-						"end": 40
+						"end": 40,
+						"bpm": 175
 					},
 					{
 						"id": "test song-id4",
@@ -137,7 +140,8 @@
 						"raw_wave_form": null,
 						"track": 2,
 						"start": 20,
-						"end": 40.56
+						"end": 40.56,
+						"bpm": 175
 					},
 					{
 						"id": "test song-id5",
@@ -149,7 +153,8 @@
 						"raw_wave_form": null,
 						"track": 3,
 						"start": 20,
-						"end": 40.56
+						"end": 40.56,
+						"bpm": 175
 					},
 					{
 						"id": "test song-id6",
@@ -161,7 +166,8 @@
 						"raw_wave_form": null,
 						"track": 2,
 						"start": 2,
-						"end": 7
+						"end": 7,
+						"bpm": 175
 					}//mock audio data
 				],
 				menuItems: [
@@ -279,6 +285,25 @@
 
 								case "volume":
 									componentObj.effectHandler.renderEffectModal(type, componentObj.renderItems[i], null);
+									break;
+
+								case "highPass":
+									componentObj.effectHandler.renderEffectModal(type, componentObj.renderItems[i], null);
+									break;
+
+								case "lowPass":
+									componentObj.effectHandler.renderEffectModal(type, componentObj.renderItems[i], null);
+									break;
+
+								case "pitch":
+									componentObj.effectHandler.renderEffectModal(type, componentObj.renderItems[i], null);
+									break;
+
+								case "tempo":
+									componentObj.effectHandler.renderEffectModal(type, componentObj.renderItems[i], null);
+									break;
+
+
 							}
 							componentObj.canvas.removeEventListener('click', audioSelectCallback, false);
 						}
@@ -504,8 +529,8 @@
 
 					if (this.renderedItems == false){
 						let AudioRect = new AudioItem();
-						AudioRect.setWaveForm(audioItem.raw_wave_form, y1, y2, x, x2, this.frameStart, this.timeScale, offset, this.dpr);
-						AudioRect.set(x, y1, x2, y2, Settings.theme.audioElement, audioItem.name, audioItem.id, audioItem.track, this.timeScale, this.frameStart, audioItem.beat_markers, audioItem.effects, audioItem.end);
+						AudioRect.setWaveForm(audioItem.raw_wave_form, y1, y2, x, x2, this.frameStart, this.timeScale, offset);
+						AudioRect.set(x, y1, x2, y2, Settings.theme.audioElement, audioItem.name, audioItem.id, audioItem.track, this.timeScale, this.frameStart, audioItem.beat_markers, audioItem.effects, audioItem.end, audioItem.bpm, this.dpr);
 						AudioRect.paint(this.ctx, Settings.theme.audioElement, this.block);
 						this.renderItems.push(AudioRect);
 
@@ -513,15 +538,15 @@
 						let currentItem = this.renderItems[i];
 						if (currentItem != undefined){
 							if (audioItem.raw_wave_form != null && currentItem.rawWaveForm == undefined || this.lastTimeScale != this.timeScale || this.resetWaveForm == true){
-								currentItem.setWaveForm(audioItem.raw_wave_form, y1, y2, x, x2, this.frameStart, this.timeScale, offset, this.dpr);
+								currentItem.setWaveForm(audioItem.raw_wave_form, y1, y2, x, x2, this.frameStart, this.timeScale, offset);
 							}
-							currentItem.set(x, y1, x2, y2, Settings.theme.audioElement, audioItem.name, audioItem.id, audioItem.track, this.timeScale, this.frameStart, audioItem.beat_markers, audioItem.effects, audioItem.end);
+							currentItem.set(x, y1, x2, y2, Settings.theme.audioElement, audioItem.name, audioItem.id, audioItem.track, this.timeScale, this.frameStart, audioItem.beat_markers, audioItem.effects, audioItem.end, audioItem.bpm, this.dpr);
 							currentItem.paint(this.ctx, Settings.theme.audioElement, this.block);
 						} else {
 							//New item has been inserted from copy/cut
 							let AudioRect = new AudioItem();
-							AudioRect.setWaveForm(audioItem.raw_wave_form, y1, y2, x, x2, this.frameStart, this.timeScale, offset, this.dpr);
-							AudioRect.set(x, y1, x2, y2, Settings.theme.audioElement, audioItem.name, audioItem.id, audioItem.track, this.timeScale, this.frameStart, audioItem.beat_markers, audioItem.effects, audioItem.end);
+							AudioRect.setWaveForm(audioItem.raw_wave_form, y1, y2, x, x2, this.frameStart, this.timeScale, offset);
+							AudioRect.set(x, y1, x2, y2, Settings.theme.audioElement, audioItem.name, audioItem.id, audioItem.track, this.timeScale, this.frameStart, audioItem.beat_markers, audioItem.effects, audioItem.end, audioItem.bpm, this.dpr);
 							AudioRect.paint(this.ctx, Settings.theme.audioElement, this.block);
 							this.renderItems.push(AudioRect);
 						}
@@ -777,7 +802,7 @@
 							let item = componentObj.renderItems[i];
 							if (item.contains(currentX, currentY, timeScale, frameStart)) {
 								let effect = item.containsEffect(currentX, currentY);
-								console.log(effect);
+								console.log("Contains effect val", effect);
 								if (effect == false){
 									componentObj.draggingx = item.x + frameStart * timeScale;
 									componentObj.currentDragging = item;
@@ -854,6 +879,36 @@
 																componentObj.effectHandler.renderEffectModal("eq", componentObj.currentAudio, null);
 															}
 														}
+
+				this.menuItems[2]["sub"][1]["events"] = { //Set volume click event
+												"click": function(e){
+													componentObj.effectHandler.renderEffectModal("eq", componentObj.currentAudio, null);
+												}
+											}
+
+				this.menuItems[2]["sub"][2]["events"] = { //Set high pass click event
+												"click": function(e){
+													componentObj.effectHandler.renderEffectModal("highPass", componentObj.currentAudio, null);
+												}
+											}
+
+				this.menuItems[2]["sub"][3]["events"] = { //Set low pass click event
+												"click": function(e){
+													componentObj.effectHandler.renderEffectModal("lowPass", componentObj.currentAudio, null);
+												}
+											}
+
+				this.menuItems[2]["sub"][4]["events"] = { //Set pitch click event
+												"click": function(e){
+													componentObj.effectHandler.renderEffectModal("pitch", componentObj.currentAudio, null);
+												}
+											}
+
+				this.menuItems[2]["sub"][5]["events"] = { //Set tempo click event
+												"click": function(e){
+													componentObj.effectHandler.renderEffectModal("tempo", componentObj.currentAudio, null);
+												}
+											}
 
 				this.menuItems[6]["events"] = { //Set delete click event
 												"click": function(e){

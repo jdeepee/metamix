@@ -88,6 +88,7 @@
 				},
 				strengthCurveUpdate(value){
 					this.$store.commit("updateEffect", {"id": this.effectId, "audioId": this.audioId, "strength_curve": value});
+					this.effectDescriptor[this.currentEffect]['strengthCurve'] = value;
 					if (value != "continuous"){
 						this.hiddenKnobContainer.style.display = "block";
 					} else {
@@ -123,16 +124,23 @@
 					}
 				},
 				update(value, effectId, audioId, type, name){
-					// console.log("Update", value, effectId, audioId, type, name, this.effectData);
+					console.log("Update", value, effectId, audioId, type, name, this.effectData);
 					if (audioId != null){
 						value = this.knobRevert(value);
-						switch (this.currentEffect){
-							case "eq":
-								let update = this.effectData[name];
+						let update;
+						let out;
+						if (this.currentEffect == "eq"){
+								update = this.effectData[name];
 								update[type] = value;
-								let out = {"id": this.effectId, "audioId": this.audioId};
+								out = {"id": this.effectId, "audioId": this.audioId};
 								out[name] = update;
 								this.$store.commit("updateEffect", out);
+						} else {
+							if (type == "start"){
+								this.$store.commit("updateEffect", {"id": this.effectId, "audioId": this.audioId, "effectStart": Number(value)});
+							} else {
+								this.$store.commit("updateEffect", {"id": this.effectId, "audioId": this.audioId, "effectTarget": Number(value)});
+							}
 						}
 					}
 				},
@@ -145,13 +153,47 @@
 					}
 				},
 				knobUpdate(value){ //Currently knob update and knob revert are created using manual precision values - in the future this should be computed per effect type
-					let multiplier = Math.pow(10, 2 || 0); 
-					value = Math.round(value * multiplier) / multiplier;
-					return (value*100).toString() + "%";
+					switch (this.currentEffect){
+						case "eq":
+							let multiplier = Math.pow(10, 2 || 0); 
+							value = Math.round(value * multiplier) / multiplier;
+							return (value*100).toString() + "%";
+
+						case "highPass":
+							return ">"+value.toString();
+
+						case "lowPass":
+							return "<"+value.toString();
+
+						case "pitch":
+							return value;
+
+						case "tempo":
+							return value;
+					}
 				},
 				knobRevert(value){
-					value = value.slice(0, -1);
-					return value/100;
+					switch (this.currentEffect){
+						case "eq":
+							value = value.slice(0, -1);
+							return value/100;
+
+						case "volume":
+							value = value.slice(0, -1);
+							return value/100;
+
+						case "lowPass":
+							return value.substring(1);
+						
+						case "highPass":
+							return value.substring(1);
+
+						case "pitch":
+							return value;
+
+						case "tempo":
+							return value;
+					}
 				},
 				resetKnobs(){
 					for (let i=0; i<this.effectDescriptor[this.currentEffect]["knobs"].length; i++){
@@ -160,35 +202,31 @@
 					}
 				},
 				updateEffect(effectData){
-					switch (this.currentEffect){ //Also likley that EQ is the only rendered effect that has difference in the way we store the effect paramters - if/else might work better than a switch statement here
-						case "eq":
-							if (effectData != null){
-								this.effectDescriptor[this.currentEffect]["knobs"][0]["start"] = effectData["high"]["start"];
-								this.effectDescriptor[this.currentEffect]["knobs"][0]["target"] = effectData["high"]["target"];
+					if (this.currentEffect == "eq"){
+						if (effectData != null){
+							this.effectDescriptor[this.currentEffect]["knobs"][0]["start"] = effectData["high"]["start"];
+							this.effectDescriptor[this.currentEffect]["knobs"][0]["target"] = effectData["high"]["target"];
 
-								this.effectDescriptor[this.currentEffect]["knobs"][1]["start"] = effectData["mid"]["start"];
-								this.effectDescriptor[this.currentEffect]["knobs"][1]["target"] = effectData["mid"]["target"];
+							this.effectDescriptor[this.currentEffect]["knobs"][1]["start"] = effectData["mid"]["start"];
+							this.effectDescriptor[this.currentEffect]["knobs"][1]["target"] = effectData["mid"]["target"];
 
-								this.effectDescriptor[this.currentEffect]["knobs"][2]["start"] = effectData["low"]["start"];
-								this.effectDescriptor[this.currentEffect]["knobs"][2]["target"] = effectData["low"]["target"];
-							} else {
-								this.resetKnobs();
-								this.effectData["high"] = {"start": 0, "target": 0};
-								this.effectData["mid"] = {"start": 0, "target": 0};
-								this.effectData["low"] = {"start": 0, "target": 0};
-							}
-							break;
-
-						case "volume":
-							if (effectData != null){
-								this.effectDescriptor[this.currentEffect]["knobs"][0]["start"] = effectData["effectStart"];
-								this.effectDescriptor[this.currentEffect]["knobs"][0]["target"] = effectData["effectTarget"];
-							} else {
-								this.resetKnobs();
-								this.effectData["effectStart"] = 1;
-								this.effectData["effectTarget"] = 1;
-							}
-							break;
+							this.effectDescriptor[this.currentEffect]["knobs"][2]["start"] = effectData["low"]["start"];
+							this.effectDescriptor[this.currentEffect]["knobs"][2]["target"] = effectData["low"]["target"];
+						} else {
+							this.resetKnobs();
+							this.effectData["high"] = {"start": 0, "target": 0};
+							this.effectData["mid"] = {"start": 0, "target": 0};
+							this.effectData["low"] = {"start": 0, "target": 0};
+						}
+					} else {
+						if (effectData != null){
+							this.effectDescriptor[this.currentEffect]["knobs"][0]["start"] = effectData["effectStart"];
+							this.effectDescriptor[this.currentEffect]["knobs"][0]["target"] = effectData["effectTarget"];
+						} else {
+							this.resetKnobs();
+							this.effectData["effectStart"] = 1;
+							this.effectData["effectTarget"] = 1;
+						}
 					}
 				},
 				removeAudio(audioId){

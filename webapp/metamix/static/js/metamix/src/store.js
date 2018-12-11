@@ -26,7 +26,15 @@ export const store = new Vuex.Store({
 					  "cut": {"start": null, "end": null, "barCountStart": null, "barCountEnd": null, "strengthCurve": null, "title": "Remove", "knobs": [], "default_values": null, "strength_curve": null},
 					  "volume": {"start": 0, "end": 0, "barCountStart": 0, "barCountEnd": 0, "strengthCurve": "continuous", "title": "Volume Modulation",
 					  		     "knobs": [{"name": "volume", "start": 0, "target": 0, "max": 2, "min": 0, "step": 0.01, "precision": 2, "default": 1}],
-					  		     "default_values": {"start": null, "target": null, "strength_curve": "continuous"}, "starting": 1}
+					  		     "default_values": {"start": null, "target": null, "strength_curve": "continuous"}, "starting": 1},
+					  "highPass": {"start": 0, "end": 0, "barCountStart": 0, "barCountEnd": 0, "strengthCurve": "continuous", "title": "High Pass Filter", "knobs": [{"name": "filter", "start": 0, "target": 0, "max": 15000, "min": 20, "step": 10, "precision": 2, "default": 0}],
+					  		     "default_values": {"start": null, "target": null, "strength_curve": "continuous"}, "starting": 0},
+					  "lowPass": {"start": 0, "end": 0, "barCountStart": 0, "barCountEnd": 0, "strengthCurve": "continuous", "title": "Low Pass Filter", "knobs": [{"name": "filter", "start": 0, "target": 0, "max": 15000, "min": 20, "step": 10, "precision": 2, "default": 0}],
+					  		     "default_values": {"start": null, "target": null, "strength_curve": "continuous"}, "starting": 0},
+					  "pitch": {"start": 0, "end": 0, "barCountStart": 0, "barCountEnd": 0, "strengthCurve": "continuous", "title": "Pitch Modulation", "knobs": [{"name": "pitch", "start": 0, "target": 0, "max": 12, "min": -12, "step": 1, "precision": 2, "default": 0}],
+					  		     "default_values": {"start": null, "target": null, "strength_curve": "continuous"}, "starting": 0},
+					  "tempo": {"start": 0, "end": 0, "barCountStart": 0, "barCountEnd": 0, "strengthCurve": "continuous", "title": "Tempo Modulation", "knobs": [{"name": "tempo", "start": 0, "target": 0, "max": 250, "min": 0, "step": 0.5, "precision": 2, "default": 0}],
+					  		     "default_values": {"start": null, "target": null, "strength_curve": "continuous"}, "starting": 0}
 					} //This might not have to be here in Vuex - it might be possible to handle everything in the effect Vue
 		}
 	},

@@ -268,13 +268,13 @@ function computeHighLow(start, end, type){
 	//Computes high/low ratio (0-100) of where the start/target of the effects are compared to possible min/max
 	let offset = 0;
 	let bounds = Settings.effectBounds[type];
-	if (bounds["startMin"] <= 0){
-		offset = bounds["startMin"] * -1;
+	if (bounds["min"] <= 0){
+		offset = bounds["min"] * -1;
 	} else {
-		offset = -bounds["startMin"]
+		offset = -bounds["min"]
 	}
 
-	let max = bounds["startMax"] + offset
+	let max = bounds["max"] + offset
 	let startOff = start + offset;
 	let endOffset = end + offset;
 

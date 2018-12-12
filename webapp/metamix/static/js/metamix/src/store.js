@@ -36,6 +36,12 @@ export const store = new Vuex.Store({
 					  "tempo": {"start": 0, "end": 0, "barCountStart": 0, "barCountEnd": 0, "strengthCurve": "continuous", "title": "Tempo Modulation", "knobs": [{"name": "tempo", "start": 0, "target": 0, "max": 250, "min": 0, "step": 0.5, "precision": 2, "default": 0}],
 					  		     "default_values": {"start": null, "target": null, "strength_curve": "continuous"}, "starting": 0}
 					} //This might not have to be here in Vuex - it might be possible to handle everything in the effect Vue
+		},
+		userData: {
+			"jwtToken": null
+		},
+		appData: {
+			"baseUrl": null
 		}
 	},
 	mutations: { //syncronous
@@ -155,6 +161,8 @@ export const store = new Vuex.Store({
 			}
 		},
 		getMixData: state => state.mixData,
-		getUi: state => state.uiData
+		getUi: state => state.uiData,
+		getAppData: state => state.appData,
+		getUserData: state => state.userData
 	}
 })

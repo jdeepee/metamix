@@ -50,8 +50,7 @@ def login():
 
 @user.route("/api/globals", methods=["GET"])
 @jwt_required
-def api_globals(user_id):
-    print user_id   
+def api_globals(user_id): 
     data = {
         "base_url": current_app.config["BASE_URL"],
         "modulation_algorithm_parameters": []

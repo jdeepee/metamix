@@ -3,3 +3,5 @@
 ./webapp/metamix/static/node_modules
 ./testing/timeline-testing/metamix-studio/node_modules/*
 ./testing/timeline-testing/metamix-studio/node_modules
+./webapp/venv/*
+./webapp/venv

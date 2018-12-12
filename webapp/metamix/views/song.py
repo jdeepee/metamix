@@ -19,7 +19,6 @@ def retrieve_song_mp3(id):
 	if song is None:
 		raise MetaMixException(message="That song does not exist")
 
-
 	song_schema = SongSchema(many=False)
 	return song_schema.dump(song).data
 

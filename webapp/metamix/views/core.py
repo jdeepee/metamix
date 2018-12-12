@@ -7,7 +7,6 @@ from metamix.extensions import db
 from metamix.errors import MetaMixException
 from metamix.utils.upload import upload_s3, allowed_file
 from metamix.utils.analysis import analyse_audio
-from metamix.key_variables import modulation_algorithm_parameters
 from flask import *
 import uuid
 
@@ -52,14 +51,3 @@ def upload_song():
         raise MetaMixException(message="Invalid type argument", status_code=400)
 
     return jsonify({"message": "Clip(s) have been uploaded"}), 200 
-
-@core.route("/meta/effects", methods=["GET"])
-def get_effects():
-    """Gets all effects currently available on the service and their associated parameters"""
-    out = []
-
-    for effect in modulation_algorithm_parameters:
-        del effect["increment_time_change"]
-        out.append(effect)
-
-    return jsonify(out)

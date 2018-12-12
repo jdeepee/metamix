@@ -11,6 +11,7 @@ class Config(object):
     REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD")
     ALLOWED_EXTENSIONS = set(["mp3", "MP3", "flac", "FLAC", "wav", "WAV"])
     METAMIX_TEMP_SAVE = "/var/tmp/metamix/"
+    BETA_EMAILS = ["joshuadparkin@gmail.com", "test@test.com"]
 
 class Production(Config):
     """Production config expands on base config"""
@@ -22,16 +23,17 @@ class Production(Config):
 
 class Development(Config):
     """Development config expands on base config"""
-    SQLALCHEMY_DATABASE_URI = "postgres://Josh:@localhost/metamix"
+    SQLALCHEMY_DATABASE_URI = "postgres://metamix:metamix@localhost/metamix"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     PRESERVE_CONTEXT_ON_EXCEPTION = True
     DEBUG = True
-    BASE_URL = 'http://127.0.0.1:5000'
+    BASE_URL = 'http://localhost:5000'
     ADMIN = True
     REDIS_IP = ""
     REDIS_PASSWORD = ""
     RQ_REDIS_URL = 'redis://:0c2fbe953260497603907b8f20a6d4f255fe57d1e4eba5ce47e169e670fcb22c@52.16.190.51:6379'
     S3_URL = "s3.eu-west-1.amazonaws.com"
+    JWT_SECRET = "SUPERSECRETSECRET"
 
 class Test(Config):
     """Test config expands on base config"""

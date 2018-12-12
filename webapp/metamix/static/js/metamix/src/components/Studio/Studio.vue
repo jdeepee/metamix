@@ -344,7 +344,7 @@
 
 				//Redefine track bounds after resize
 				for (let i=0; i<this.trackLayers; i++){
-					this.trackBounds[i] = [(this.offset + i*this.lineHeight)/this.dpr, (this.offset + i+1*this.lineHeight)/this.dpr];
+					this.trackBounds[i] = [(this.offset + i*this.lineHeight)/this.dpr, (this.offset + (i+1)*this.lineHeight)/this.dpr];
 				}
 			},
 			moveY(yPosition){

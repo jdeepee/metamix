@@ -53,7 +53,6 @@
 <script type="text/javascript">
 	import {Settings} from "../../settings.js"
 	import utils from "./src/utils.js"
-	import effectUtils from "./src/effects.js"
 	import AudioItem from "./src/audio.js"
 	import Scroll from "./Subcomponents/Scroll.vue"
 	import Exterior from "./Subcomponents/Exterior.vue"
@@ -537,7 +536,7 @@
 					let audioItem = this.audioData[i];
 					let x = utils.time_to_x(audioItem.start, this.timeScale, this.frameStart); //Starting x value for audio item
 					let x2 = utils.time_to_x(audioItem.end, this.timeScale, this.frameStart); //Ending x value for audio item
-					audioItem.effects = effectUtils.computeEffectsX(audioItem.effects, x, this.timeScale, this.frameStart);
+					audioItem.effects = utils.computeEffectsX(audioItem.effects, x, this.timeScale, this.frameStart);
 					let y1 = (offset + audioItem.track * lineHeight)/this.dpr; //Starting y value for audio item
 					let y2 = (lineHeight)/this.dpr; //Ending y value for audio item
 

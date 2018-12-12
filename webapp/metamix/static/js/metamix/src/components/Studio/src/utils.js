@@ -1,3 +1,5 @@
+import {Settings} from "../../../settings.js"
+
 function guid() {
   function s4() {
     return Math.floor((1 + Math.random()) * 0x10000)
@@ -272,6 +274,39 @@ function capitalizeFirstLetter(string) {
     return string.charAt(0).toUpperCase() + string.slice(1);
 }
 
+function computeHighLow(start, end, type){
+	//Computes high/low ratio (0-100) of where the start/target of the effects are compared to possible min/max
+	let offset = 0;
+	let bounds = Settings.effectBounds[type];
+	if (bounds["min"] <= 0){
+		offset = bounds["min"] * -1;
+	} else {
+		offset = -bounds["min"]
+	}
+
+	let max = bounds["max"] + offset
+	let startOff = start + offset;
+	let endOffset = end + offset;
+
+	if (startOff == 0){
+		return [0, (endOffset / max)*100]
+
+	} else if (endOffset == 0){
+		return [(startOff / max)*100, 0]
+
+	} else {
+		return [(startOff / max)*100, (endOffset / max)*100]
+	}
+}
+
+function computeEffectsX(effects, startX, time_scale, frame_start){
+	for (let i=0; i<effects.length; i++){
+		effects[i]["startX"] = startX + effects[i]["start"] * time_scale;
+		effects[i]["endX"] = startX + effects[i]["end"] * time_scale;
+	}
+	return effects;
+}
+
 let utils = {
 		style: style,
 		format_friendly_seconds: format_friendly_seconds,
@@ -287,7 +322,9 @@ let utils = {
 		linepointNearestMouse: linepointNearestMouse,
 		interpolateHeight: interpolateHeight,
 		guid: guid,
-		capitalizeFirstLetter: capitalizeFirstLetter
+		capitalizeFirstLetter: capitalizeFirstLetter,
+		computeHighLow: computeHighLow,
+		computeEffectsX: computeEffectsX
 	}
 	
 export default utils;

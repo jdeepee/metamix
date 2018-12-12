@@ -1,6 +1,5 @@
 import utils from "./utils.js"
 import {Settings} from "../../../settings.js"
-import effectUtils from "./effects.js"
 
 //AudioItem class? which is used to draw each audio item + x/y containing operations 
 //AudioItem code should be moved to its own file - its getting huge and cluttering this file
@@ -140,7 +139,7 @@ AudioItem.prototype.drawEffectCurve = function(ctx, start, target, type, startX,
 		}
 		//console.log("Drawing", strengthCurve, start, target, type);
 		let effectStartRatio, effectEndRatio;
-		let out = effectUtils.computeHighLow(start, target, type);
+		let out = utils.computeHighLow(start, target, type);
 		effectStartRatio = out[0];
 		effectEndRatio = out[1];
 		let effectStartY = this.y + this.y2 - effectStartRatio * this.ratio;

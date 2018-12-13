@@ -20,6 +20,7 @@ class Production(Config):
     DEBUG = False
     RQ_REDIS_URL = 'redis://:'+ os.environ.get("REDIS_PASSWORD") + '@'+os.environ.get("REDIS_IP") + ':6379'
     BASE_URL = 'http://127.0.0.1:5000'
+    DEVELOPMENT = False
 
 class Development(Config):
     """Development config expands on base config"""
@@ -34,6 +35,7 @@ class Development(Config):
     RQ_REDIS_URL = 'redis://:0c2fbe953260497603907b8f20a6d4f255fe57d1e4eba5ce47e169e670fcb22c@52.16.190.51:6379'
     S3_URL = "s3.eu-west-1.amazonaws.com"
     JWT_SECRET = "SUPERSECRETSECRET"
+    DEVELOPMENT = True
 
 class Test(Config):
     """Test config expands on base config"""

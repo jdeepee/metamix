@@ -11,5 +11,5 @@ export const routes = [
     { path: '/register', component: Register},
     { path: '/login', component: Login},
     { path: '/upload', component: Upload},
-    { path: '/manage', component: Manage}
+    { path: '/meta', component: Manage}
 ]

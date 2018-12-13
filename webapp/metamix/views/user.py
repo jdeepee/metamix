@@ -20,7 +20,7 @@ def signup():
     if data["email"] not in current_app.config["BETA_EMAILS"]:
         raise MetaMixException(message="You are not in the MetaMix beta", status_code=400)
 
-    if User.get_user(data["email"]) != None:
+    if User.get_user_by_email(data["email"]) != None:
         raise MetaMixException(message="User with given email already exists", status_code=400)
 
     iuser = User.add_user(data)
@@ -37,7 +37,7 @@ def login():
     if "password" not in data:
         raise MetaMixException(message="Password has not been supplied", status_code=400)
 
-    target_user = User.get_user(data["email"])
+    target_user = User.get_user_by_email(data["email"])
 
     if target_user == None:
         raise MetaMixException(message="User with given email does not exist", status_code=400)

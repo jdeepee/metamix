@@ -1,4 +1,4 @@
-import essentia
+import essentia.standard
 
 def analyse_audio(audio):
 	loader = essentia.standard.MonoLoader(filename=audio)

@@ -1,6 +1,8 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
 import Settings from "./settings.js"
+import createPersistedState from 'vuex-persistedstate'
+import * as Cookies from 'js-cookie'
 
 Vue.use(Vuex)
 
@@ -38,13 +40,26 @@ export const store = new Vuex.Store({
 					} //This might not have to be here in Vuex - it might be possible to handle everything in the effect Vue
 		},
 		userData: {
-			"jwtToken": null
+			"jwtToken": null,
+			"songs": [],
+			"clips": []
 		},
 		appData: {
-			"baseUrl": null
+			"baseUrl": "http://localhost:5000"
+			//"baseUrl": "https://metamix.io"
 		}
 	},
 	mutations: { //syncronous
+		addSongData(state, data){
+			for (let i=0; i<data.length; i++){
+				state.userData.songs.push(data[i])
+			}
+		},
+		addClipData(state, data){
+			for (let i=0; i<data.length; i++){
+				state.userData.clips.push(data[i])
+			}
+		},
 		addMixData(state, data){
 			state.mixData = data;
 		},
@@ -164,5 +179,11 @@ export const store = new Vuex.Store({
 		getUi: state => state.uiData,
 		getAppData: state => state.appData,
 		getUserData: state => state.userData
-	}
+	},
+	plugins: [
+    	createPersistedState({
+      		getState: (key) => Cookies.getJSON(key),
+      		setState: (key, state) => Cookies.set(key, state, { expires: 3, secure: true })
+    })
+  ]
 })

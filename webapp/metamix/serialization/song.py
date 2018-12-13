@@ -8,6 +8,6 @@ class SongSchema(Schema):
     description = fields.Int()
     genre = fields.Str()
     bpm = fields.Float()
-    beat_positions = fields.Raw()
+    beat_positions = fields.Raw() #This should be of type JSON of LIST - and then return data as json array when dumping
     pitch = fields.Str()
     processing_status = fields.Str()

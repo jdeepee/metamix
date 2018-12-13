@@ -1,4 +1,5 @@
 from metamix.extensions import db
+from metamix.models.song import Song
 from sqlalchemy.dialects.postgresql import UUID
 import bcrypt
 import uuid
@@ -14,18 +15,27 @@ class User(db.Model):
     last_name = db.Column("last_name", db.String(50), default='')
     password = db.Column("password", db.String())
 
+    def get_songs(self):
+        songs = Song.query.filter_by(owner_id=self.id).all()
+        return songs
+
     @staticmethod
     def get_hashed_password(plain_text_password):
-        return bcrypt.hashpw(plain_text_password, bcrypt.gensalt(12))
+        return bcrypt.hashpw(plain_text_password.encode('utf8'), bcrypt.gensalt(12))
 
     @staticmethod
     def check_password(plain_text_password, hashed_password):
         # Check hased password. Using bcrypt, the salt is saved into the hash itself
-        return bcrypt.checkpw(plain_text_password, hashed_password)
+        return bcrypt.checkpw(plain_text_password.encode('utf8'), hashed_password.encode('utf-8'))
 
     @staticmethod
-    def get_user(email):
+    def get_user_by_email(email):
         user = User.query.filter_by(email=email).first()
+        return user
+
+    @staticmethod
+    def get_user(user_id):
+        user = User.query.filter_by(id=user_id).first()
         return user
 
     @staticmethod

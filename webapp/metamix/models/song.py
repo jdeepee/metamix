@@ -17,6 +17,8 @@ class Song(db.Model):
     genre = db.Column("genre", db.String(50))
     processing_start = db.Column("processing_status", db.String())
 
+    owner_id = db.Column("owner_id", UUID(as_uuid=True), db.ForeignKey('user.id', ondelete='CASCADE'))
+
     mixes = db.relationship("MixAudio", backref="song_mixes", lazy="dynamic") #Mixes which the song is contained in
     effects = db.relationship("Effect", backref="song_effects", lazy="dynamic") #relationship to effects which have been applied to the song
 
@@ -37,7 +39,7 @@ class Song(db.Model):
     @staticmethod
     def insert_song(data):
         data["id"] = uuid.uuid4()
-
+        print "Inserting song with data: {}".format(data)
         song = Song(**data)
         db.session.add(song)
         db.session.commit()

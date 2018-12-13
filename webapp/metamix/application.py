@@ -7,6 +7,7 @@ from metamix.models.clip import Clip
 from metamix.errors import MetaMixException
 from flask import Flask, jsonify
 from importlib import import_module
+from flask_cors import CORS
 import os
 import logging
 
@@ -25,6 +26,7 @@ def create_app(config):
     :return: flask application object
     """
     app = SubClassFlask(__name__)
+    CORS(app)
     # Creating flask application from Config object in ./config.py
     app.config.from_object(config)
     # Settings stripe API key

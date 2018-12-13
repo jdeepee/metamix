@@ -13,7 +13,7 @@
         <router-link to="/upload" v-if="hasLoggedIn === true">
             <p>Upload Song(s)</p>
         </router-link>
-        <router-link to="/manage" v-if="hasLoggedIn === true">
+        <router-link to="/meta" v-if="hasLoggedIn === true">
             <p>View Song(s)</p>
         </router-link>
 	</div>
@@ -29,7 +29,6 @@
 		},
 		mounted() {
 			let userData = this.$store.getters.getUserData;
-
 			if (userData.jwtToken == null){
 				this.hasLoggedIn = false;
 			} else {

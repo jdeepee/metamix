@@ -23,6 +23,27 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1] in current_app.config["ALLOWED_EXTENSIONS"]
 
+def persist_file(temp_filepath, return_length=False, delete=True):
+    if current_app.config["DEVELOPMENT"] == True:
+        #Save to local storage\
+        temp_filename = current_app.config["METAMIX_TEMP_SAVE"] + str(uuid.uuid4()) + ".wav"
+
+        data, sr = librosa.load(temp_filepath, sr=44100)
+        librosa.output.write_wav(temp_filename, data, sr)
+
+        os.remove(temp_filepath)
+
+        if return_length == False:
+            return None, temp_filename
+
+        else:
+            return None, float(len(data)) / float(sr), temp_filename
+
+    else:
+        #Upload to s3
+        s3_key, length, wav_file = upload_s3(temp_filepath, return_length, delete)
+        return s3_key, length, wav_file
+
 def upload_s3(temp_filepath, return_length=False, delete=True):
     temp_filename = current_app.config["METAMIX_TEMP_SAVE"] + str(uuid.uuid4()) + ".wav"
     key = str(uuid.uuid4()) + ".wav"
@@ -51,18 +72,10 @@ def upload_s3(temp_filepath, return_length=False, delete=True):
 
     os.remove(temp_filepath)
 
-    if delete == True:
-        if return_length == False:
-            return key
-
-        else:
-            return key, float(len(data)) / float(sr)
+    if return_length == False:
+        return key, None, temp_filename
 
     else:
-        if return_length == False:
-            return key, temp_filename
-
-        else:
-            return key, float(len(data)) / float(sr), temp_filename
+        return key, float(len(data)) / float(sr), temp_filename
 
 

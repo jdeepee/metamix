@@ -237,6 +237,7 @@
 				},
 				removeAudio(audioId){
 					this.$store.commit("deleteAudio", audioId);
+					console.log(this.$store.getters.getMixData);
 				},
 				copyAudio(audioId){
 					let copyId = utils.guid();

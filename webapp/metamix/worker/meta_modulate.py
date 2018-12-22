@@ -352,8 +352,8 @@ class MetaModulate():
         
         sample_rate: int
         strength_curve: continuous, linear, quater, half, exponential (str)
-        start: ratio of EQ to be applied to song: 0.1 -> 2
-        target: ratio of EQ to abblied to song: 0.1 -> 2
+        start: ratio of EQ to be applied to song: 0 -> 2
+        target: ratio of EQ to abblied to song: 0 -> 2
         start_decibel: starting value of eq in decibels
         target_decibel: target value of eq in decibels
         frequency: frequency in HZ of center of eq (int)

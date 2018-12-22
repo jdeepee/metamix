@@ -41,7 +41,6 @@ class Mix():
             mix_end = song["mix_end"]
             song_start = song["song_start"]
             song_end = song["song_end"]
-            effects = song["effects"]
 
             if len(effects) > 0:
                 #Here we are only searching for an exact match - in the future should also look for matches which we can shape/slice into the correct format as

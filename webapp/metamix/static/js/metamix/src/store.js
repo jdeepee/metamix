@@ -14,7 +14,7 @@ export const store = new Vuex.Store({
 			totalTime: Settings.default_length,
 			scrollTime: 0,
 			timeScale: Settings.time_scale,
-			tracks: undefined, //This should also be set in Studio component after data has been received and maximum number of tracks is decided
+			tracks: 4, //This should also be set in Studio component after data has been received and maximum number of tracks is decided
 			trackTimelineOffset: Settings.trackTimelineOffset, //Offset between top of studio timeline and start of track items
 			lineHeight: undefined, //Size of track items - this should be compute when Studio component is ran and resized
 			xScrollTime: 0,
@@ -77,22 +77,22 @@ export const store = new Vuex.Store({
 			}
 		},
 		addEffect(state, data){
-			for (let i in state.mixData) {
-				if (state.mixData[i].id == data.audioId){
+			for (let i in state.mixData.audio) {
+				if (state.mixData.audio[i].id == data.audioId){
 					delete data["audioId"];
-					state.mixData[i]["effects"].push(data)
+					state.mixData.audio[i]["effects"].push(data)
 					break;
 				}
 			}
 		},
 		updateEffect(state, data){
-			for (let i in state.mixData){
-				if (state.mixData[i].id == data.audioId){
-					for (let i2 in state.mixData[i].effects){
-						if (state.mixData[i].effects[i2].id == data.id){
+			for (let i in state.mixData.audio){
+				if (state.mixData.audio[i].id == data.audioId){
+					for (let i2 in state.mixData.audio[i].effects){
+						if (state.mixData.audio[i].effects[i2].id == data.id){
 							delete data["audioId"];
 							for (let key in data){
-								state.mixData[i].effects[i2][key] = data[key]
+								state.mixData.audio[i].effects[i2][key] = data[key]
 							}
 							break;
 						}
@@ -101,11 +101,11 @@ export const store = new Vuex.Store({
 			}
 		},
 		deleteEffect(start, data){
-			for (let i in state.mixData){
-				if (state.mixData[i].id == data.audioId){
-					for (let i2 in state.mixData[i].effects){
-						if (state.mixData[i].effects[i2].id == data.id){
-							state.mixData[i].splice(i2);
+			for (let i in state.mixData.audio){
+				if (state.mixData.audio[i].id == data.audioId){
+					for (let i2 in state.mixData.audio[i].effects){
+						if (state.mixData.audio[i].effects[i2].id == data.id){
+							state.mixData.audio[i].splice(i2);
 							break;
 						}
 					}
@@ -113,31 +113,35 @@ export const store = new Vuex.Store({
 			}
 		},
 		updateAudio(state, data){
-			for (let i in state.mixData){
-				if (state.mixData[i].id == data.id){
+			for (let i in state.mixData.audio){
+				if (state.mixData.audio[i].id == data.id){
 					delete data["id"];
 					for (let key in data){
-						state.mixData[i][key] = data[key];
+						state.mixData.audio[i][key] = data[key];
 					}
 				}
 			}
 		},
 		copyAudio(state, data){
-			for (let i in state.mixData){
-				if (state.mixData[i].id == data.copyId){
-					let newAudio = JSON.parse(JSON.stringify(state.mixData[i])); //This is currently updating old audio rather than creating copy from old and then adding to the array as new value
+			for (let i in state.mixData.audio){
+				if (state.mixData.audio[i].id == data.copyId){
+					let newAudio = JSON.parse(JSON.stringify(state.mixData.audio[i]));
 					newAudio["id"] = data["id"];
 					newAudio["name"] = state.mixData[i].name + " copy";
-					state.mixData.push(newAudio);
+					state.mixData.audio.push(newAudio);
 				}
 			}
 		},
 		deleteAudio(state, id){
-			for (let i in state.mixData){
-				if (state.mixData[i].id == id){
-					state.mixData.splice(i, 1);
+			for (let i in state.mixData.audio){
+				if (state.mixData.audio[i].id == id){
+					state.mixData.audio.splice(i, 1);
 				}
 			}
+		},
+		addAudio(state, data){
+			//adds audio to mix data studio view
+			state.mixData.audio.push(data);
 		},
 		deleteFromArray(state, data){
 			for (let i in state.mixData){
@@ -155,11 +159,11 @@ export const store = new Vuex.Store({
 		//Get information with data manipulation code applied
 		getEffect(state){
 			return function(data){
-				for (let i=0; i<state.mixData.length; i++){
-					if (state.mixData[i].id == data.audioId){
-						for (let i2 in state.mixData[i]['effects']){
-							if (state.mixData[i]["effects"][i2].id == data.effectId){
-								return state.mixData[i].effects[i2];
+				for (let i=0; i<state.mixData.audio.length; i++){
+					if (state.mixData.audio[i].id == data.audioId){
+						for (let i2 in state.mixData.audio[i]['effects']){
+							if (state.mixData.audio[i]["effects"][i2].id == data.effectId){
+								return state.mixData.audio[i].effects[i2];
 							}
 						}
 					}
@@ -168,9 +172,9 @@ export const store = new Vuex.Store({
 		},
 		getAudio(state){
 			return function(id){
-				for (let i=0; i<state.mixData.length; i++){
-					if (state.mixData[i].id == id){
-						return state.mixData[i];
+				for (let i=0; i<state.mixData.audio.length; i++){
+					if (state.mixDat.audioa[i].id == id){
+						return state.mixData.audio[i];
 					}
 				}
 			}

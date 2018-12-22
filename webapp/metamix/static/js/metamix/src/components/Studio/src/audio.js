@@ -222,15 +222,16 @@ AudioItem.prototype.paintBarMarkers = function(ctx, block) {
 
 		for (let i=0; i<this.barMarkers.length; i++){
 			if (i % 4 == 0){ ctx.lineWidth = 2; } else { ctx.lineWidth = 1;}
-
-			let time = utils.time_to_x(this.barMarkers[i], this.time_scale, this.frame_start) + this.xNormalized;
-			this.barMarkersX.push(time);
-			this.barMarkersXRounded.push(utils.round(time, 0.5));
-			ctx.beginPath();
-			ctx.moveTo(time, this.y+1);
-			ctx.lineTo(time, this.y+this.y2);
-			ctx.fillText(i+1, time+5, this.y+this.y2-1);
-			ctx.stroke();
+				let time = utils.time_to_x(this.barMarkers[i], this.time_scale, this.frame_start) + this.xNormalized;
+				if (this.insideWindowRaw(time) == true){
+				this.barMarkersX.push(time);
+				this.barMarkersXRounded.push(utils.round(time, 0.5));
+				ctx.beginPath();
+				ctx.moveTo(time, this.y+1);
+				ctx.lineTo(time, this.y+this.y2);
+				ctx.fillText(i+1, time+5, this.y+this.y2-1);
+				ctx.stroke();
+			}
 		}
 		this.createBarDiff();
 
@@ -239,13 +240,14 @@ AudioItem.prototype.paintBarMarkers = function(ctx, block) {
 
 		for (let i=0; i<this.barMarkers.length; i++){
 			if (i % 4 == 0){ ctx.lineWidth = 2; } else { ctx.lineWidth = 1;}
-
-			let time = this.barMarkersX[i];
-			ctx.beginPath();
-			ctx.moveTo(time, this.y+1);
-			ctx.lineTo(time, this.y+this.y2);
-			ctx.fillText(i+1, time+5, this.y+this.y2-1);
-			ctx.stroke();
+			if (this.insideWindowRaw(this.barMarkersX[i]) == true){
+				let time = this.barMarkersX[i];
+				ctx.beginPath();
+				ctx.moveTo(time, this.y+1);
+				ctx.lineTo(time, this.y+this.y2);
+				ctx.fillText(i+1, time+5, this.y+this.y2-1);
+				ctx.stroke();
+			}
 		}
 	}
 	ctx.lineWidth = 1.0;
@@ -286,6 +288,15 @@ AudioItem.prototype.paint = function(ctx, outlineColor, block) {
 		}
 	}
 };
+
+AudioItem.prototype.insideWindowRaw = function(x){
+	if (x >= 0){
+		if (x <= this.currentWidth){
+			return true;
+		}
+	}
+	return false;
+}
 
 AudioItem.prototype.isInsideWindow = function(){ //Checks if the audioitem is inside the width of the window - so that we can selectivly render/process audio items
 	if (this.x >= 0 || this.x2 >= 0){
@@ -331,6 +342,7 @@ AudioItem.prototype.alert = function(ctx, outlineColor){
 }
 
 AudioItem.prototype.onBarMarker = function(x, frameStart, timeScale){
+	//this computation should only run on bar markers inside screen
 	for (let i=0; i<this.barMarkersX.length; i++){
 		let line = {"x0": this.barMarkersX[i] + frameStart * timeScale}
 

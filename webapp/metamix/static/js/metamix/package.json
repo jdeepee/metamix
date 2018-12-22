@@ -17,7 +17,8 @@
     "vue-knob-control": "^1.2.1",
     "vue-router": "^3.0.1",
     "vue-slider-component": "^2.8.0",
-    "vuex": "^3.0.1"
+    "vuex": "^3.0.1",
+    "vuex-persistedstate": "^2.5.4"
   },
   "devDependencies": {
     "autoprefixer": "^7.1.2",

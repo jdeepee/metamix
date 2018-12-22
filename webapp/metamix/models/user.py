@@ -1,5 +1,6 @@
 from metamix.extensions import db
 from metamix.models.song import Song
+from metamix.models.mix import Mix
 from sqlalchemy.dialects.postgresql import UUID
 import bcrypt
 import uuid
@@ -18,6 +19,10 @@ class User(db.Model):
     def get_songs(self):
         songs = Song.query.filter_by(owner_id=self.id).all()
         return songs
+
+    def get_mixes(self):
+        mixes = Mix.query.filter_by(owner_id=self.id).all()
+        return mixes
 
     @staticmethod
     def get_hashed_password(plain_text_password):

@@ -1,4 +1,5 @@
 from marshmallow import Schema, fields
+import json
 
 class MixSchema(Schema):
     id = fields.UUID()
@@ -9,3 +10,5 @@ class MixSchema(Schema):
     genre = fields.Str()
     processing_status = fields.Str()
     json_description = fields.Raw()
+    #fields.Function(lambda obj: json.dumps(obj.json_description))
+    #fields.Function(lambda obj: json.dumps(obj.json_description))

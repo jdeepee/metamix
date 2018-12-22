@@ -4,6 +4,7 @@ from metamix.models.clip import Clip
 from metamix.errors import MetaMixException
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
+import json
 
 class Mix(db.Model):
     """Mix database object"""
@@ -18,7 +19,7 @@ class Mix(db.Model):
     json_description = db.Column("json_description", db.JSON)
     processing_status = db.Column("processing_status", db.String())
 
-    #owner_id = db.Column("owner_id", UUID(as_uuid=True), db.ForeignKey('user.id', ondelete='CASCADE'))
+    owner_id = db.Column("owner_id", UUID(as_uuid=True), db.ForeignKey('user.id', ondelete='CASCADE'))
     audio = db.relationship("MixAudio", backref="audio", lazy="dynamic")
 
     def update_mix_data(self, data):
@@ -34,13 +35,13 @@ class Mix(db.Model):
         db.session.commit()
 
     @staticmethod
-    def insert_mix(name, description, genre, json_description):
+    def insert_mix(name, description, genre, user_id, json_description):
         """Method used upon mix creation - adds core mix structure to database"""
         Mix.validate_mix_audio(json_description)
         id = uuid.uuid4()
-        json_description["id"] = id
+        json_description["id"] = str(id)
 
-        mix = Mix(id=id, name=name, description=description, genre=genre, json_description=json_description, processing_status="Processing", length=0)
+        mix = Mix(id=id, name=name, description=description, genre=genre, json_description=json.dumps(json_description), processing_status="Processing", length=0, owner_id=user_id)
         db.session.add(mix)
         db.session.commit()
 
@@ -54,7 +55,7 @@ class Mix(db.Model):
 
         for clip in json_description["clips"]:
             if Clip.exists(clip["id"]) != True:
-                raise MetaMixException(message="Clip with ID: " + str(Clip["id"]) + "does not exist")
+                raise MetaMixException(message="Clip with ID: " + str(clip["id"]) + "does not exist")
 
     @staticmethod
     def get_mix(id):

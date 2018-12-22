@@ -1,8 +1,8 @@
 <template>
 	<div>
 		<h4>MetaMix Home Page</h4>
-	    <router-link to="/studio">
-            <p>Studio</p>
+	    <router-link to="/meta/mix">
+            <p>Mix</p>
         </router-link>
       	<router-link to="/register" v-if="hasLoggedIn === false">
             <p>Register</p>

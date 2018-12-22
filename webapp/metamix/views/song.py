@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+#This file and blueprint should be changed to song from clip
 from metamix.blueprints import song
 from metamix.models.song import Song, Effect
 from metamix.models.clip import Clip
@@ -15,12 +16,17 @@ import json
 
 @song.route("/meta/song", methods=["GET"])
 @jwt_required
-def view_songs(user_id):
+def get_songs(user_id):
 	"""GET all uploaded songs"""
 	user = User.get_user(user_id)
 	songs = user.get_songs()
 	song_schema = SongSchema(many=True)
-	return jsonify(song_schema.dump(songs)), 200
+	return jsonify(song_schema.dump(songs).data), 200
+
+@song.route("/meta/clip", methods=["GET"])
+@jwt_required
+def get_clips(user_id):
+    pass
 
 @song.route("/meta/song/upload", methods=["POST"])
 @jwt_required

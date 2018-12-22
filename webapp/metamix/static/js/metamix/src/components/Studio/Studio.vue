@@ -69,118 +69,6 @@
 		data(){
 			return {
 				canvas: undefined,//This can be accesed on self from either mounted or resize methods
-				audio: [
-					{
-						"id": "test song-id", //ID and song ID is required - id referes to ID in UI, the song_id is necassary so if a copy is made they can be differentiated by ID but also still link to the same song on the backend
-						"song_id": "test song-id",
-						"name": "Test song 1",
-						"effects": [
-							{
-								"id": "ceeae4f4-3fb7-4ed0-aaa7-0540c026b534",
-								"start": 1,
-								"end": 5,
-								'type': "eq",
-								"high": {
-									"start": -2,
-									"target": -1
-								},
-								"mid": {
-									"start": 0,
-									"target": 0
-								},
-								"low": {
-									'start': 1,
-									'target': 1.5
-								},
-								"strength_curve": "linear"
-							}
-						],
-						"beat_markers": [1,5,10,15,20,24.3],
-						"wave_form": "test.dat", //Currently wave form is a file - in the future this would most likely be a s3 URL which contains the file - request would be made to retrieve the file and the it would be loaded into the page and used for rendering
-						"raw_wave_form": null,
-						"track": 0,
-						"start": 0,
-						"end": 30.4,
-						"bpm": 175,
-						"song_start": 0,
-						"song_end": 30.4
-					},
-					{
-						"id": "test song-id2",
-						"song_id": "test song-id",
-						"name": "Test song 2",
-						"effects": [],
-						"beat_markers": [1.5],
-						"wave_form": "test.dat",
-						"raw_wave_form": null,
-						"track": 1,
-						"start": 0,
-						"end": 25.4,
-						"bpm": 175,
-						"song_start": 0,
-						"song_end": 25.4
-					},
-					{
-						"id": "test song-id3",
-						"song_id": "test song-id",
-						"name": "Test song 3",
-						"effects": [],
-						"beat_markers": [],
-						"wave_form": null,
-						"raw_wave_form": null,
-						"track": 0,
-						"start": 30.4,
-						"end": 40,
-						"bpm": 175,
-						"song_start": 0,
-						"song_end": 9.6
-					},
-					{
-						"id": "test song-id4",
-						"song_id": "test song-id",
-						"name": "Test song 4",
-						"effects": [],
-						"beat_markers": [],
-						"wave_form": null,
-						"raw_wave_form": null,
-						"track": 2,
-						"start": 20,
-						"end": 40.56,
-						"bpm": 175,
-						"song_start": 0,
-						"song_end": 20.56
-					},
-					{
-						"id": "test song-id5",
-						"song_id": "test song-id",
-						"name": "Test song 5",
-						"effects": [],
-						"beat_markers": [3, 5, 7, 9, 11],
-						"wave_form": null,
-						"raw_wave_form": null,
-						"track": 3,
-						"start": 20,
-						"end": 40.56,
-						"bpm": 175,
-						"song_start": 10,
-						"song_end": 30.56
-					},
-					{
-						"id": "test song-id6",
-						"song_id": "test song-id",
-						"name": "Test song 6",
-						"effects": [],
-						"beat_markers": [],
-						"wave_form": null,
-						"raw_wave_form": null,
-						"track": 2,
-						"start": 2,
-						"end": 7,
-						"bpm": 175,
-						"song_start": 3,
-						"song_end": 8
-					}//mock audio data
-				],
 				menuItems: [
 					  {
 					    "text": "Copy Item"
@@ -260,6 +148,9 @@
 					this.$nextTick(fn);
 				});
 			},
+			removeRenderItem(index){
+				this.renderItems.splice(index, 1);
+			},
 			effectClick(type){
 				// htmlElement = document.getElementById(type+"I");
 				// htmlElement.setAttribute("text-shadow", "5px 5px 5px #ccc");
@@ -286,6 +177,7 @@
 
 								case "remove":
 									componentObj.effectHandler.removeAudio(componentObj.renderItems[i].id);
+									componentObj.removeRenderItem(i);
 									break;
 
 								case "cut":
@@ -346,6 +238,7 @@
 				for (let i=0; i<this.trackLayers; i++){
 					this.trackBounds[i] = [(this.offset + i*this.lineHeight)/this.dpr, (this.offset + (i+1)*this.lineHeight)/this.dpr];
 				}
+				this.$store.commit("updateUi", {"trackBounds": this.trackBounds});
 			},
 			moveY(yPosition){
 				let track = this.currentDragging.track;
@@ -362,6 +255,7 @@
 				return track;
 			},
 			moveX(e){
+				console.log("X MOVE");
 				let startX = (this.draggingx + e.dx/this.dpr); //tickOffset must be calculated based on diffence between current x value and last x value
 				let endX = (startX + this.currentDragging.size)
 				let rendX = utils.round(endX, 0.5);
@@ -370,6 +264,7 @@
 				audioItemLoop:
 				for (let i = 0; i < this.renderItems.length; i++){
 					let item = this.renderItems[i];
+					console.log("Checking against item", item);
 					if (item.isInsideWindow() == true){
 						if (item.track == this.currentDragging.track && item.id != this.currentDragging.id){ //If to check if comparison items are on same track 
 							if (item.xNormalized >= this.currentDragging.xNormalized){ //If start of current comparison audio is before dragging audio start
@@ -396,10 +291,7 @@
 							}
 						} else if (item.id != this.currentDragging.id && this.lastX != 0) { //Run Y aligment - will hold currently dragged audio item at snapped location for x movement ticks
 							//Rounding values should change based on time_scale value - when we are far zoomed out 0.5 is too small each scroll steps much larger than 0.5
-							//Items should not be able to snap inside other pieces of audio by being close 
-							// console.log("Comparing", rstartX, rendX, "With", item.rounded2X, 
-							// 	item.rounded2X2, "ID", item.id, "and", currentDragging.id,
-							// 	"original values", startX, endX, item.xNormalized, item.x2Normalized)
+							console.log("Running Y snapping computation");
 							if (rendX == item.rounded2X){ //end2start
 								this.block = true;
 								this.blockNumber = 10;
@@ -435,72 +327,83 @@
 							} else {
 								if (startX >= item.xNormalized && startX <= item.x2Normalized || endX >= item.xNormalized && endX <= item.x2Normalized || item.xNormalized >= startX && item.x2Normalized <= endX){
 									if (item.barMarkersX.length > 0){
+										console.log("Running bar marker matching");
 										for (let i2=0; i2<item.barMarkersXRounded.length; i2++){ //bar marker matching seems to be very hit and miss - try and figure out why that is happening
 											//console.log("Checkng", item.id, "marker ", item.barMarkersXRounded[i], "vs", rendX, rstartX);
-											if (rendX == item.barMarkersXRounded[i2]){ //end2start
-												this.block = true;
-												this.blockNumber = 4;
-												startX = item.barMarkersX[i2] - this.currentDragging.size;
-												endX = item.barMarkersX[i2];
-												this.drawSnapMarker = item.barMarkersX[i2];
-												break audioItemLoop;
+											if (item.isInsideWindow(item.barMarkersXRounded[i2]) == true){
+												if (rendX == item.barMarkersXRounded[i2]){ //end2start
+													this.block = true;
+													this.blockNumber = 4;
+													startX = item.barMarkersX[i2] - this.currentDragging.size;
+													endX = item.barMarkersX[i2];
+													this.drawSnapMarker = item.barMarkersX[i2];
+													break audioItemLoop;
 
-											} else if (rstartX == item.barMarkersXRounded[i2]) { //start2/start
-												this.block = true;
-												this.blockNumber = 4;
-												startX = item.barMarkersX[i2];
-												endX = item.barMarkersX[i2] + this.currentDragging.size;
-												this.drawSnapMarker = item.barMarkersX[i2];
-												break audioItemLoop;
-
-											} else {
-												for (let bi=0; bi<this.currentDragging.barMarkersXRounded.length; bi++){
-													//console.log("Checkng", item.id, "marker ", item.barMarkersXRounded[i], "vs", this.currentDragging.id, "vs marker", this.currentDragging.barMarkersXRounded[bi]);
-													if (this.currentDragging.barMarkersXRounded[bi] == item.barMarkersXRounded[i2]){
-														startX = item.barMarkersX[i2] - this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][0];
-														endX = item.barMarkersX[i2] + this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][1];
-														this.block = true;
-														this.blockNumber = 4;
-														this.drawSnapMarker = item.barMarkersX[i2];
-														break audioItemLoop;
-
-													} else if (this.currentDragging.barMarkersXRounded[bi] == item.rounded2X) {
-														startX = item.xNormalized - this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][0];
-														endX = item.xNormalized + this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][1];
-														this.block = true;
-														this.blockNumber = 4;
-														this.drawSnapMarker = item.xNormalized;
-														break audioItemLoop;
-
-													} else if (this.currentDragging.barMarkersXRounded[bi] == item.rounded2X2) {
-														startX = item.x2Normalized - this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][0];
-														endX = item.x2Normalized + this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][1];
-														this.block = true;
-														this.blockNumber = 4;
-														this.drawSnapMarker = item.x2Normalized;
-														break audioItemLoop;
-													}
+												} else if (rstartX == item.barMarkersXRounded[i2]) { //start2/start
+													this.block = true;
+													this.blockNumber = 4;
+													startX = item.barMarkersX[i2];
+													endX = item.barMarkersX[i2] + this.currentDragging.size;
+													this.drawSnapMarker = item.barMarkersX[i2];
+													break audioItemLoop;
 												}
+												// } else {
+												// 	for (let bi=0; bi<this.currentDragging.barMarkersXRounded.length; bi++){
+												// 		// console.log("Checkng", item.id, "marker ", "vs", this.currentDragging.id, "vs marker", "item x", item.barMarkersX, "cd bar diff", this.currentDragging.barMarkerDiff);
+												// 		if (this.currentDragging.barMarkersXRounded[bi] == item.barMarkersXRounded[i2]){
+												// 			console.log("Match 1", item.id, "vs", this.currentDragging.id, this.currentDragging.barMarkersXRounded[bi], item.barMarkersXRounded[i2])
+												// 			startX = item.barMarkersX[i2] - this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][0];
+												// 			endX = item.barMarkersX[i2] + this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][1];
+												// 			this.block = true;
+												// 			this.blockNumber = 4;
+												// 			this.drawSnapMarker = item.barMarkersX[i2];
+												// 			break audioItemLoop;
+
+												// 		} else if (this.currentDragging.barMarkersXRounded[bi] == item.rounded2X) {
+												// 			console.log("Match 2", item.id, "vs", this.currentDragging.id, this.currentDragging.barMarkersXRounded[bi], item.rounded2X)
+												// 			startX = item.xNormalized - this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][0];
+												// 			endX = item.xNormalized + this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][1];
+												// 			this.block = true;
+												// 			this.blockNumber = 4;
+												// 			this.drawSnapMarker = item.xNormalized;
+												// 			break audioItemLoop;
+
+												// 		} else if (this.currentDragging.barMarkersXRounded[bi] == item.rounded2X2) {
+												// 			console.log("Match 3", item.id, "vs", this.currentDragging.id, this.currentDragging.barMarkersXRounded[bi], item.rounded2X2)
+												// 			startX = item.x2Normalized - this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][0];
+												// 			endX = item.x2Normalized + this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][1];
+												// 			this.block = true;
+												// 			this.blockNumber = 4;
+												// 			this.drawSnapMarker = item.x2Normalized;
+												// 			break audioItemLoop;
+												// 		}
+												// 	}
+												// }
 											}
 										}
 									} else {
+										console.log("Checking current dragging bar markers vs items start/end");
 										for (let bi=0; bi<this.currentDragging.barMarkersXRounded.length; bi++){
-											//console.log("Checkng", item.id, "start ", item.rounded2X, "vs", this.currentDragging.id, "vs marker", this.currentDragging.barMarkersXRounded[bi]);
-											if (this.currentDragging.barMarkersXRounded[bi] == item.rounded2X) {
-												startX = item.xNormalized - this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][0];
-												endX = item.xNormalized + this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][1];
-												this.block = true;
-												this.blockNumber = 4;
-												this.drawSnapMarker = item.xNormalized;
-												break audioItemLoop;
+											if (this.currentDragging.isInsideWindow(this.currentDragging.barMarkersXRounded[bi]) == true){
+												//console.log("Checkng", item.id, "start ", item.rounded2X, "vs", this.currentDragging.id, "vs marker", this.currentDragging.barMarkersXRounded[bi]);
+												if (this.currentDragging.barMarkersXRounded[bi] == item.rounded2X) {
+													console.log("Match 4", item.id, "vs", this.currentDragging.id, this.currentDragging.barMarkersXRounded[bi], item.rounded2X)
+													startX = item.xNormalized - this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][0];
+													endX = item.xNormalized + this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][1];
+													this.block = true;
+													this.blockNumber = 4;
+													this.drawSnapMarker = item.xNormalized;
+													break audioItemLoop;
 
-											} else if (this.currentDragging.barMarkersXRounded[bi] == item.rounded2X2) {
-												startX = item.x2Normalized - this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][0];
-												endX = item.x2Normalized + this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][1];
-												this.block = true;
-												this.blockNumber = 4;
-												this.drawSnapMarker = item.x2Normalized;
-												break audioItemLoop;
+												} else if (this.currentDragging.barMarkersXRounded[bi] == item.rounded2X2) {
+													console.log("Match 5", item.id, "vs", this.currentDragging.id, this.currentDragging.barMarkersXRounded[bi], item.rounded2X2)
+													startX = item.x2Normalized - this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][0];
+													endX = item.x2Normalized + this.currentDragging.barMarkerDiff[this.currentDragging.barMarkersX[bi]][1];
+													this.block = true;
+													this.blockNumber = 4;
+													this.drawSnapMarker = item.x2Normalized;
+													break audioItemLoop;
+												}
 											}
 										}
 									}
@@ -543,7 +446,7 @@
 					if (this.renderedItems == false){
 						let AudioRect = new AudioItem();
 						AudioRect.setWaveForm(audioItem.raw_wave_form, y1, y2, x, x2, this.frameStart, this.timeScale, offset);
-						AudioRect.set(x, y1, x2, y2, Settings.theme.audioElement, audioItem.name, audioItem.id, audioItem.track, this.timeScale, this.frameStart, audioItem.beat_markers, audioItem.effects, audioItem.end, audioItem.bpm, this.dpr, this.width);
+						AudioRect.set(x, y1, x2, y2, Settings.theme.audioElement, audioItem.name, audioItem.id, audioItem.track, this.timeScale, this.frameStart, audioItem.beat_positions, audioItem.effects, audioItem.end, audioItem.bpm, this.dpr, this.width);
 						AudioRect.paint(this.ctx, Settings.theme.audioElement, this.block);
 						this.renderItems.push(AudioRect);
 
@@ -553,13 +456,14 @@
 							if (audioItem.raw_wave_form != null && currentItem.rawWaveForm == undefined || this.lastTimeScale != this.timeScale || this.resetWaveForm == true){
 								currentItem.setWaveForm(audioItem.raw_wave_form, y1, y2, x, x2, this.frameStart, this.timeScale, offset);
 							}
-							currentItem.set(x, y1, x2, y2, Settings.theme.audioElement, audioItem.name, audioItem.id, audioItem.track, this.timeScale, this.frameStart, audioItem.beat_markers, audioItem.effects, audioItem.end, audioItem.bpm, this.dpr, this.width);
+							currentItem.set(x, y1, x2, y2, Settings.theme.audioElement, audioItem.name, audioItem.id, audioItem.track, this.timeScale, this.frameStart, audioItem.beat_positions, audioItem.effects, audioItem.end, audioItem.bpm, this.dpr, this.width);
 							currentItem.paint(this.ctx, Settings.theme.audioElement, this.block);
 						} else {
-							//New item has been inserted from copy/cut
+							//New item has been inserted from copy/cut/import
+							console.log("new audio rect");
 							let AudioRect = new AudioItem();
 							AudioRect.setWaveForm(audioItem.raw_wave_form, y1, y2, x, x2, this.frameStart, this.timeScale, offset);
-							AudioRect.set(x, y1, x2, y2, Settings.theme.audioElement, audioItem.name, audioItem.id, audioItem.track, this.timeScale, this.frameStart, audioItem.beat_markers, audioItem.effects, audioItem.end, audioItem.bpm, this.dpr, this.width);
+							AudioRect.set(x, y1, x2, y2, Settings.theme.audioElement, audioItem.name, audioItem.id, audioItem.track, this.timeScale, this.frameStart, audioItem.beat_positions, audioItem.effects, audioItem.end, audioItem.bpm, this.dpr, this.width);
 							AudioRect.paint(this.ctx, Settings.theme.audioElement, this.block);
 							this.renderItems.push(AudioRect);
 						}
@@ -704,6 +608,7 @@
 					for (let i = 0; i < componentObj.renderItems.length; i++){
 						if (componentObj.renderItems[i].contains(currentX, currentY, timeScale, frameStart)) {
 							componentObj.currentAudio = componentObj.renderItems[i];
+							componentObj.currentAudioIndex = i;
 							componentObj.menuItem.display(e, undefined);
 						}
 					}
@@ -764,17 +669,20 @@
 					}
 				});
 
-				document.addEventListener("keydown", function(e){
+				let keydownHandler = function(e){
 					let currentUi = componentObj.$store.getters.getUi;
 					if (e.keyCode == 37){ //left arrow key
-						let out = currentUi["scrollTime"] -1;
+						let timeScale = 60/currentUi["timeScale"];
+						let out = currentUi["scrollTime"] -1*timeScale;
 						if (out < 0){
 							out = 0;
 						}
+						console.log(out);
 						componentObj.$store.commit("updateUi", {"scrollTime": out});
 
 					} else if (e.keyCode == 39){ //right arrow key
-						componentObj.$store.commit("updateUi", {"scrollTime": currentUi["scrollTime"] +1});
+						let timeScale = 60/currentUi["timeScale"]; //Ensure that this changing of timeScale offset for moving on timeline is working correctl
+						componentObj.$store.commit("updateUi", {"scrollTime": currentUi["scrollTime"] +1*timeScale});
 
 					} else if (e.keyCode == 38){ //up arrow key
 						let timeScale = currentUi["timeScale"];
@@ -800,7 +708,11 @@
 						componentObj.$store.commit("updateUi", {"timeScale": out});
 
 					}
-				});
+				}
+
+				//this seems to be adding listner multiple times - makes sure that all listeners are only added once
+				document.removeEventListener("keydown", keydownHandler);
+				document.addEventListener("keydown", keydownHandler);
 
 				//Handles dragging of movable items
 				utils.handleDrag(this.canvas,
@@ -926,6 +838,7 @@
 				this.menuItems[6]["events"] = { //Set delete click event
 												"click": function(e){
 													componentObj.effectHandler.removeAudio(componentObj.currentAudio.id);
+													componentObj.removeRenderItem(componentObj.currentAudioIndex);
 												}
 											}
 
@@ -942,9 +855,12 @@
 				this.canvas = document.querySelector("#timeline-canvas");
 				this.ctx = this.canvas.getContext('2d');
 				this.dpr = window.devicePixelRatio; 
-				this.$store.commit("addMixData", this.audio)
-				this.audioData = this.$store.getters["getMixData"];
-				this.trackLayers = Math.max.apply(Math, this.audioData.map(function(o) { return o.track; }))+1;
+				//this.$store.commit("addMixData", this.audio)
+				this.mixData = this.$store.getters["getMixData"];
+				this.audioData = this.mixData.audio; 
+				console.log("Loaded mix data", this.mixData);
+				//this.trackLayers = Math.max.apply(Math, this.audioData.map(function(o) { return o.track; }))+1; for now this shouldnt be used - only to be used when there is a + icon on the timeline to add more tracks - that way it doesnt matter if the timeline renders with no tracks
+				this.trackLayers = 4;
 				let lineWidth, lineHeight = utils.getDivSize("timeline");
 				this.lineHeight = lineHeight * Settings.lineHeightProportion;
 				this.offset = Settings.trackTimelineOffset;
@@ -965,6 +881,7 @@
 				for (let i=0; i<this.trackLayers; i++){
 					this.trackBounds[i] = [(this.offset + i*this.lineHeight)/this.dpr, (this.offset + (i+1)*this.lineHeight)/this.dpr];
 				}
+				this.$store.commit("updateUi", {"trackBounds": this.trackBounds});
 
 				this.exterior.init();
 				this.registerListeners();

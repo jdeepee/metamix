@@ -41,17 +41,18 @@ def persist_file(temp_filepath, return_length=False, delete=True):
 
     else:
         #Upload to s3
-        s3_key, length, wav_file = upload_s3(temp_filepath, return_length, delete)
-        return s3_key, length, wav_file
+        temp_filename = current_app.config["METAMIX_TEMP_SAVE"] + str(uuid.uuid4()) + ".wav" #Create temporary file upload name
+        key = str(uuid.uuid4()) + ".wav" #Create s3 key for file
+        data, sr = librosa.load(temp_filepath, sr=44100) #Load audio as array data
+        length = float(len(data)) / float(sr) #Get length of audio
+        librosa.output.write_wav(temp_filename, data, sr) #Write audio as wav to outfile location
 
-def upload_s3(temp_filepath, return_length=False, delete=True):
-    temp_filename = current_app.config["METAMIX_TEMP_SAVE"] + str(uuid.uuid4()) + ".wav"
-    key = str(uuid.uuid4()) + ".wav"
+        upload_s3(temp_filename, key, delete)
+        os.remove(temp_filepath)
+        return key, length, temp_filename
 
-    data, sr = librosa.load(temp_filepath, sr=44100)
-    librosa.output.write_wav(temp_filename, data, sr)
-
-    """Uploads text document to s3 bucket"""
+def upload_s3(temp_filename, key, delete=True, public=False):
+    """Uploads file to s3 bucket"""
     os.environ['S3_USE_SIGV4'] = 'True'
 
     connect = boto.connect_s3(
@@ -64,18 +65,13 @@ def upload_s3(temp_filepath, return_length=False, delete=True):
     k.key = key
     # file contents to be added
     k.set_contents_from_filename(temp_filename)
-    k.set_acl('private')
+    if public == False:
+        k.set_acl('private')
+
+    else:
+        k.set_acl("public-read")
     print "Upload complete"
 
     if delete == True:
         os.remove(temp_filename)
-
-    os.remove(temp_filepath)
-
-    if return_length == False:
-        return key, None, temp_filename
-
-    else:
-        return key, float(len(data)) / float(sr), temp_filename
-
 

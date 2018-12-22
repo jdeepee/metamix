@@ -48,6 +48,9 @@
 				.then(result => {
 					console.log(result.data);
 					mix["id"] = result.data.id;
+					delete mix["clips"];
+					delete mix["song"];
+					mix["audio"] = [];
 					this.$store.commit("addMixData", mix);
 					this.$router.push("/meta/mix/studio");	
 

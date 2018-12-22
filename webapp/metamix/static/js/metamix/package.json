@@ -18,7 +18,8 @@
     "vue-router": "^3.0.1",
     "vue-slider-component": "^2.8.0",
     "vuex": "^3.0.1",
-    "vuex-persistedstate": "^2.5.4"
+    "vuex-persistedstate": "^2.5.4",
+    "waveform-data": "^2.1.2"
   },
   "devDependencies": {
     "autoprefixer": "^7.1.2",

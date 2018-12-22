@@ -45,7 +45,9 @@ export const store = new Vuex.Store({
 			"clips": []
 		},
 		appData: {
-			"baseUrl": "http://localhost:5000"
+			"baseUrl": "http://localhost:5000",
+			"s3Url": "https://s3-eu-west-1.amazonaws.com/metamix-development/",
+			//"s3Url": "https://s3-eu-west-1.amazonaws.com/metamix/",
 			//"baseUrl": "https://metamix.io"
 		}
 	},

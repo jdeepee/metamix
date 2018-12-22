@@ -51,13 +51,15 @@
 </template>
 
 <script type="text/javascript">
-	import {Settings} from "../../settings.js"
-	import utils from "./src/utils.js"
-	import AudioItem from "./src/audio.js"
-	import Scroll from "./Subcomponents/Scroll.vue"
-	import Exterior from "./Subcomponents/Exterior.vue"
-	import Effect from "./Subcomponents/Effect.vue"
-	import ContextMenu from "./src/menu.js"
+	import {Settings} from "../../settings.js";
+	import utils from "./src/utils.js";
+	import AudioItem from "./src/audio.js";
+	import Scroll from "./Subcomponents/Scroll.vue";
+	import Exterior from "./Subcomponents/Exterior.vue";
+	import Effect from "./Subcomponents/Effect.vue";
+	import ContextMenu from "./src/menu.js";
+	import WaveformData from "waveform-data";
+	import axios from "axios";
 
 	export default {
 		name: "Timeline",
@@ -255,7 +257,7 @@
 				return track;
 			},
 			moveX(e){
-				console.log("X MOVE");
+				//console.log("X MOVE");
 				let startX = (this.draggingx + e.dx/this.dpr); //tickOffset must be calculated based on diffence between current x value and last x value
 				let endX = (startX + this.currentDragging.size)
 				let rendX = utils.round(endX, 0.5);
@@ -264,7 +266,7 @@
 				audioItemLoop:
 				for (let i = 0; i < this.renderItems.length; i++){
 					let item = this.renderItems[i];
-					console.log("Checking against item", item);
+					//console.log("Checking against item", item);
 					if (item.isInsideWindow() == true){
 						if (item.track == this.currentDragging.track && item.id != this.currentDragging.id){ //If to check if comparison items are on same track 
 							if (item.xNormalized >= this.currentDragging.xNormalized){ //If start of current comparison audio is before dragging audio start
@@ -291,7 +293,7 @@
 							}
 						} else if (item.id != this.currentDragging.id && this.lastX != 0) { //Run Y aligment - will hold currently dragged audio item at snapped location for x movement ticks
 							//Rounding values should change based on time_scale value - when we are far zoomed out 0.5 is too small each scroll steps much larger than 0.5
-							console.log("Running Y snapping computation");
+							//console.log("Running Y snapping computation");
 							if (rendX == item.rounded2X){ //end2start
 								this.block = true;
 								this.blockNumber = 10;
@@ -327,7 +329,7 @@
 							} else {
 								if (startX >= item.xNormalized && startX <= item.x2Normalized || endX >= item.xNormalized && endX <= item.x2Normalized || item.xNormalized >= startX && item.x2Normalized <= endX){
 									if (item.barMarkersX.length > 0){
-										console.log("Running bar marker matching");
+										//console.log("Running bar marker matching");
 										for (let i2=0; i2<item.barMarkersXRounded.length; i2++){ //bar marker matching seems to be very hit and miss - try and figure out why that is happening
 											//console.log("Checkng", item.id, "marker ", item.barMarkersXRounded[i], "vs", rendX, rstartX);
 											if (item.isInsideWindow(item.barMarkersXRounded[i2]) == true){
@@ -382,7 +384,7 @@
 											}
 										}
 									} else {
-										console.log("Checking current dragging bar markers vs items start/end");
+										//console.log("Checking current dragging bar markers vs items start/end");
 										for (let bi=0; bi<this.currentDragging.barMarkersXRounded.length; bi++){
 											if (this.currentDragging.isInsideWindow(this.currentDragging.barMarkersXRounded[bi]) == true){
 												//console.log("Checkng", item.id, "start ", item.rounded2X, "vs", this.currentDragging.id, "vs marker", this.currentDragging.barMarkersXRounded[bi]);
@@ -445,7 +447,7 @@
 
 					if (this.renderedItems == false){
 						let AudioRect = new AudioItem();
-						AudioRect.setWaveForm(audioItem.raw_wave_form, y1, y2, x, x2, this.frameStart, this.timeScale, offset);
+						AudioRect.setWaveForm(audioItem.rawWaveForm, y1, y2, x, x2, this.frameStart, this.timeScale, offset);
 						AudioRect.set(x, y1, x2, y2, Settings.theme.audioElement, audioItem.name, audioItem.id, audioItem.track, this.timeScale, this.frameStart, audioItem.beat_positions, audioItem.effects, audioItem.end, audioItem.bpm, this.dpr, this.width);
 						AudioRect.paint(this.ctx, Settings.theme.audioElement, this.block);
 						this.renderItems.push(AudioRect);
@@ -453,16 +455,21 @@
 					} else {
 						let currentItem = this.renderItems[i];
 						if (currentItem != undefined){
-							if (audioItem.raw_wave_form != null && currentItem.rawWaveForm == undefined || this.lastTimeScale != this.timeScale || this.resetWaveForm == true){
-								currentItem.setWaveForm(audioItem.raw_wave_form, y1, y2, x, x2, this.frameStart, this.timeScale, offset);
+							if (audioItem.rawWaveForm != null && currentItem.rawWaveForm == undefined || this.lastTimeScale != this.timeScale || this.resetWaveForm == true){
+								currentItem.setWaveForm(audioItem.rawWaveForm, y1, y2, x, x2, this.frameStart, this.timeScale, offset);
 							}
 							currentItem.set(x, y1, x2, y2, Settings.theme.audioElement, audioItem.name, audioItem.id, audioItem.track, this.timeScale, this.frameStart, audioItem.beat_positions, audioItem.effects, audioItem.end, audioItem.bpm, this.dpr, this.width);
 							currentItem.paint(this.ctx, Settings.theme.audioElement, this.block);
 						} else {
 							//New item has been inserted from copy/cut/import
 							console.log("new audio rect");
+							let waveform = this.fetchWaveForm(audioItem.waveform);
+							let componentObj = this;
+							waveform.then(function(data) {
+								componentObj.audioData[i].rawWaveForm = WaveformData.create(data.data);
+							})
 							let AudioRect = new AudioItem();
-							AudioRect.setWaveForm(audioItem.raw_wave_form, y1, y2, x, x2, this.frameStart, this.timeScale, offset);
+							AudioRect.setWaveForm(audioItem.rawWaveForm, y1, y2, x, x2, this.frameStart, this.timeScale, offset);
 							AudioRect.set(x, y1, x2, y2, Settings.theme.audioElement, audioItem.name, audioItem.id, audioItem.track, this.timeScale, this.frameStart, audioItem.beat_positions, audioItem.effects, audioItem.end, audioItem.bpm, this.dpr, this.width);
 							AudioRect.paint(this.ctx, Settings.theme.audioElement, this.block);
 							this.renderItems.push(AudioRect);
@@ -847,6 +854,31 @@
 													componentObj.effectHandler.copyAudio(componentObj.currentAudio.id);
 												}
 											}
+			},
+			fetchWaveForms(){
+				console.log("Fetching all songs in studio waveforms", this.audioData);
+				let componentObj = this;
+				for (let i=0; i<this.audioData.length; i++){
+					console.log("Fetching", this.audioData[i].waveform, this.audioData[i]);
+					if (this.audioData[i].waveform != null){
+						let waveform = this.fetchWaveForm(this.audioData[i].waveform);
+						waveform.then(function(data) {
+							componentObj.audioData[i].rawWaveForm = WaveformData.create(data.data);
+						})
+					}
+				}
+			},
+			async fetchWaveForm(waveformKey){
+				// let res = axios.get(this.appData.s3Url+waveformKey, {"responseType": 'arraybuffer'});
+				// console.log(res);
+				// await res;
+				try {
+					let res = axios.get(this.appData.s3Url+waveformKey, {"responseType": 'arraybuffer'});
+					return await res;
+				} catch (error) {
+					console.error(error);
+				}
+				//return out;
 			}
 		},
 		mounted() {
@@ -858,6 +890,7 @@
 				//this.$store.commit("addMixData", this.audio)
 				this.mixData = this.$store.getters["getMixData"];
 				this.audioData = this.mixData.audio; 
+				this.appData = this.$store.getters["getAppData"];
 				console.log("Loaded mix data", this.mixData);
 				//this.trackLayers = Math.max.apply(Math, this.audioData.map(function(o) { return o.track; }))+1; for now this shouldnt be used - only to be used when there is a + icon on the timeline to add more tracks - that way it doesnt matter if the timeline renders with no tracks
 				this.trackLayers = 4;
@@ -882,7 +915,7 @@
 					this.trackBounds[i] = [(this.offset + i*this.lineHeight)/this.dpr, (this.offset + (i+1)*this.lineHeight)/this.dpr];
 				}
 				this.$store.commit("updateUi", {"trackBounds": this.trackBounds});
-
+				this.fetchWaveForms();
 				this.exterior.init();
 				this.registerListeners();
 				this.menuItem = new ContextMenu(this.menuItems);

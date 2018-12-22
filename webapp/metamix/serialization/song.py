@@ -11,3 +11,4 @@ class SongSchema(Schema):
     beat_positions = fields.Raw() #This should be of type JSON of LIST - and then return data as json array when dumping
     pitch = fields.Str()
     processing_status = fields.Str()
+    waveform = fields.Str()

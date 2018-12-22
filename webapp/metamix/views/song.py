@@ -8,7 +8,7 @@ from metamix.extensions import db
 from metamix.errors import MetaMixException
 from metamix.serialization.song import SongSchema
 from metamix.utils.general import jwt_required
-from metamix.utils.analysis import analyse_audio
+from metamix.utils.analysis import analyse_audio, create_waveform
 from metamix.utils.upload import persist_file, allowed_file
 from flask import *
 import uuid
@@ -47,9 +47,10 @@ def upload_song(user_id):
                 file.save(temp_filepath)
                 s3_key, length, wav_file = persist_file(temp_filepath, return_length=True, delete=False)
                 bpm, beat_positions, key = analyse_audio(wav_file)
-                print "User id: {}".format(user_id)
+                waveform_key = create_waveform(wav_file)
+
                 Song.insert_song({"name": file.filename, "s3_key": s3_key, "length": length, "bpm": bpm, "beat_positions": json.dumps(beat_positions.tolist()),
-                                  "key": key, "owner_id": user_id})
+                                  "key": key, "owner_id": user_id, "waveform": waveform_key})
 
     elif type == "clip":
         for file in files:
@@ -58,9 +59,9 @@ def upload_song(user_id):
                 file.save(temp_filepath)
                 s3_key, length, wav_file = persist_file(temp_filepath, return_length=True, delete=False)
                 bpm, beat_positions, key = analyse_audio(wav_file)
-
+                waveform_key = create_waveform(wav_file)
                 Clip.insert_clip({"name": file.filename, "s3_key": s3_key, "length": length, "bpm": bpm, "beat_positions": beat_positions,
-                                  "key": key, "owner_id": user_id})
+                                  "key": key, "owner_id": user_id, "waveform": waveform_key})
 
     else:
         raise MetaMixException(message="Invalid type argument", status_code=400)

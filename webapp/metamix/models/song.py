@@ -16,6 +16,7 @@ class Song(db.Model):
     length = db.Column("length", db.Float()) #Song length in seconds 
     genre = db.Column("genre", db.String(50))
     processing_start = db.Column("processing_status", db.String())
+    waveform = db.Column("waveform", db.String())#String of s3 waveform key name
 
     owner_id = db.Column("owner_id", UUID(as_uuid=True), db.ForeignKey('user.id', ondelete='CASCADE'))
 

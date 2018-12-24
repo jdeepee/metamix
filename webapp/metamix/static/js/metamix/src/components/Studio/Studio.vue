@@ -447,30 +447,33 @@
 
 					if (this.renderedItems == false){
 						let AudioRect = new AudioItem();
-						AudioRect.setWaveForm(audioItem.rawWaveForm, y1, y2, x, x2, this.frameStart, this.timeScale, offset);
-						AudioRect.set(x, y1, x2, y2, Settings.theme.audioElement, audioItem.name, audioItem.id, audioItem.track, this.timeScale, this.frameStart, audioItem.beat_positions, audioItem.effects, audioItem.end, audioItem.bpm, this.dpr, this.width);
+						AudioRect.set(x, y1, x2, y2, Settings.theme.audioElement, audioItem, this.timeScale, this.frameStart, this.dpr, this.width);
+						AudioRect.setWaveForm(audioItem.rawWaveForm, this.frameStart, this.timeScale, offset);
 						AudioRect.paint(this.ctx, Settings.theme.audioElement, this.block);
 						this.renderItems.push(AudioRect);
 
 					} else {
 						let currentItem = this.renderItems[i];
 						if (currentItem != undefined){
+							currentItem.set(x, y1, x2, y2, Settings.theme.audioElement, audioItem, this.timeScale, this.frameStart, this.dpr, this.width);
 							if (audioItem.rawWaveForm != null && currentItem.rawWaveForm == undefined || this.lastTimeScale != this.timeScale || this.resetWaveForm == true){
-								currentItem.setWaveForm(audioItem.rawWaveForm, y1, y2, x, x2, this.frameStart, this.timeScale, offset);
+								currentItem.setWaveForm(audioItem.rawWaveForm, this.frameStart, this.timeScale, offset);
 							}
-							currentItem.set(x, y1, x2, y2, Settings.theme.audioElement, audioItem.name, audioItem.id, audioItem.track, this.timeScale, this.frameStart, audioItem.beat_positions, audioItem.effects, audioItem.end, audioItem.bpm, this.dpr, this.width);
 							currentItem.paint(this.ctx, Settings.theme.audioElement, this.block);
 						} else {
 							//New item has been inserted from copy/cut/import
 							console.log("new audio rect");
-							let waveform = this.fetchWaveForm(audioItem.waveform);
-							let componentObj = this;
-							waveform.then(function(data) {
-								componentObj.audioData[i].rawWaveForm = WaveformData.create(data.data);
-							})
+							console.log(audioItem)
+							if (audioItem.rawWaveForm == undefined){
+								let waveform = this.fetchWaveForm(audioItem.waveform);
+								let componentObj = this;
+								waveform.then(function(data) {
+									componentObj.audioData[i].rawWaveForm = WaveformData.create(data.data);
+								})
+							}
 							let AudioRect = new AudioItem();
-							AudioRect.setWaveForm(audioItem.rawWaveForm, y1, y2, x, x2, this.frameStart, this.timeScale, offset);
-							AudioRect.set(x, y1, x2, y2, Settings.theme.audioElement, audioItem.name, audioItem.id, audioItem.track, this.timeScale, this.frameStart, audioItem.beat_positions, audioItem.effects, audioItem.end, audioItem.bpm, this.dpr, this.width);
+							AudioRect.set(x, y1, x2, y2, Settings.theme.audioElement, audioItem, this.timeScale, this.frameStart, this.dpr, this.width);
+							AudioRect.setWaveForm(audioItem.rawWaveForm, this.frameStart, this.timeScale, offset);
 							AudioRect.paint(this.ctx, Settings.theme.audioElement, this.block);
 							this.renderItems.push(AudioRect);
 						}
@@ -596,6 +599,7 @@
 				this.ctx.restore();
 
 				this.needsRepaint = false;
+				//There should be check here that the user is still on the canvas page - currently it is running this loop even when the user is not on the canvas page
 				requestAnimationFrame(this.paint)
 			},
 			registerListeners(){
@@ -605,7 +609,6 @@
 
 				// Contextmenu-eventlistener
 				this.canvas.addEventListener("contextmenu", function(e){
-					console.log("Content menu");
 					let currentUi = componentObj.$store.getters.getUi;
 					let timeScale = currentUi["timeScale"];
 					let frameStart = currentUi["scrollTime"];
@@ -684,7 +687,6 @@
 						if (out < 0){
 							out = 0;
 						}
-						console.log(out);
 						componentObj.$store.commit("updateUi", {"scrollTime": out});
 
 					} else if (e.keyCode == 39){ //right arrow key
@@ -718,7 +720,6 @@
 				}
 
 				//this seems to be adding listner multiple times - makes sure that all listeners are only added once
-				document.removeEventListener("keydown", keydownHandler);
 				document.addEventListener("keydown", keydownHandler);
 
 				//Handles dragging of movable items
@@ -734,7 +735,7 @@
 							let item = componentObj.renderItems[i];
 							if (item.contains(currentX, currentY, timeScale, frameStart)) {
 								let effect = item.containsEffect(currentX, currentY);
-								console.log("Contains effect val", effect);
+								//console.log("Contains effect val", effect);
 								if (effect == false){
 									componentObj.draggingx = item.x + frameStart * timeScale;
 									componentObj.currentDragging = item;
@@ -856,10 +857,8 @@
 											}
 			},
 			fetchWaveForms(){
-				console.log("Fetching all songs in studio waveforms", this.audioData);
 				let componentObj = this;
 				for (let i=0; i<this.audioData.length; i++){
-					console.log("Fetching", this.audioData[i].waveform, this.audioData[i]);
 					if (this.audioData[i].waveform != null){
 						let waveform = this.fetchWaveForm(this.audioData[i].waveform);
 						waveform.then(function(data) {
@@ -869,16 +868,12 @@
 				}
 			},
 			async fetchWaveForm(waveformKey){
-				// let res = axios.get(this.appData.s3Url+waveformKey, {"responseType": 'arraybuffer'});
-				// console.log(res);
-				// await res;
 				try {
 					let res = axios.get(this.appData.s3Url+waveformKey, {"responseType": 'arraybuffer'});
 					return await res;
 				} catch (error) {
 					console.error(error);
 				}
-				//return out;
 			}
 		},
 		mounted() {

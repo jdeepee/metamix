@@ -1,73 +1,70 @@
 import utils from "./utils.js"
 import {Settings} from "../../../settings.js"
 
-//AudioItem class? which is used to draw each audio item + x/y containing operations 
-//AudioItem code should be moved to its own file - its getting huge and cluttering this file
 function AudioItem() {
 	
 }
 
-//Set letiables for audio item
-//This should be refactored to accept AudioItem object and then this letiables set from getting values from this object - much cleaner than sending a bunch of paramters
-AudioItem.prototype.setWaveForm = function(rawWaveForm, y, y2, x, x2, time_scale, frame_start, offset){
+AudioItem.prototype.setWaveForm = function(rawWaveForm, time_scale, frame_start, offset){
+	//console.log("SEtting waveform from", rawWaveForm, this.audioName, this.songStart, this.songEnd, this.size)
 	this.rawWaveForm = rawWaveForm;
 	this.rawWaveFormMin = [];
 	this.rawWaveFormMax = [];
-	this.y = y;
-	this.y2 = y2;
-	this.x = x;
-	this.x2 = x2;
-	this.xNormalized = this.x + (frame_start * time_scale);
-	this.x2Normalized = this.x2 + (frame_start * time_scale);
-	this.size = this.x2Normalized - this.xNormalized;
+	this.originalSize = this.originalLength * this.time_scale;
+	//console.log(this.originalSize, this.originalLength, this.time_scale)
 
-	if (this.rawWaveForm != null){
-		const y = utils.interpolateHeight(this.y2-16);
-		this.rawWaveForm = this.rawWaveForm.resample({ width: this.size })
+	if (this.rawWaveForm != undefined){
+		const y = utils.interpolateHeight(this.y2);
+		this.rawWaveForm = this.rawWaveForm.resample({ width: this.originalSize })
 
-		// for(let i=0; i<this.rawWaveForm.min.length; i++){
-		// 	this.rawWaveFormMin.push([i + 0.5, y(this.rawWaveForm.min[i]) + 0.5])
-		// }
+		const timeToPixels = (waveform, time) => 
+			Math.floor(time * waveform.adapter.sample_rate / waveform.adapter.scale);
+
+		const scale = Math.floor((this.songEnd - this.songStart) * this.rawWaveForm.adapter.sample_rate / this.originalSize);
+
+		const startIndex = timeToPixels(this.rawWaveForm, this.songStart);
+		const endIndex = timeToPixels(this.rawWaveForm, this.songEnd);
+		this.rawWaveForm.offset(startIndex, endIndex);
+
 		this.rawWaveForm.min.forEach((val, x) => {
-		  this.rawWaveFormMin.push([x + 0.5, y(val)+8])
-		});
-		// this.rawWaveForm.max = this.rawWaveForm.max.reverse()
-		// for(let i=0; i<this.rawWaveForm.max.length; i++){
-		// 	this.rawWaveFormMax.push([(this.rawWaveForm.offset_length - y) + 0.5, y(this.rawWaveForm.max[i]) + 0.5]);
-		// }
-		this.rawWaveForm.max.reverse().forEach((val, x) => {
-			this.rawWaveFormMax.push([(this.rawWaveForm.offset_length - x) + 0.5, y(val)+8]);
+		  this.rawWaveFormMin.push([x, y(val)])
 		});
 
+		this.rawWaveForm.max.reverse().forEach((val, x) => {
+			this.rawWaveFormMax.push([(this.rawWaveForm.offset_length - x), y(val)]);
+		});
 	}
 }
 
-AudioItem.prototype.set = function(x, y, x2, y2, color, audioName, id, track, time_scale, frame_start, barMarkers, effects, end, bpm, dpr, currentWidth) {
+AudioItem.prototype.set = function(x, y, x2, y2, color, audioItem, time_scale, frame_start, dpr, currentWidth) {
 	this.x = x;
 	this.y = y;
 	this.x2 = x2;
 	this.y2 = y2;
 	this.color = color;
-	this.audioName = audioName;
-	this.bpm = bpm;
-	this.id = id;
-	this.track = track;
+	this.audioName = audioItem.name;
+	this.bpm = audioItem.bpm;
+	this.id = audioItem.id;
+	this.track = audioItem.track;
 	this.xNormalized = x + (frame_start * time_scale);
 	this.x2Normalized = x2 + (frame_start * time_scale);
 	this.size = this.x2Normalized - this.xNormalized;
+	this.originalLength = audioItem.originalLength;
 	this.ySize = this.y2 - this.y;
 	this.xMiddle = this.xNormalized + ((this.size) / 2);
-	this.effects = effects;
-	this.barMarkers = barMarkers;
+	this.effects = audioItem.effects;
+	this.barMarkers = audioItem.beat_positions;
 	this.time_scale = time_scale;
 	this.frame_start = frame_start;
 	this.xOffset = this.frame_start * this.time_scale;
 	this.ratio = this.y2 / 100;
 	this.curveValues = [];
 	this.drawSelectGlow = false;
-	this.end = end;
+	this.end = audioItem.end;
 	this.dpr = dpr;
 	this.currentWidth = currentWidth;
+	this.songStart = audioItem.song_start;
+	this.songEnd = audioItem.song_end;
 
 	this.rounded1X = utils.round(this.xNormalized, 0.25);
 	this.rounded1X2 = utils.round(this.x2Normalized, 0.25);
@@ -182,10 +179,6 @@ AudioItem.prototype.drawEffectCurve = function(ctx, start, target, type, startX,
 }
 
 AudioItem.prototype.paintEffects = function(ctx) {
-	//Iterate over effects and paint them on the audio item - in theme define some basic temporary colour scheme/symbols which can signify different effects
-	//So for example yellow = eq, red = volume. etc. Currently only two supported strength_curves on backend: continous and linear - just build these for now
-	//Y position on the audio item should indicate the start/target values of the effects
-	//console.log("Effects", this.effects);
 	for (let i=0; i<this.effects.length; i++){
 		let effect = this.effects[i];
 		if (effect["endX"] - effect["startX"] > 5){
@@ -298,7 +291,8 @@ AudioItem.prototype.insideWindowRaw = function(x){
 	return false;
 }
 
-AudioItem.prototype.isInsideWindow = function(){ //Checks if the audioitem is inside the width of the window - so that we can selectivly render/process audio items
+//Checks if the audioitem is inside the width of the window - so that we can selectivly render/process audio items
+AudioItem.prototype.isInsideWindow = function(){ 
 	if (this.x >= 0 || this.x2 >= 0){
 		if (this.x <= this.currentWidth){
 			return true;
@@ -309,9 +303,6 @@ AudioItem.prototype.isInsideWindow = function(){ //Checks if the audioitem is in
 
 //Check if mouse at x/y is contained in audio
 AudioItem.prototype.contains = function(x, y, time_scale, frame_start) {
-	// console.log("X", this.x, "Y", this.y, "X2", this.x2, "y2", this.y2)
-	// console.log("Comparison", x ," >= ", (this.x + (frame_start * time_scale)), y, " >= ", this.y, x, " <= ", (this.x2 + (frame_start * time_scale)), y, "<= ", this.y + this.y2, this.id)
-	//X & X2 values of audio item are normalized in accordance with the timescale and framestart so we can effectively care againsy mouse position no matter where the scroll wheel is
 	return x >= this.xNormalized && y >= this.y  && x <= this.x2Normalized && y <= this.y + this.y2;
 };
 

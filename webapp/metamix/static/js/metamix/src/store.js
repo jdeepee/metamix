@@ -127,9 +127,11 @@ export const store = new Vuex.Store({
 		copyAudio(state, data){
 			for (let i in state.mixData.audio){
 				if (state.mixData.audio[i].id == data.copyId){
+					let waveformCopy = Object.assign( Object.create( Object.getPrototypeOf(state.mixData.audio[i].rawWaveForm)), state.mixData.audio[i].rawWaveForm)
 					let newAudio = JSON.parse(JSON.stringify(state.mixData.audio[i]));
+					newAudio.rawWaveForm = waveformCopy;
 					newAudio["id"] = data["id"];
-					newAudio["name"] = state.mixData[i].name + " copy";
+					newAudio["name"] = state.mixData.audio[i].name + " copy";
 					state.mixData.audio.push(newAudio);
 				}
 			}
@@ -175,7 +177,7 @@ export const store = new Vuex.Store({
 		getAudio(state){
 			return function(id){
 				for (let i=0; i<state.mixData.audio.length; i++){
-					if (state.mixDat.audioa[i].id == id){
+					if (state.mixData.audio[i].id == id){
 						return state.mixData.audio[i];
 					}
 				}

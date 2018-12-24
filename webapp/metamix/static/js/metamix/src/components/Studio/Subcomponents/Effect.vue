@@ -254,9 +254,13 @@
 					this.$store.commit("copyAudio", {"copyId": audioItem.id, "id": copyId});
 					this.$store.commit("updateAudio", {"id": copyId, "start": cutTime, "end": audioItem.end, "song_start":  oldAudio["song_start"] + (cutTime - oldAudio["start"])});
 					this.$store.commit("updateAudio", {"id": audioItem.id, "song_end": oldAudio["song_start"] + (cutTime - (oldAudio["start"]))});
+					audioItem.songEnd = oldAudio["song_start"] + (cutTime - (oldAudio["start"]))
+					audioItem.setWaveForm(audioItem.rawWaveForm, currentUi.timeScale, currentUi.frameStart, currentUi.trackTimelineOffset)
+					//Here the waveform for the audioItem should be set again - song start/end should be taken into account on each setting of waveform
 
 					let newAudio = this.$store.getters.getAudio(copyId);
 					let oldAudioLength = oldAudio["end"] - oldAudio["start"];
+					console.log(oldAudio, newAudio)
 
 					//Update effect curves
 					for (let i=0; i<oldAudio["effects"].length; i++){
@@ -285,16 +289,16 @@
 
 					//Update beat markers
 
-					for (let i=0; i<newAudio["beat_markers"].length; i++){ //Remove any bar markers before start of new audio cut segment (right side)
-						if (newAudio["beat_markers"][i] + oldAudio["start"] < newAudio["start"]){
-							delete newAudio["beat_markers"][i];
+					for (let i=0; i<newAudio["beat_positions"].length; i++){ //Remove any bar markers before start of new audio cut segment (right side)
+						if (newAudio["beat_positions"][i] + oldAudio["start"] < newAudio["start"]){
+							delete newAudio["beat_positions"][i];
 						}
-						newAudio["beat_markers"][i] = newAudio["beat_markers"][i] - oldAudioLength;
+						newAudio["beat_positions"][i] = newAudio["beat_positions"][i] - oldAudioLength;
 					}
 
-					for (let i=0; i<oldAudio["beat_markers"].length; i++){ //Remove any bar markers past new end of first audio cut segment (left side)
-						if (oldAudio["beat_markers"][i] + oldAudio["start"] > oldAudio["end"]){
-							delete oldAudio["beat_markers"][i];
+					for (let i=0; i<oldAudio["beat_positions"].length; i++){ //Remove any bar markers past new end of first audio cut segment (left side)
+						if (oldAudio["beat_positions"][i] + oldAudio["start"] > oldAudio["end"]){
+							delete oldAudio["beat_positions"][i];
 						}
 					}
 

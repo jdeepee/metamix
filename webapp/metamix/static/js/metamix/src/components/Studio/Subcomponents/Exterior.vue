@@ -90,6 +90,7 @@
 					result.end = inputTime + result.length;
 					result.song_start = 0;
 					result.song_end = result.length;
+					result.originalLength = result.length;
 					result.track = track;
 					delete result.x;
 					delete result.y;

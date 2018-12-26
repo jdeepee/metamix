@@ -11,7 +11,6 @@ AudioItem.prototype.setWaveForm = function(rawWaveForm, time_scale, frame_start,
 	this.rawWaveFormMin = [];
 	this.rawWaveFormMax = [];
 	this.originalSize = this.originalLength * this.time_scale;
-	//console.log(this.originalSize, this.originalLength, this.time_scale)
 
 	if (this.rawWaveForm != undefined){
 		const y = utils.interpolateHeight(this.y2);

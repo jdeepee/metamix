@@ -17,8 +17,8 @@ class MetaModulate():
         self.effect_data = song_object['effects']
         self.data = song_object["data"]
         self.sample_rate = float(song_object["sample_rate"])
-        self.song_start = float(song_object["song_start"])
-        self.song_end = float(song_object["song_end"])
+        self.audio_start = float(song_object["song_start"])
+        self.audio_end = float(song_object["song_end"])
         self.debug_level = debug_level #Level of debug to output 0-3 where 0 is none, 1 is lowest amount of debugging (most important) and 3 is all 
 
     def modulate(self):
@@ -33,12 +33,12 @@ class MetaModulate():
         """
         #Data has been sliced at starting and ending values - thus this should be accounted for when interacting with the data
         self.debug_print(1, 'Running modulate functon')
-
+        self.debug_print(1, "Modulating data: {}".format(self.effect_data))
         for i, effect in enumerate(self.effect_data):
-            self.effect_data[i]["start"] = float(float(self.effect_data[i]["start"]) - self.song_start)
-            self.effect_data[i]["end"] = float(float(self.effect_data[i]["end"]) - self.song_start)
+            self.effect_data[i]["start"] = float(float(self.effect_data[i]["start"]) - self.audio_start)
+            self.effect_data[i]["end"] = float(float(self.effect_data[i]["end"]) - self.audio_start)
 
-        end = self.song_end - self.song_start
+        end = self.audio_end - self.audio_start
         start = 0
 
         self.debug_print(3, "Adjusted start and end values {}, {}".format(start, end))
@@ -49,6 +49,8 @@ class MetaModulate():
         eval_copy = copy.deepcopy(self.effect_data) #THis is our moving evaluation dataset where start/end times are updated as they are found by parent effects
         #Append first section of output - this will either be a section at start where no effect is playing or nothing if effect also starts at 0 - time songs starts
         out.append(self.data[start:self.effect_data[0]["start"]*self.sample_rate])
+
+        #Most likely need some code here which will take EQ effect (or other if needed) and split the three EQ values (high, mid, low) into three individual effects
 
         for i, effect in enumerate(self.effect_data):
             self.debug_print(2, "Iterating over effect: {}\n".format(effect))
@@ -169,6 +171,27 @@ class MetaModulate():
 
             else:
                 pass
+
+    @staticmethod
+    def return_overlaping_times(current, checks):
+        """Returns two lists: children which fall completely inside current, children which fall partially inside current value"""
+        #Lets turn this code into nice one line iterations and move type key/value pairs as they are most likley not useful at all
+        complete_coverage = []
+        partial_coverage = []
+
+        for check in checks:
+            if check["id"] != current["id"]:
+                #print "Evaluating value: {} against: {}".format(check, current)
+
+                if check["start"] >= current["start"] and check["end"] <= current["end"]:
+                    check["child_type"] = "child_covered"
+                    complete_coverage.append(check)
+
+                elif check["start"] >= current["start"] and check["end"] > current["end"] and check["start"] < current["end"]:
+                    check["child_type"] = "child_partial"
+                    partial_coverage.append(check)   
+
+        return complete_coverage, partial_coverage 
 
     @staticmethod
     def standard_incrementation(start_timestamp, end_timestamp, effect_start, effect_target, effect_type, non_zero=False):
@@ -323,27 +346,6 @@ class MetaModulate():
         start, target = (np.abs(increments - start_timestamp)).argmin(), (np.abs(increments - end_timestamp)).argmin()
 
         return (start*chunk_size) + effect_start, (target*chunk_size) + effect_start
-
-    @staticmethod
-    def return_overlaping_times(current, checks):
-        """Returns two lists: children which fall completely inside current, children which fall partially inside current value"""
-        #Lets turn this code into nice one line iterations and move type key/value pairs as they are most likley not useful at all
-        complete_coverage = []
-        partial_coverage = []
-
-        for check in checks:
-            if check["id"] != current["id"]:
-                #print "Evaluating value: {} against: {}".format(check, current)
-
-                if check["start"] >= current["start"] and check["end"] <= current["end"]:
-                    check["child_type"] = "child_covered"
-                    complete_coverage.append(check)
-
-                elif check["start"] >= current["start"] and check["end"] > current["end"] and check["start"] < current["end"]:
-                    check["child_type"] = "child_partial"
-                    partial_coverage.append(check)   
-
-        return complete_coverage, partial_coverage 
 
     #Effect methods
     def eq(self, data, sample_rate, strength_curve, frequency, target=None, start=None, target_decibel=None, start_decibel=None, width_q=1.0):

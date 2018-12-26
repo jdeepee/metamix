@@ -80,5 +80,3 @@ def retrieve_song_mp3(id):
 	song_schema = SongSchema(many=False)
 	return song_schema.dump(song).data
 
-
-

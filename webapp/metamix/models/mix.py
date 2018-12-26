@@ -49,13 +49,15 @@ class Mix(db.Model):
 
     @staticmethod
     def validate_mix_audio(json_description):
-        for song in json_description["songs"]:
-            if Song.exists(song["id"]) != True:
-                raise MetaMixException(message="Song with ID: " + str(song["id"]) + "does not exist")
+        for audio in json_description["audio"]:
+            print "Validating: {}".format(audio)
+            if audio["type"] == "song":
+                if Song.exists(audio["audio_id"]) != True:
+                    raise MetaMixException(message="Song with ID: " + str(audio["audio_id"]) + "does not exist")
 
-        for clip in json_description["clips"]:
-            if Clip.exists(clip["id"]) != True:
-                raise MetaMixException(message="Clip with ID: " + str(clip["id"]) + "does not exist")
+            else:
+                if Clip.exists(audio["audio_id"]) != True:
+                    raise MetaMixException(message="Clip with ID: " + str(audio["audio_id"]) + "does not exist")
 
     @staticmethod
     def get_mix(id):
@@ -76,68 +78,65 @@ class MixAudio(db.Model):
     end = db.Column("end", db.Float) #Float of song end timestamp in seconds
     mix_start = db.Column("mix_start", db.Float)
     mix_end = db.Column("mix_end", db.Float)
+    #These song related values are being saved here so we dont change the original songs values - effect changes should only show in a mix
+    waveform = db.Column("waveform", db.String())#String of s3 waveform key name - this is used if a song has the BPM changed 
+    beat_positions = db.Column(db.JSON()) #Used to keep an updated version of the beat_positions if BPM is changed
+    bpm = db.Column("bpm", db.Float()) #Used to keep an updated version of the BPM
+    key = db.Column("key", db.String(50)) #Used to keep an updated version of the key
 
     clip_id = db.Column("clip_id", UUID(as_uuid=True), db.ForeignKey('clip.id', ondelete='CASCADE'))
     song_id = db.Column("song_id", UUID(as_uuid=True), db.ForeignKey('song.id', ondelete='CASCADE'))
     effects = db.relationship("Effect", backref="effect", lazy="dynamic")
 
     @staticmethod
-    def save_audio(mix_id, name, s3_key, start, end, mix_start, mix_end, audio_id, type, effects):
+    def save_audio(mix_id, audio_obj):
+        #Recomputation of waveform/beat positions and saving of new bpm/key should happen here on save_audio
+        print "Saving audio {} for mix {}".format(audio_obj, mix_id)
         if type == "song":
-            audio = MixAudio(id=uuid.uuid4(), mix_id=mix_id, name=name, s3_key=s3_key, start=start, end=end, 
-                             mix_start=mix_start, mix_end=mix_end, song_id=audio_id)
+            audio = MixAudio(id=uuid.uuid4(), mix_id=mix_id, name=audio_obj["name"], s3_key=audio_obj["s3_key"], start=audio_obj["audio_start"], end=audio_obj["audio_end"], 
+                             mix_start=audio_obj["mix_start"], mix_end=audio_obj["mix_end"], song_id=audio_obj["id"], 
+                             waveform=audio_obj["waveform"], beat_positions=audio_obj["beat_positions"], bpm=audio_obj["bpm"], key=audio_obj["key"])
             db.session.add(audio)
             db.sesson.commit()
-
-            for effect in effects:
-                effect_params = next((item for item in modulation_algorithm_parameters if item['type'] == effect_type), None)
-                for key, value in effect["params"].iteritems():
-                    effect_data[effect_params["database_defaults"][key]] = value
-
-                effect_data["mix_audio_id"] = audio.id
-
-                Effect.insert_audio_effect(**effect_data)
 
         elif type == "clip":
-            audio = MixAudio(id=uuid.uuid4(), mix_id=mix_id, name=name, s3_key=s3_key, start=start, end=end, 
-                             mix_start=mix_start, mix_end=mix_end,clip_id=audio_id)
+            audio = MixAudio(id=uuid.uuid4(), mix_id=mix_id, name=audio_obj["name"], s3_key=audio_obj["s3_key"], start=audio_obj["audio_start"], end=audio_obj["audio_end"], 
+                             mix_start=audio_obj["mix_start"], mix_end=audio_obj["mix_end"], song_id=audio_obj["id"], 
+                             waveform=audio_obj["waveform"], beat_positions=audio_obj["beat_positions"], bpm=audio_obj["bpm"], key=audio_obj["key"])
             db.session.add(audio)
             db.sesson.commit()
 
-            for effect in effects:
-                effect_params = next((item for item in modulation_algorithm_parameters if item['type'] == effect_type), None)
-                for key, value in effect["params"].iteritems():
-                    effect_data[effect_params["database_defaults"][key]] = value
-
-                effect_data["mix_audio_id"] = audio.id
-
-                Effect.insert_audio_effect(**effect_data)
+        effect_data = {}
+        for effect in audio_obj["effects"]:
+            effect_data["type"] = effect["type"]
+            effect_data["start"] = effect["start"]
+            effect_data["end"] = effect["end"]
+            effect_data["effect_parameters"] = effect
+            effect_data["id"] = effect["id"]
+            print 'Saving effect: {}'.format(effect_data)
+            Effect.insert_audio_effect(**effect_data)
 
         return audio
 
     @staticmethod
-    def get_mix_song(song_id, song_start, song_end, target_effects):
+    def get_mix_song(mix_id, song_id, song_start, song_end, target_effects):
         """Returns song with given effects on it - if exists
         Note this returns exact audio/effect matches for given mix - useful for retrieving previously computed data for this mix
         not useful for looking at all created audio clips for a given user as a result of their mixing
         """
         #Most likely this wont work - as we are quering as if a MixSong audio clip will only have one applied effect - likely effects table
         #will have multiple effects applied
-        songs = MixAudio.query.filter(MixAudio.song_id == song_id, MixAudio.start == song_start, MixAudio.end == song_end).all()
+        songs = MixAudio.query.filter(MixAudio.song_id == song_id, MixAudio.start == song_start, MixAudio.end == song_end, MixAudio.mix_id == mix_id).all()
         out = []
 
         for song in songs:
             #Create list of dictionaries which is the same as input effect data shape
             song_effects = [{"type": effect.type, "start": effect.start, "end": effect.end, 
-                            "strength_curve": effect.strength_curve, "effect_start": effect.effect_start,
-                            "effect_target": effect.effect_target, "strength_curve_2": effect.strength_curve_2,
-                            "effect_start_2": effect.effect_start_2, "effect_target_2": effect.effect_target_2,
-                            "frequency": effect.frequency, "q_width": effect.q_width,
-                            "upper_bound": effect.upper_bound, "lower_bound": effect.lower_bound} for effect in song.effects]
-            match = True
+                            "effect_parameters": effect.effect_parameters} for effect in song.effects]
+            match = False
 
             for effect in target_effects:
-                if effect not in song_effects:
+                if effect in song_effects:
                     match = True
 
             if match == True:
@@ -150,28 +149,24 @@ class MixAudio(db.Model):
             return None
 
     @staticmethod
-    def get_mix_clip(clip_id, clip_start, clip_end, target_effects):
+    def get_mix_clip(mix_id, clip_id, clip_start, clip_end, target_effects):
         """Returns song with given effects on it - if exists
         Note this returns exact audio/effect matches for given mix - useful for retrieving previously computed data for this mix
         not useful for looking at all created audio clips for a given user as a result of their mixing
         """
         #Most likely this wont work - as we are quering as if a MixSong audio clip will only have one applied effect - likely effects table
         #will have multiple effects applied
-        clips = MixAudio.query.filter(MixAudio.clip_id == clip_id, MixAudio.start == clip_start, MixAudio.end == clip_end).all()
+        clips = MixAudio.query.filter(MixAudio.clip_id == clip_id, MixAudio.start == clip_start, MixAudio.end == clip_end, MixAudio.mix_id == mix_id).all()
         out = []
 
         for clip in clips:
             #Create list of dictionaries which is the same as input effect data shape
             clip_effects = [{"type": effect.type, "start": effect.start, "end": effect.end, 
-                            "strength_curve": effect.strength_curve, "effect_start": effect.effect_start,
-                            "effect_target": effect.effect_target, "strength_curve_2": effect.strength_curve_2,
-                            "effect_start_2": effect.effect_start_2, "effect_target_2": effect.effect_target_2,
-                            "frequency": effect.frequency, "q_width": effect.q_width,
-                            "upper_bound": effect.upper_bound, "lower_bound": effect.lower_bound} for effect in clip.effects]
+                            "effect_parameters": effect.effect_parameters} for effect in clip.effects]
             match = True
 
             for effect in target_effects:
-                if effect not in clip_effects:
+                if effect in clip_effects:
                     match = True
 
             if match == True:

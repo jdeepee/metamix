@@ -1,5 +1,6 @@
-from metamix.worker.mix import Mix
+from metamix.worker.mix import MixWorker
 from redis import Redis
+from rq import Queue
 from flask import *
 import librosa
 import uuid
@@ -15,7 +16,7 @@ def enqueue_mix(mix_id, testing, debug_level):
         password=current_app.config["REDIS_PASSWORD"],
         socket_timeout=100000)
     q = Queue('mix', connection=redis_conn)
-    mix = Mix.mix
+    mix = MixWorker.mix
     q.enqueue(mix, mix_id, testing, debug_level, ttl=500, timeout=500)
 
 def allowed_file(filename):
@@ -24,7 +25,7 @@ def allowed_file(filename):
            filename.rsplit('.', 1)[1] in current_app.config["ALLOWED_EXTENSIONS"]
 
 def persist_file(temp_filepath, return_length=False, delete=True):
-    if current_app.config["DEVELOPMENT"] == True:
+    if current_app.config["LOCAL_SAVE"] == True:
         #Save to local storage\
         temp_filename = current_app.config["METAMIX_TEMP_SAVE"] + str(uuid.uuid4()) + ".wav"
 

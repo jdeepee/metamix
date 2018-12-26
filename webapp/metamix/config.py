@@ -30,12 +30,13 @@ class Development(Config):
     DEBUG = True
     BASE_URL = 'http://localhost:5000'
     ADMIN = True
-    REDIS_IP = ""
+    REDIS_IP = "127.0.0.1"
     REDIS_PASSWORD = ""
-    RQ_REDIS_URL = 'redis://:0c2fbe953260497603907b8f20a6d4f255fe57d1e4eba5ce47e169e670fcb22c@52.16.190.51:6379'
+    RQ_REDIS_URL = 'redis://127.0.0.1:6379'
     S3_URL = "s3.eu-west-1.amazonaws.com"
     JWT_SECRET = "SUPERSECRETSECRET"
     DEVELOPMENT = True
+    LOCAL_SAVE = False
 
 class Test(Config):
     """Test config expands on base config"""

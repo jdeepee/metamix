@@ -6,6 +6,10 @@
 		<div id="zoom-column">
 			<input id="range-slider" v-model="rangeValue" type="range" min="1" max="150" step="0.5" v-on:mousemove="rangeUpdate" v-on:mousedown="rangeDown" v-on:mouseup="rangeUp">
 <!-- 			<input id="timeline-size-input" v-on:input="updateTimelineSize"> -->
+			<button type="button" @click="saveAudio">Save</button>
+			<div id="play-pause">
+				<i class="material-icons" @click="playAudio">play_arrow</i><i class="material-icons" @click="pauseAudio">pause</i>
+			</div>
 		</div>
 		<div id="add-song" @click="updateAudioModal()">
 			<i class="material-icons" style="font-size: 5rem">expand_less</i>
@@ -41,6 +45,35 @@
 			}
 		},
 		methods:{
+			saveAudio(){
+				let mixData = JSON.parse(JSON.stringify(this.$store.getters.getMixData));
+				for (let i=0; i<mixData.audio.length; i++){
+					delete mixData.audio[i].rawWaveForm;
+					for (let i2=0; i2<mixData.audio[i].effects.length; i2++){
+						delete mixData.audio[i].effects[i2].startX
+						delete mixData.audio[i].effects[i2].endX
+					}
+				}
+				console.log("Saving mix with data: ", mixData)
+				mixData = {"id": mixData.id, "mix_description": mixData, "description": mixData.description, "genre": mixData.genre, "name": mixData.name};
+				axios({ method: "POST", "url": this.baseUrl+"/meta/mix", "data": mixData, "headers": { "content-type": "application/json", "JWT-Auth":  this.jwt}})
+				.then(result => {
+					this.$notify({
+						type: "success",
+						group: "main",
+						title: 'Mix Saved',
+						text: 'Your mix has been saved - it is now processing.',
+						duration: 1000
+					});
+				}).catch(error => {
+                	//Display error on front end
+   					console.log(error.response)
+				});
+			},
+			playAudio(){
+			},
+			pauseAudio(){
+			},
 			$ready(fn) {
 				if (process.env.NODE_ENV === 'production') {
 					return this.$nextTick(fn);
@@ -83,9 +116,8 @@
 					//prepare audio data for insertion into studio
 					result.beat_positions = JSON.parse(result.beat_positions);
 					result.effects = [];
-					result.song_id = result.id;
-					result.id = utils.guid();
-					result.raw_wave_form = null;
+					result.audio_id = result.id; //Backend song linked ID
+					result.id = utils.guid(); //Local front end ID
 					result.start = inputTime;
 					result.end = inputTime + result.length;
 					result.song_start = 0;
@@ -96,13 +128,14 @@
 					delete result.y;
 					delete result.w;
 					delete result.h;
+					console.log("Adding audio", result)
 					this.$store.commit("addAudio", result)
 				}
 
 				dragObj.left = origX;
 				dragObj.top = origY;
 			},
-			computeAudioXy(){
+			computeAudioXy(type){
 				let audioWidth = 160;
 				let audioHeight = 120;
 				let paddingX = 20;
@@ -129,6 +162,7 @@
 							xCount += 1
 						}
 					}
+					this.audioData[i].type = type
 					this.audioData[i].w = audioWidth;
 					this.audioData[i].h = audioHeight;
 
@@ -136,12 +170,12 @@
 				// console.log(this.audioData);
 			},
 			getAudio(){
-				console.log(this.baseUrl)
 				axios({ method: "GET", "url": this.baseUrl+"/meta/song", "headers": { "content-type": "application/json", "JWT-Auth":  this.jwt}})
 				.then(result => {
+					console.log("Song data", result)
 					let songResult = result.data;
 					this.audioData = songResult;
-					this.computeAudioXy();
+					this.computeAudioXy("song");
                 }).catch(error => {
                 	//Display error on front end
    					console.log(error.response)

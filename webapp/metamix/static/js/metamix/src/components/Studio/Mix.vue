@@ -43,16 +43,20 @@
 				if (this.name == undefined || this.description == undefined || this.genre == undefined){
 					//raise error ensuring that all fields are filled out
 				}
-				let mix = {"name": this.name, "description": this.description, "genre": this.genre, "clips": [], "songs": []};
+				let mix = {"name": this.name, "description": this.description, "genre": this.genre, "audio": []};
 				axios({ method: "POST", "url": this.baseUrl+"/meta/mix", "data": {"mix_description": mix}, "headers": { "content-type": "application/json", "JWT-Auth":  this.jwt}})
 				.then(result => {
-					console.log(result.data);
-					mix["id"] = result.data.id;
-					delete mix["clips"];
-					delete mix["song"];
-					mix["audio"] = [];
+					console.log("Creating Mix", result.data);
+					mix["id"] = result.data.data.id;
+					console.log("Mix data being set as", mix)
 					this.$store.commit("addMixData", mix);
 					this.$router.push("/meta/mix/studio");	
+					this.$notify({
+						type: "success",
+						group: "main",
+						title: 'Mix '+mix.name+' Created',
+						duration: 1000
+					});
 
                 }).catch(error => {
                 	//Display error on front end
@@ -62,7 +66,6 @@
 			getMixes(){
 				axios({ method: "GET", "url": this.baseUrl+"/meta/mix", "headers": { "content-type": "application/json", "JWT-Auth":  this.jwt}})
 				.then(result => {
-					console.log(result);
 					this.mixData = result.data.data;
                 }).catch(error => {
                 	//Display error on front end
@@ -70,21 +73,20 @@
 				});
 			},
 			loadMix(mix){
-				console.log("Loading mix", mix)
-				let desc = JSON.parse(mix.json_description);
-				desc.audio = [];
-				for (let i=0; i<desc.songs.length; i++){
-					desc.songs[i].type = "song";
-					desc.audio.push(desc.songs[i])
+				console.log("Received mix", mix)
+				if (typeof mix.json_description != "object"){
+					mix.json_description = JSON.parse(mix.json_description)
 				}
-				delete desc.songs;
-				for (let i=0; i<desc.clips.length; i++){
-					desc.songs[i].type = "clip";
-					desc.audio.push(desc.songs[i])
-				}
-				delete desc.clips;
-				this.$store.commit("addMixData", desc);
+				mix.json_description.s3_key = mix.s3_key
+				mix.json_description.processing_status = mix.processing_status
+				this.$store.commit("addMixData", mix.json_description);
 				this.$router.push("/meta/mix/studio");	
+				this.$notify({
+					type: "success",
+					group: "main",
+					title: 'Mix Loaded',
+					duration: 1000
+				});
 			}
 		},
 		mounted() {

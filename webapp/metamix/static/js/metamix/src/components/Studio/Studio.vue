@@ -882,7 +882,6 @@
 				this.canvas = document.querySelector("#timeline-canvas");
 				this.ctx = this.canvas.getContext('2d');
 				this.dpr = window.devicePixelRatio; 
-				//this.$store.commit("addMixData", this.audio)
 				this.mixData = this.$store.getters["getMixData"];
 				this.audioData = this.mixData.audio; 
 				this.appData = this.$store.getters["getAppData"];

@@ -31,6 +31,12 @@
 					console.log("Login success", result.data)
                     this.currentUserData["jwtToken"] = result.data["token"]
                     this.$router.push("/");	
+                    this.$notify({
+						type: "success",
+						group: "main",
+						title: 'Login Success',
+						duration: 1000
+					});
                 }).catch(error => {
                 	//Display error on front end
    					console.log(error.response)

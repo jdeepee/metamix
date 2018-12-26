@@ -61,19 +61,19 @@ class Effect(db.Model):
     type = db.Column("type", db.String())
     start = db.Column("start", db.Float) #Start timestamp of effect in song recorded in seconds
     end = db.Column("end", db.Float) #End timestamp of effect in song recorded in seconds
+    effect_parameters = db.Column("effect_parameters", db.JSON)
+    # strength_curve = db.Column("effect_curve", db.String())
+    # effect_start = db.Column("effect_start", db.String()) #Starting value for effect
+    # effect_target = db.Column("effect_target", db.String()) #Ending value for effect 
+    # #Defining two strength curve/effect start/target values as some algorithms have two 
+    # strength_curve_2 = db.Column("strength_curve_2", db.String())
+    # effect_start_2 = db.Column("effect_start_2", db.String()) #Starting value for effect
+    # effect_target_2 = db.Column("effect_target_2", db.String()) #Ending value for effect 
 
-    strength_curve = db.Column("effect_curve", db.String())
-    effect_start = db.Column("effect_start", db.String()) #Starting value for effect
-    effect_target = db.Column("effect_target", db.String()) #Ending value for effect 
-    #Defining two strength curve/effect start/target values as some algorithms have two 
-    strength_curve_2 = db.Column("strength_curve_2", db.String())
-    effect_start_2 = db.Column("effect_start_2", db.String()) #Starting value for effect
-    effect_target_2 = db.Column("effect_target_2", db.String()) #Ending value for effect 
-
-    frequency = db.Column("frequency", db.String()) #Frequency of EQ
-    q_width = db.Column("q_width", db.String()) #Q Width of EQ
-    upper_bound = db.Column("upper_bound", db.Integer) #Upperbound of filter 
-    lower_bound = db.Column("lower_bound", db.Integer) #Lowerbound of filter
+    # frequency = db.Column("frequency", db.String()) #Frequency of EQ
+    # q_width = db.Column("q_width", db.String()) #Q Width of EQ
+    # upper_bound = db.Column("upper_bound", db.Integer) #Upperbound of filter 
+    # lower_bound = db.Column("lower_bound", db.Integer) #Lowerbound of filter
 
     mix_audio_id = db.Column("mix_audio_id", UUID(as_uuid=True), db.ForeignKey('mix_audio.id', ondelete='CASCADE'))
     song_id = db.Column("song_id", UUID(as_uuid=True), db.ForeignKey('song.id', ondelete='CASCADE'))
@@ -83,8 +83,6 @@ class Effect(db.Model):
     def insert_audio_effect(data):
         """Inserts audio effect into Effect table - accepts data which should contain all fields required by table"""
         # for c in Effect.__table__.columns:
-        data["id"] = uuid.uuid4()
-        
         effect = Effect(**data)
         db.session.add(effect)
         db.session.add()

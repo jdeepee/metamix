@@ -28,6 +28,7 @@
 			}
 		},
 		mounted() {
+			console.log(this.$store.setState)
 			let userData = this.$store.getters.getUserData;
 			if (userData.jwtToken == null){
 				this.hasLoggedIn = false;

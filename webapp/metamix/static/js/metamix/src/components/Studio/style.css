@@ -54,6 +54,14 @@ body{
 	width: 10%;
 	height: 5%;
 	background-color: #343434;
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+}
+
+#play-pause{
+    display: flex;
+    align-items: space-between;
 }
 
 #range-slider{

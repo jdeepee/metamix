@@ -3,6 +3,7 @@ from metamix.models.song import Song
 from metamix.models.user import User
 from metamix.models.clip import Clip
 from metamix.worker.meta_modulate import MetaModulate
+from flask import *
 import json
 import boto3
 import uuid
@@ -10,7 +11,7 @@ import librosa
 import os
 import copy
 
-class Mix():
+class MixWorker():
     """
     Class to be used by Flask-RQ worker for creating a MP3 of a mix given its ID - fetches JSON representation of mix
     """
@@ -18,6 +19,7 @@ class Mix():
         self.mix_id = id
         self.testing = testing
         self.debug_level = debug_level
+        self.create_mix_data()
 
     @classmethod
     def mix(cls, id, testing, debug_level):
@@ -31,102 +33,71 @@ class Mix():
         - call mix_songs with relevant mix schema and full mix data (in order and effects computed)
         - then call to_mp3 to get mp3 of mix data"""
         self.mix_object = Mix.get_mix(self.mix_id)
-        self.json_decription = json.loads(self.mix_object.json_decription)
+        self.json_description = self.mix_object.json_description
         out = []
+        print "Working on: {}".format(self.json_description)
 
-        for song in self.json_decription["songs"]:
-            print 'Currently computing song: {}'.format(song)
-            song_id = song["id"]
-            mix_start = song["mix_start"]
-            mix_end = song["mix_end"]
-            song_start = song["song_start"]
-            song_end = song["song_end"]
+        for audio in self.json_description["audio"]:
+            del audio["beat_positions"]
+            print '\nCurrently computing audio: {}'.format(audio)
 
-            if len(effects) > 0:
+            if len(audio["effects"]) > 0:
                 #Here we are only searching for an exact match - in the future should also look for matches which we can shape/slice into the correct format as
                 #Defined by the effects i.e if continuous effects are applied on song between timestamps greater than timestamps specified here - then we can
                 #just grab previous data and then slice down to the right size
-                prev_processed = MixAudio.get_mix_song(song_id, song_start, song_end, effects)
+                if audio["type"] == "song":
+                    prev_processed = MixAudio.get_mix_song(self.mix_id, audio["id"], audio["song_start"], audio["song_end"], audio["effects"]) 
+
+                else:
+                    prev_processed = MixAudio.get_mix_clip(self.mix_id, audio["id"], audio["song_start"], audio["song_end"], audio["effects"])
+
                 print "Previously processed value: {}".format(prev_processed)
 
                 if prev_processed != None:
                     print "Previously processed clip found - appending to output data"
                     #Get prev processed value and use this as output
-                    data, sample_rate = fetch_s3(prev_processed.s3_key)
-                    out.append({"id": song_id, "start": mix_start, "end": mix_end, "data": data})
+                    data, sample_rate = self.fetch_s3(prev_processed.s3_key)
+                    out.append({"id": audio["id"], "start": audio["start"], "end": audio["end"], "data": data}) #Using local ID for ID of out as their could be duplicate audio items
 
                 else:
                     #Make computation, save data - then add data to output
                     print "No previous processed clip found - running clip effect computation"
-                    song_obj = Song.get_song(song_id)
-                    data, sample_rate = fetch_s3(song_obj.s3_key)
-                    song["data"] = data[song_start*sample_rate:song_end*sample_rate]
-                    song["sample_rate"] = sample_rate
+                    if audio["type"] == "song":
+                        audio_obj = Song.get_song(audio["audio_id"]) 
+                    else:
+                        audio_obj = Clip.get_clip(audio["audio_id"])
 
-                    effect_creator = MetaModulate(song, 1)
+                    data, sample_rate = self.fetch_s3(audio_obj.s3_key)
+
+                    audio["data"] = data[audio["song_start"]*sample_rate:audio["song_end"]*sample_rate]
+                    audio["sample_rate"] = sample_rate
+
+                    effect_creator = MetaModulate(audio, 3)
                     data = effect_creator.modulate()
-                    out.append({"id": song_id, "start": mix_start, "end": mix_end, "data": data})
+                    out.append({"id": audio["id"], "start": audio["start"], "end": audio["end"], "data": data}) #Using local ID for ID of out as their could be duplicate audio items
 
                     #Save audio with effects applied into database for retrieval later on future computations
                     self.upload_s3(data, sample_rate)
-                    MixAudio.save_audio(self.mix_id, song_obj.name, song_obj.s3_key, song_start, song_end, mix_start, mix_end, song_id, "song", effects)
+                    MixAudio.save_audio(self.mix_id, audio)
 
             else:
-                #No effects applied on this song - just grab song and slice accordingly - then append data to out
+                #No effects applied on this audio - just grab audio and slice accordingly - then append data to out
                 print "No effects applied on this song - fetching slicing and appending to output"
-                song = Song.get_song(song_id)
-                data, sample_rate = fetch_s3(song.s3_key)
-
-                out.append({"id": song_id, "start": mix_start, "end": mix_end, "data": data[song_start*sample_rate:song_end*sample_rate]})
-
-        for clip in self.json_decription['clips']:
-            print 'Currently computing clip: {}'.format(clip)
-            clip_id = clip["id"]
-            mix_start = clip["mix_start"]
-            mix_end = clip["mix_end"]
-            clip_start = clip["start"]
-            clip_end = clip["end"]
-            effects = clip["effects"]
-
-            if len(effects) > 0:
-                prev_processed = MixAudio.get_mix_clip(clip_id, clip_start, clip_end, effects)
-                print "Previously processed value: {}".format(prev_processed)
-
-                if prev_processed != None:
-                    print "Previously processed clip found - appending to output data"
-                    #Get prev processed value and use this as output
-                    data, sample_rate = fetch_s3(prev_processed.s3_key)
-                    out.append({"id": clip_id, "start": mix_start, "end": mix_end, "data": data})
-
+                if audio["type"] == "song":
+                    audio_obj = Song.get_song(audio["audio_id"]) 
                 else:
-                    #Make computation, save data - then add data to output
-                    print "No previous processed clip found - running clip effect computation"
-                    clip_obj = Clip.get_clip(clip_id)
-                    data, sample_rate = fetch_s3(clip_obj.s3_key)
+                    audio_obj = Clip.get_clip(audio["audio_id"])
 
-                    clip["data"] = data[clip_start*sample_rate:clip_end*sample_rate]
-                    clip["sample_rate"] = sample_rate
+                data, sample_rate = self.fetch_s3(audio_obj.s3_key)
 
-                    effect_creator = MetaModulate(clip, 1)
-                    data = effect_creator.modulate()
-                    out.append({"id": clip_id, "start": mix_start, "end": mix_end, "data": data})
+                out.append({"id": audio["id"], "start": audio["start"], "end": audio["end"], "data": data[audio["song_start"]*sample_rate:audio["song_end"]*sample_rate]}) #Using local ID for ID of out as their could be duplicate audio items
 
-                    self.upload_s3(data, sample_rate)
-                    MixAudio.save_audio(self.mix_id, clip_obj.name, clip_obj.s3_key, clip_start, clip_end, mix_start, mix_end, clip_id, "clip", effects)
-
-            else:
-                print "No effects applied on this clip - fetching slicing and appending to output"
-                clip = Clip.get_clip(clip_id)
-                data, sample_rate = fetch_s3(clip.s3_key)
-
-                out.append({"id": clip_id, "start": mix_start, "end": mix_end, "data": data[clip_start*sample_rate:clip_end*sample_rate]})
-
-        self.modulated_objects = out
+        self.modulated_audio_objects = out
         mix_data = self.make_mix()
         length = float(mix_data.shape[0]) / float(sample_rate)
-        self.json_decription["length"] = length
+        self.json_description["length"] = length
 
-        self.mix_object.update_mix_data({"length": length, "json_decription": self.json_decription})
+        self.mix_object.update_mix_data({"length": length, "json_description": self.json_description})
         self.upload_s3(mix_data, sample_rate)
 
     def make_mix(self):
@@ -338,23 +309,27 @@ class Mix():
         return complete_coverage, partial_coverage 
 
     def fetch_s3(self, s3_key):
-        temp_filename = os.environ.get("METAMIX_TEMP_SAVE") + str(uuid.uuid4()) + ".wav"
+        temp_filename = current_app.config["METAMIX_TEMP_SAVE"] + str(uuid.uuid4()) + ".wav"
 
-        session = boto3.session.Session(region_name='eu-west-1')
+        session = boto3.session.Session(region_name='eu-west-1',
+                aws_access_key_id=current_app.config["AWS_ACCESS_KEY_ID"],
+                aws_secret_access_key=current_app.config["AWS_SECRET_ACCESS_KEY"])
         s3 = session.client('s3', config=boto3.session.Config(signature_version='s3v4'))
-        s3.download_file(os.environ.get("S3_BUCKET"), s3_key, temp_filename)
+        s3.download_file(current_app.config["S3_BUCKET"], s3_key, temp_filename)
         data, sr = librosa.load(temp_filename, sr=None) 
 
         return data, sr
 
     def upload_s3(self, data, sample_rate):
         key = str(uuid.uuid4()) + ".wav"
-        temp_filename = os.environ.get("METAMIX_TEMP_SAVE") + str(uuid.uuid4()) + ".wav"
+        temp_filename = current_app.config["METAMIX_TEMP_SAVE"] + str(uuid.uuid4()) + ".wav"
 
         librosa.output.write_wav(temp_filename, data, sample_rate)
-        session = boto3.session.Session(region_name='eu-west-1')
+        session = boto3.session.Session(region_name='eu-west-1',
+                aws_access_key_id=current_app.config["AWS_ACCESS_KEY_ID"],
+                aws_secret_access_key=current_app.config["AWS_SECRET_ACCESS_KEY"])
         s3 = session.client('s3', config=boto3.session.Config(signature_version='s3v4'))
-        s3.upload_file(temp_filename, os.environ.get("S3_BUCKET"), key)
+        s3.upload_file(temp_filename, current_app.config["S3_BUCKET"], key)
         os.remove(temp_filename)
 
         return key

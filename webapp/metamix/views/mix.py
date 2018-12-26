@@ -8,6 +8,7 @@ from metamix.errors import MetaMixException
 from metamix.serialization.mix import MixSchema
 from metamix.utils.general import jwt_required
 from flask import *
+import json
 
 @mix.route("/meta/mix", methods=["GET"])
 @jwt_required
@@ -16,7 +17,6 @@ def dashboard(user_id):
 	user = User.get_user(user_id)
 	mixes = user.get_mixes()
 	mix_schema = MixSchema(many=True)
-	print mix_schema.dump(mixes).data
 	return jsonify({"data": mix_schema.dump(mixes).data}), 200
 
 @mix.route("/meta/mix", methods=["POST"])
@@ -24,21 +24,26 @@ def dashboard(user_id):
 def create_mix(user_id):
 	"""Create or update existing mix"""
 	json_description = request.json["mix_description"]
+	print "Processing Audio: {}\n".format(json_description["audio"])
 	if "id" in json_description:
 		#Old mix - either re-compute mix if necassary or just return mix
 		mix = Mix.get_mix(json_description["id"])
+		print "Mix: {}".format(type(mix.json_description))
 		if mix is not None:
 			#Uploaded mix description must be changed - audio is not split into songs and clips just in the audio key - correct this formatting
 			#Do mix auth checking
-			if mix.json_description["clips"] == json_description["clips"] and mix.json_description["songs"] == json_description["songs"]:
-				#Mix need no more computation - description has not changed
+			if (type(mix.json_description) == unicode):
+				mix.json_description = json.loads(mix.json_description)
+
+			if mix.json_description["audio"] == json_description["audio"]:
+				#Mix need no more computation - audio has not changed just description of mix
 				mix.update_mix_data(json_description)
 				return jsonify({"message": "Mix is up to date", "data": {"redirect": "/meta/mix/"+str(mix.id)+"/download"}})
 
 			else:
 				#Mix description has changed - recomputation is needed
 				mix.update_mix_data(json_description)
-				#enqueue_mix(mix.id)
+				enqueue_mix(mix.id, True, 3)
 				return jsonify({"message": "Mix is being processed"})
 
 		else:
@@ -50,7 +55,6 @@ def create_mix(user_id):
 		description = json_description["description"]
 		genre = json_description["genre"]
 		mix = Mix.insert_mix(name, description, genre, user_id, json_description)
-		#enqueue_mix(mix.id)
 
 		return jsonify({"message": "New mix has been created", "data": {"id": str(mix.id)}})
 
@@ -70,3 +74,10 @@ def get_mix(id):
 def download_mix(id):
 	"""Download MP3/WAV of mix"""
 	pass
+
+@mix.route("/meta/mix/<mix_id>/song/<song_id>", methods=["POST"])
+@jwt_required
+def get_mix_song(user_id, mix_id, song_id):
+	#Get song data within mix context - this will be used after applying tempo/pitch modulating effects to get the new BPM/key/beat pos/waveform data
+    pass
+

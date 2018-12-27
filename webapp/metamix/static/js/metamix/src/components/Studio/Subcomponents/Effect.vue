@@ -314,6 +314,21 @@
 					this.counterStart = 0;
 					this.counterEnd = 0;
 					this.knobColour = Settings.theme.effectColours[this.currentEffect];
+					let match = false;
+					let startIndex = 0;
+
+					while (match==false){
+						if (audioItem.barMarkers[startIndex] != null){
+							match = true;
+						} else {
+							startIndex += 1;
+						}
+					}
+
+					this.effectDescriptor[this.currentEffect]['barCountStart'] = startIndex + 1;
+					this.effectDescriptor[this.currentEffect]['barCountEnd'] = startIndex + 1;
+					this.counterStart = startIndex;
+					this.counterEnd = startIndex;
 
 					if (effect == null){
 						//Fresh effect

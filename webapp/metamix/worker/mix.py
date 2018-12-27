@@ -37,6 +37,7 @@ class MixWorker():
         self.mix_object = Mix.get_mix(self.mix_id)
         self.json_description = self.mix_object.json_description
         out = []
+        audio_data_store = {}
 
         for audio in self.json_description["audio"]:
             del audio["beat_positions"]
@@ -68,7 +69,12 @@ class MixWorker():
                     else:
                         audio_obj = Clip.get_clip(audio["audio_id"])
 
-                    data, sample_rate = self.fetch_s3(audio_obj.s3_key)
+                    if audio["audio_id"] in audio_data_store:
+                        data, sample_rate = audio_data_store[audio["audio_id"]], current_app.config["DEFAULT_SAMPLE_RATE"]
+
+                    else:
+                        data, sample_rate = self.fetch_s3(audio_obj.s3_key)
+                        audio_data_store[audio["audio_id"]] = data
 
                     audio["data"] = data[int(round(audio["song_start"]*sample_rate)):int(round(audio["song_end"]*sample_rate))]
                     audio["sample_rate"] = sample_rate
@@ -89,6 +95,13 @@ class MixWorker():
                 else:
                     audio_obj = Clip.get_clip(audio["audio_id"])
 
+                if audio["audio_id"] in audio_data_store:
+                    data, sample_rate = audio_data_store[audio["audio_id"]], current_app.config["DEFAULT_SAMPLE_RATE"]
+
+                else:
+                    data, sample_rate = self.fetch_s3(audio_obj.s3_key)
+                    audio_data_store[audio["audio_id"]] = data
+
                 data, sample_rate = self.fetch_s3(audio_obj.s3_key)
                 out.append({"id": audio["id"], "start": audio["start"], "end": audio["end"], "data": data[int(round(audio["song_start"]*sample_rate)):int(round(audio["song_end"]*sample_rate))]}) #Using local ID for ID of out as their could be duplicate audio items
 
@@ -99,7 +112,7 @@ class MixWorker():
 
         self.mix_object.update_mix_data(self.json_description)
         self.upload_s3(mix_data, sample_rate)
-        print "Mix uploaded"
+        print "Mix computation completed and mix uploaded"
 
     def make_mix(self):
         """Returns mixed version of input data - where songs are mixed according to time-stamps

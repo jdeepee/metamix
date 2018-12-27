@@ -12,6 +12,7 @@ class Config(object):
     ALLOWED_EXTENSIONS = set(["mp3", "MP3", "flac", "FLAC", "wav", "WAV"])
     METAMIX_TEMP_SAVE = "/var/tmp/metamix/"
     BETA_EMAILS = ["joshuadparkin@gmail.com", "test@test.com"]
+    DEFAULT_SAMPLE_RATE = 44100
 
 class Production(Config):
     """Production config expands on base config"""

@@ -4,12 +4,14 @@ from metamix.models.user import User
 from metamix.models.clip import Clip
 from metamix.worker.meta_modulate import MetaModulate
 from flask import *
+import numpy as np
 import json
 import boto3
 import uuid
 import librosa
 import os
 import copy
+import itertools
 
 class MixWorker():
     """
@@ -35,7 +37,6 @@ class MixWorker():
         self.mix_object = Mix.get_mix(self.mix_id)
         self.json_description = self.mix_object.json_description
         out = []
-        print "Working on: {}".format(self.json_description)
 
         for audio in self.json_description["audio"]:
             del audio["beat_positions"]
@@ -69,7 +70,7 @@ class MixWorker():
 
                     data, sample_rate = self.fetch_s3(audio_obj.s3_key)
 
-                    audio["data"] = data[audio["song_start"]*sample_rate:audio["song_end"]*sample_rate]
+                    audio["data"] = data[int(round(audio["song_start"]*sample_rate)):int(round(audio["song_end"]*sample_rate))]
                     audio["sample_rate"] = sample_rate
 
                     effect_creator = MetaModulate(audio, 3)
@@ -89,16 +90,16 @@ class MixWorker():
                     audio_obj = Clip.get_clip(audio["audio_id"])
 
                 data, sample_rate = self.fetch_s3(audio_obj.s3_key)
-
-                out.append({"id": audio["id"], "start": audio["start"], "end": audio["end"], "data": data[audio["song_start"]*sample_rate:audio["song_end"]*sample_rate]}) #Using local ID for ID of out as their could be duplicate audio items
+                out.append({"id": audio["id"], "start": audio["start"], "end": audio["end"], "data": data[int(round(audio["song_start"]*sample_rate)):int(round(audio["song_end"]*sample_rate))]}) #Using local ID for ID of out as their could be duplicate audio items
 
         self.modulated_audio_objects = out
         mix_data = self.make_mix()
         length = float(mix_data.shape[0]) / float(sample_rate)
         self.json_description["length"] = length
 
-        self.mix_object.update_mix_data({"length": length, "json_description": self.json_description})
+        self.mix_object.update_mix_data(self.json_description)
         self.upload_s3(mix_data, sample_rate)
+        print "Mix uploaded"
 
     def make_mix(self):
         """Returns mixed version of input data - where songs are mixed according to time-stamps
@@ -121,7 +122,7 @@ class MixWorker():
 
         for i, audio in enumerate(data):
             print "Iterating over audio: {}\n".format(audio)
-            covered_children, partial_children = Mix.return_overlaping_times(audio, eval_copy) #Get children completely inside audio and partially inside audio 
+            covered_children, partial_children = self.return_overlaping_times(audio, eval_copy) #Get children completely inside audio and partially inside audio 
 
             print "covered_children: {}\n".format(covered_children)
             print "Partial children: {}\n".format(partial_children)
@@ -132,7 +133,7 @@ class MixWorker():
             for cc in covered_children:
                 eval_data[i].append(copy.deepcopy(cc)) #Add covered child to current eval data item
                 eval_copy.remove(cc) #Remove from future evaluations - is completely inside this and thus does not need its own evaluation
-                del cc["type"] #Delete type so we can access eval data object by value
+                del cc["child_type"] #Delete type so we can access eval data object by value
                 eval_data.remove([cc]) #Remove from output eval data object
                 data.remove(cc) #Remove from future evaluations - anything inside or partially inside this audio segment will be caught by current audio iteration
                 #time_copy.remove(cc)
@@ -141,7 +142,7 @@ class MixWorker():
                 eval_data[i].append(copy.deepcopy(pc)) #Add partially covered childto current eval data item
                 cpc = copy.deepcopy(pc) #Make copy so we can change starting time for future evaluations without changing value inside eval data object
                 eval_copy[eval_copy.index(cpc)]["start"] = audio["end"] #Update starting time for evaluation dataset
-                del cpc["type"] #Delete type so we access eval data object by value
+                del cpc["child_type"] #Delete type so we access eval data object by value
                 eval_data[eval_data.index([cpc])][0]["start"] = audio["end"] #Update starting time for output dataset - the first segment of this audio will be contained within current output data value - thus the next stage of data creation will only need to happen from end of current output data value
             
             print 'Eval copy: {}\n'.format(eval_copy)
@@ -152,7 +153,7 @@ class MixWorker():
         master_clip_index = []
 
         for i, d in enumerate(eval_data):
-            eval_data[i][0]["type"] = "parent"
+            eval_data[i][0]["child_type"] = "parent"
 
         #Test method below on standard input data without grouping clips together and see if it works
         for i, data in enumerate(eval_data):
@@ -168,8 +169,8 @@ class MixWorker():
                 local_out.append([starting_value, ending_value, [parent_value["id"]]])
                 #Create two lists sorted by lowest start and lowest end
                 print 'Current start and end values: {}, {}'.format(starting_value, ending_value)
-                start_list = sorted([x for x in eval_data[i] if x["start"] > ending_value and x["type"] != "parent"], key=lambda x: x["start"])
-                end_list = sorted([x for x in eval_data[i] if x["end"] > ending_value and x["type"] != "parent"], key=lambda x: x["end"])
+                start_list = sorted([x for x in eval_data[i] if x["start"] > ending_value and x["child_type"] != "parent"], key=lambda x: x["start"])
+                end_list = sorted([x for x in eval_data[i] if x["end"] > ending_value and x["child_type"] != "parent"], key=lambda x: x["end"])
                 print "master iteration, next_start_list: {}, end list: {}".format(start_list, end_list)
 
                 while len(start_list) != 0 or len(end_list) != 0:
@@ -205,8 +206,8 @@ class MixWorker():
                         local_out.append([starting_value, ending_value, [x["id"] for x in eval_data[i] if x["start"] < ending_value and x["end"] > starting_value]])
 
                     print "new ending value: {}".format(ending_value)
-                    start_list = sorted([x for x in eval_data[i] if x["start"] > ending_value and x["type"] != "parent"], key=lambda x: x["start"])
-                    end_list = sorted([x for x in eval_data[i] if x["end"] > ending_value and x["type"] != "parent"], key=lambda x: x["end"])
+                    start_list = sorted([x for x in eval_data[i] if x["start"] > ending_value and x["child_type"] != "parent"], key=lambda x: x["start"])
+                    end_list = sorted([x for x in eval_data[i] if x["end"] > ending_value and x["child_type"] != "parent"], key=lambda x: x["end"])
 
                     print "While loop new start and end list: {}, {}".format(start_list, end_list)
 
@@ -254,7 +255,7 @@ class MixWorker():
                 i = 1
 
                 while i != len(mix_section_data):
-                    mixed = Mix.mix_audio(mix_section_data[i-1], mix_section_data[i], sample_rate)
+                    mixed = self.mix_audio(mix_section_data[i-1], mix_section_data[i], sample_rate)
                     print "Length of mixed tracks: {}, {}\n".format(float(len(mixed)), float(len(mixed))/sample_rate)
                     out.append(mixed)
                     i += 1

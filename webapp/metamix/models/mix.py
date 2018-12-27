@@ -25,8 +25,13 @@ class Mix(db.Model):
     def update_mix_data(self, data):
         self.validate_mix_audio(data)
 
-        data = {"name": data["name"], "description": data["description"], 
-                "genre": data["genre"], "json_description": data}
+        if "length" in data:
+            data = {"name": data["name"], "description": data["description"], 
+                    "genre": data["genre"], "json_description": data, "length": data["length"]}
+
+        else:
+            data = {"name": data["name"], "description": data["description"], 
+                    "genre": data["genre"], "json_description": data}
 
         for key, value in data.items():
             if value != getattr(self, key):

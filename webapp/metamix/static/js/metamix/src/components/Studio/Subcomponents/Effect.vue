@@ -28,6 +28,7 @@
 							<br>
 							<input id="end" :value="effectDescriptor[currentEffect]['end']" v-on:input="updateStartEnd($event.target.value, 'end')">
 						</div>
+						<button id="entireAudio" @click="updateStartEnd('max', 'both')">Entire Audio</button>
 					</div>
 					<div class="knobs-container">
 						<div id="start-knob-container" class="knob-container">
@@ -148,11 +149,23 @@
 					}
 				},
 				updateStartEnd(value, type){
+					console.log("Update start/end", value, type)
 					if (value != ""){
-						this.effectDescriptor[this.currentEffect][type] = value;
-						let out = {"id": this.effectId, "audioId": this.audioId}
-						out[type] = value;
-						this.$store.commit("updateEffect", out)
+						if (type != "both"){
+							this.effectDescriptor[this.currentEffect][type] = value;
+							let out = {"id": this.effectId, "audioId": this.audioId}
+							out[type] = value;
+							this.$store.commit("updateEffect", out)
+						} else {
+							if (value == "max"){
+								this.effectDescriptor[this.currentEffect]["start"] = this.audioStart;
+								this.effectDescriptor[this.currentEffect]["end"] = this.audioEnd;
+								let out = {"id": this.effectId, "audioId": this.audioId}
+								out["start"] = this.audioStart;
+								out["end"] = this.audioEnd;
+								this.$store.commit("updateEffect", out)
+							}
+						}
 					}
 				},
 				knobUpdate(value){ //Currently knob update and knob revert are created using manual precision values - in the future this should be computed per effect type
@@ -315,6 +328,8 @@
 					this.counterStart = 0;
 					this.counterEnd = 0;
 					this.knobColour = Settings.theme.effectColours[this.currentEffect];
+					this.audioStart = audioItem.songStart;
+					this.audioEnd = audioItem.songEnd;
 					console.log(audioItem);
 					let match = false;
 					let startIndex = 0;

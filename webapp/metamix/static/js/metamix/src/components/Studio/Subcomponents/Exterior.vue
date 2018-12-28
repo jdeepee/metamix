@@ -19,6 +19,8 @@
 				<template v-for="audio in audioData">
 					<VueDraggableResizable :resizable="false" class="audio-element" :x="audio.x" :y="audio.y" :w="audio.w" :h="audio.h" :id="audio.id" @dragstop="onDragstop">
 						<h4>{{audio.name}}</h4>
+						<p>Audio Key: {{audio.key}}</p>
+						<p>BPM: {{audio.bpm}}</p>
 					</VueDraggableResizable>
 				</template>
     		</div>
@@ -137,7 +139,7 @@
 			},
 			computeAudioXy(type){
 				let audioWidth = 160;
-				let audioHeight = 120;
+				let audioHeight = 140;
 				let paddingX = 20;
 				let paddingY = 20;
 				let yCount = 0;

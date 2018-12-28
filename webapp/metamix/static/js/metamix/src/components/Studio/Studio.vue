@@ -154,8 +154,6 @@
 				this.renderItems.splice(index, 1);
 			},
 			effectClick(type){
-				// htmlElement = document.getElementById(type+"I");
-				// htmlElement.setAttribute("text-shadow", "5px 5px 5px #ccc");
 				console.log("Effect clicked", type);
 				if (type == "cut"){
 					this.canvas.classList.add("cut-cursor");

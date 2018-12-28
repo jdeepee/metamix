@@ -43,7 +43,8 @@ def create_mix(user_id):
 			else:
 				#Mix description has changed - recomputation is needed
 				mix.update_mix_data(json_description)
-				enqueue_mix(mix.id, True, 3)
+				if len(mix.json_description["audio"]) > 0:
+					enqueue_mix(mix.id, True, 3)
 				return jsonify({"message": "Mix is being processed"})
 
 		else:
@@ -77,7 +78,13 @@ def download_mix(id):
 
 @mix.route("/meta/mix/<mix_id>/song/<song_id>", methods=["POST"])
 @jwt_required
-def get_mix_song(user_id, mix_id, song_id):
-	#Get song data within mix context - this will be used after applying tempo/pitch modulating effects to get the new BPM/key/beat pos/waveform data
-    pass
+def recompute_song(user_id, mix_id, song_id):
+	"""Recomputes the waveform and beat markers of a song after a BPM/pitch modulation change"""
+	pass
+
+# @mix.route("/meta/mix/<mix_id>/song/<song_id>", methods=["POST"])
+# @jwt_required
+# def get_mix_song(user_id, mix_id, song_id):
+# 	#Get song data within mix context - this will be used after applying tempo/pitch modulating effects to get the new BPM/key/beat pos/waveform data
+#     pass
 

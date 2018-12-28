@@ -43,6 +43,7 @@ AudioItem.prototype.set = function(x, y, x2, y2, color, audioItem, time_scale, f
 	this.color = color;
 	this.audioName = audioItem.name;
 	this.bpm = audioItem.bpm;
+	this.key = audioItem.key;
 	this.id = audioItem.id;
 	this.track = audioItem.track;
 	this.xNormalized = x + (frame_start * time_scale);
@@ -264,8 +265,8 @@ AudioItem.prototype.paint = function(ctx, outlineColor, block) {
 		this.paintBarMarkers(ctx, block);
 		this.paintEffects(ctx);
 
-		let text = this.audioName + " | Original BPM: (" + this.bpm.toString() + ")";
-		let medText = this.audioName + "(" + this.bpm.toString() + ")";
+		let text = this.audioName + " | Original BPM: (" + this.bpm.toString() + ") Key: "+ this.key;
+		let medText = this.audioName + "(" + this.bpm.toString() + ") "+ this.key;
 		let txtWidthFull = ctx.measureText(text).width;
 		let txtWidthMed = ctx.measureText(medText).width
 		let txtWidthShort = ctx.measureText(this.audioName).width;

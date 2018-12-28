@@ -111,7 +111,7 @@ class MixWorker():
         self.json_description["length"] = length
 
         self.mix_object.update_mix_data(self.json_description)
-        self.upload_s3(mix_data, sample_rate, upload_hq=True)
+        self.upload_s3(mix_data, sample_rate)
         print "Mix computation completed and mix uploaded"
 
     def make_mix(self):

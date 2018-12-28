@@ -34,6 +34,7 @@
 							<template v-for="knob in effectDescriptor[currentEffect]['knobs']">
 								<h4>{{knob.title}}</h4>
 								<knob-control v-model="knob['start']" :min="knob['min']" :max="knob['max']" :stepSize="knob['step']" :value-display-function="knobUpdate" :updateFunction="update" :effectId="effectId" :audioId="audioId" :type="'start'" :name="knob['name']" :primaryColor="knobColour"></knob-control>
+<!-- 								Pitch modulation effect needs another parameter which will display the achieved pitch key as the value in the knob changes -->
 							</template>
 						</div>
 						<div id="end-knob-container" class="knob-container-hidden">
@@ -314,6 +315,7 @@
 					this.counterStart = 0;
 					this.counterEnd = 0;
 					this.knobColour = Settings.theme.effectColours[this.currentEffect];
+					console.log(audioItem);
 					let match = false;
 					let startIndex = 0;
 

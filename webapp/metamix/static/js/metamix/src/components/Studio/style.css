@@ -4,6 +4,10 @@ body{
     overflow: hidden;
 }
 
+.cut-cursor{
+    cursor: url("../../assets/simple-cut.svg"), auto;
+}
+
 #top-toolbar{
 	position: fixed;
 	width: 100%;

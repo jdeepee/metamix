@@ -156,10 +156,11 @@
 			effectClick(type){
 				// htmlElement = document.getElementById(type+"I");
 				// htmlElement.setAttribute("text-shadow", "5px 5px 5px #ccc");
-				// makeCursorChange(type);
 				console.log("Effect clicked", type);
 				if (type == "cut"){
+					this.canvas.classList.add("cut-cursor");
 					this.cuttingAudio = true;
+					this.overwriteCursor = true;
 				}
 				let componentObj = this;
 				let audioSelectCallback = function(e) {
@@ -186,6 +187,8 @@
 									//If we cannot stop the X value accuractely when mouse is over a bar marker it is probably sensible to check if there is a block and if so take the drawsnapmarker position and use this as the currentX value
 									componentObj.effectHandler.cutAudio(componentObj.renderItems[i], currentX);
 									componentObj.cuttingAudio = false;
+									componentObj.overwriteCursor = false;
+									componentObj.canvas.classList.remove("cut-cursor");
 									break;
 
 								case "volume":
@@ -636,6 +639,7 @@
 								if (componentObj.cuttingAudio == true){
 									let barMatch = componentObj.renderItems[i].onBarMarker(currentX, frameStart, timeScale);
 									if (barMatch != false){
+										console.log("Cursor over bar", barMatch)
 										componentObj.drawSnapMarker = barMatch.x0;
 										componentObj.block = true;
 										componentObj.blockNumber = 4;
@@ -647,10 +651,9 @@
 								return;
 							}
 						}
-						// if (componentObj.overwriteCursor == false){
-						// 	componentObj.canvas.style.cursor = 'default';
-						// }
-						componentObj.canvas.style.cursor = 'default';
+						if (componentObj.overwriteCursor == false){
+							componentObj.canvas.style.cursor = 'default';
+						}
 					} else {
 						e.preventDefault(); //This doesnt work it should prevent the mouse from moving
 						if (componentObj.holdTick == componentObj.blockNumber){
@@ -739,10 +742,9 @@
 								if (effect == false){
 									componentObj.draggingx = item.x + frameStart * timeScale;
 									componentObj.currentDragging = item;
-									// if (componentObj.overwriteCursor == false){
-									// 	componentObj.canvas.style.cursor = 'grabbing';
-									// }
-									componentObj.canvas.style.cursor = 'grabbing';
+									if (componentObj.overwriteCursor == false){
+										componentObj.canvas.style.cursor = 'grabbing';
+									}
 									return;
 
 								} else {
@@ -797,10 +799,9 @@
 						//Reset drag related variables
 						componentObj.draggingx = null;
 						componentObj.currentDragging = null;
-						// if (componentObj.overwriteCursor == false){
-						// 	componentObj.canvas.style.cursor = 'pointer';
-						// }
-						componentObj.canvas.style.cursor = 'pointer';
+						if (componentObj.overwriteCursor == false){
+							componentObj.canvas.style.cursor = 'pointer';
+						}
 						componentObj.holdTick = 0;
 						componentObj.block = false;
 						componentObj.drawSnapMarker = false;

@@ -8,6 +8,7 @@ import subprocess
 import re
 import copy
 import itertools
+import uuid
 
 class MetaModulate():
     """
@@ -33,7 +34,10 @@ class MetaModulate():
         """
         #Data has been sliced at starting and ending values - thus this should be accounted for when interacting with the data
         self.debug_print(1, 'Running modulate functon')
-        self.debug_print(1, "Modulating data: {}".format(self.effect_data))
+        self.debug_print(3, "Modulating original data:\n {}".format(self.effect_data))
+        self.normalize_eq_effect()
+        self.debug_print(3, "Cleaned data:\n {}".format(self.effect_data))
+
         for i, effect in enumerate(self.effect_data):
             self.effect_data[i]["start"] = float(float(self.effect_data[i]["start"]) - self.audio_start)
             self.effect_data[i]["end"] = float(float(self.effect_data[i]["end"]) - self.audio_start)
@@ -48,13 +52,13 @@ class MetaModulate():
         eval_data = [[x] for x in self.effect_data]
         eval_copy = copy.deepcopy(self.effect_data) #THis is our moving evaluation dataset where start/end times are updated as they are found by parent effects
         #Append first section of output - this will either be a section at start where no effect is playing or nothing if effect also starts at 0 - time songs starts
-        out.append(self.data[start:self.effect_data[0]["start"]*self.sample_rate])
+        out.append(self.data[start:int(round(self.effect_data[0]["start"]*self.sample_rate))])
 
         #Most likely need some code here which will take EQ effect (or other if needed) and split the three EQ values (high, mid, low) into three individual effects
 
         for i, effect in enumerate(self.effect_data):
             self.debug_print(2, "Iterating over effect: {}\n".format(effect))
-            covered_children, partial_children = MetaModulate.return_overlaping_times(effect, eval_copy) #Get children completely inside audio and partially inside audio 
+            covered_children, partial_children = self.return_overlaping_times(effect, eval_copy) #Get children completely inside audio and partially inside audio 
 
             for cc in covered_children:
                 eval_data[i].append(copy.deepcopy(cc)) #Add covered child to current eval data item
@@ -66,12 +70,12 @@ class MetaModulate():
             for pc in partial_children:
                 self.debug_print(2, "Working on PC: {}".format(pc))
                 cpc = copy.deepcopy(pc)
-                if cpc["params"]["strength_curve"] != "continuous": #Check that strength curve is not continuous
-                    cpc["params"]["original_start"] = cpc["params"]["start"] #Save original start to data object
-                    cpc["params"]["original_target"] = cpc["params"]["target"] #Save original target to data object
+                if cpc["strength_curve"] != "continuous": #Check that strength curve is not continuous
+                    cpc["original_start"] = cpc["effectStart"] #Save original start to data object
+                    cpc["original_target"] = cpc["effectTarget"] #Save original target to data object
 
-                    new_start, new_target = MetaModulate.calculate_start_target(cpc, cpc["start"], effect["end"]) #Calculate new start and target for partial child
-                    cpc["params"]["start"], cpc["params"]["target"] = new_start, new_target #New target needs to be calculated as child may only last x-2 of x total seconds and thus target parameters should be reflected across different data objects
+                    new_start, new_target = self.calculate_start_target(cpc, cpc["start"], effect["end"]) #Calculate new start and target for partial child
+                    cpc["effectStart"], cpc["effectTarget"] = new_start, new_target #New target needs to be calculated as child may only last x-2 of x total seconds and thus target parameters should be reflected across different data objects
 
                     self.debug_print(2, "New values for item: {}\n".format(cpc))
 
@@ -171,6 +175,28 @@ class MetaModulate():
 
             else:
                 pass
+
+    def normalize_eq_effect(self):
+        """EQ data from front end comes as three effects in on effect object (high,med,low) this will split them into three individual effects
+        Currently all frequency values are being set manually using defaults - in the future these should be set from user data - will be inside effect object
+        """
+        for i, effect in enumerate(self.effect_data):
+            if effect["type"] == "eq" and "new" not in effect:
+                if effect["high"]["start"] != 0 or effect["high"]["target"] != 0:
+                    self.effect_data.append({"id": str(uuid.uuid4()), "effectStart": effect["high"]["start"], "effectTarget": effect["high"]["target"], 
+                                                "start": effect["start"], "end": effect["end"], "type": "eq", "strength_curve": effect["strength_curve"],
+                                                "frequency": 6500, "new": True})
+
+                if effect["mid"]["start"] != 0 or effect["mid"]["target"] != 0:
+                    self.effect_data.append({"id": str(uuid.uuid4()), "effectStart": effect["mid"]["start"], "effectTarget": effect["mid"]["target"], 
+                                                "start": effect["start"], "end": effect["end"], "type": "eq", "strength_curve": effect["strength_curve"],
+                                                "frequency": 1700, "new": True})
+
+                if effect["low"]["start"] != 0 or effect["low"]["target"] != 0:
+                    self.effect_data.append({"id": str(uuid.uuid4()), "effectStart": effect["low"]["start"], "effectTarget": effect["low"]["target"], 
+                                                "start": effect["start"], "end": effect["end"], "type": "eq", "strength_curve": effect["strength_curve"],
+                                                "frequency": 200, "new": True})
+                del self.effect_data[i]
 
     @staticmethod
     def return_overlaping_times(current, checks):
@@ -301,14 +327,14 @@ class MetaModulate():
         effect_time_end = effect["end"]    
 
         if start_timestamp == effect_time_start and end_timestamp == effect_time_end:
-            return effect["params"]["start"], effect["params"]["target"] #Start/end timestamp is the same as the original effect values - thus start/end will be the same 
+            return effect["effectStart"], effect["effectTarget"] #Start/end timestamp is the same as the original effect values - thus start/end will be the same 
 
         start_timestamp = start_timestamp - effect_time_start
         end_timestamp = end_timestamp - effect_time_start
 
         effect_type = effect["type"]
-        effect_start = effect["params"]["start"]
-        effect_target = effect["params"]["target"]
+        effect_start = effect["effectStart"]
+        effect_target = effect["effectTarget"]
 
         if effect_type in ["pitch"]:
             length, increments, chunk_size = MetaModulate.standard_incrementation(effect_time_start, effect_time_end, 
@@ -319,9 +345,9 @@ class MetaModulate():
             length, increments, chunk_size = MetaModulate.decibel_incrementation(0, float(len(data) / sample_rate), 
                                                                         start_decibel, target_decibel, "eq")
 
-        elif effect_type in ["eq"] and "start_decibel" in effect["params"] and "target_decibel" in effect["params"]:
-            effect_start = effect["params"]["start_decibel"]
-            effect_target = effect["params"]["target_decibel"]
+        elif effect_type in ["eq"] and "effectStartDecibel" in effect and "effectTargetDecibel" in effect:
+            effect_start = effect["effectStartDecibel"]
+            effect_target = effect["effectTargetDecibel"]
 
             length, increments, chunk_size = MetaModulate.standard_incrementation(effect_time_start, effect_time_end, 
                                                                                   effect_start, effect_target, 

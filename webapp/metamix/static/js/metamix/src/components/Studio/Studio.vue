@@ -814,7 +814,7 @@
 
 				this.menuItems[2]["sub"][1]["events"] = { //Set volume click event
 												"click": function(e){
-													componentObj.effectHandler.renderEffectModal("eq", componentObj.currentAudio, null);
+													componentObj.effectHandler.renderEffectModal("volume", componentObj.currentAudio, null);
 												}
 											}
 

@@ -112,6 +112,7 @@ class MixAudio(db.Model):
             db.sesson.commit()
 
         effect_data = {}
+        print "Saving effect data: {}".format(audio_obj["effects"])
         for effect in audio_obj["effects"]:
             effect_data["type"] = effect["type"]
             effect_data["start"] = effect["start"]
@@ -131,6 +132,7 @@ class MixAudio(db.Model):
         """
         #Most likely this wont work - as we are quering as if a MixSong audio clip will only have one applied effect - likely effects table
         #will have multiple effects applied
+        print "Getting mix song, song id: {}, start {} end {} mix id {}".format(song_id, song_start, song_end, mix_id)
         songs = MixAudio.query.filter(MixAudio.song_id == song_id, MixAudio.start == song_start, MixAudio.end == song_end, MixAudio.mix_id == mix_id).all()
         out = []
 

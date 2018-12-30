@@ -35,17 +35,17 @@ def create_mix(user_id):
 			if (type(mix.json_description) == unicode):
 				mix.json_description = json.loads(mix.json_description)
 
-			if mix.json_description["audio"] == json_description["audio"]:
-				#Mix need no more computation - audio has not changed just description of mix
-				mix.update_mix_data(json_description)
-				return jsonify({"message": "Mix is up to date", "data": {"redirect": "/meta/mix/"+str(mix.id)+"/download"}})
+			# if mix.json_description["audio"] == json_description["audio"]:
+			# 	#Mix need no more computation - audio has not changed just description of mix
+			# 	mix.update_mix_data(json_description)
+			# 	return jsonify({"message": "Mix is up to date", "data": {"redirect": "/meta/mix/"+str(mix.id)+"/download"}})
 
-			else:
-				#Mix description has changed - recomputation is needed
-				mix.update_mix_data(json_description)
-				if len(mix.json_description["audio"]) > 0:
-					enqueue_mix(mix.id, True, 3)
-				return jsonify({"message": "Mix is being processed"})
+			# else:
+			# 	#Mix description has changed - recomputation is needed
+			mix.update_mix_data(json_description)
+			if len(mix.json_description["audio"]) > 0:
+				enqueue_mix(mix.id, True, 3)
+			return jsonify({"message": "Mix is being processed"})
 
 		else:
 			raise MetaMixException(message="Mix with given ID does not exist")

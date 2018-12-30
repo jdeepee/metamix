@@ -29,6 +29,7 @@
 							<input id="end" :value="effectDescriptor[currentEffect]['end']" v-on:input="updateStartEnd($event.target.value, 'end')">
 						</div>
 						<button id="entireAudio" @click="updateStartEnd('max', 'both')">Entire Audio</button>
+						<button @click="deleteEffect">Delete Effect</button>
 					</div>
 					<div class="knobs-container">
 						<div id="start-knob-container" class="knob-container">
@@ -149,7 +150,6 @@
 					}
 				},
 				updateStartEnd(value, type){
-					console.log("Update start/end", value, type)
 					if (value != ""){
 						if (type != "both"){
 							this.effectDescriptor[this.currentEffect][type] = value;
@@ -244,8 +244,8 @@
 							this.effectDescriptor[this.currentEffect]["knobs"][0]["target"] = effectData["effectTarget"];
 						} else {
 							this.resetKnobs();
-							this.effectData["effectStart"] = 1;
-							this.effectData["effectTarget"] = 1;
+							this.effectData["effectStart"] = this.effectDescriptor[this.currentEffect]["starting"];
+							this.effectData["effectTarget"] = this.effectDescriptor[this.currentEffect]["starting"];
 						}
 					}
 				},
@@ -330,7 +330,6 @@
 					this.knobColour = Settings.theme.effectColours[this.currentEffect];
 					this.audioStart = audioItem.songStart;
 					this.audioEnd = audioItem.songEnd;
-					console.log(audioItem);
 					let match = false;
 					let startIndex = 0;
 

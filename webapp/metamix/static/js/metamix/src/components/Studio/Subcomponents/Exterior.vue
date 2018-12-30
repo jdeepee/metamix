@@ -43,17 +43,27 @@
 			return {
 				dragging: 0,
 				rangeValue: undefined,
-				showAudio: false
+				showAudio: false,
+				effectDescriptor: this.$store.getters.getUi["effects"]
 			}
 		},
 		methods:{
 			saveAudio(){
 				let mixData = JSON.parse(JSON.stringify(this.$store.getters.getMixData));
-				for (let i=0; i<mixData.audio.length; i++){
+				for (let i=0; i<mixData.audio.length; i++){ //Iterate over mixData to be sent to backend - delete all unnecassary key/value pairs along with redundant effects
 					delete mixData.audio[i].rawWaveForm;
-					for (let i2=0; i2<mixData.audio[i].effects.length; i2++){
-						delete mixData.audio[i].effects[i2].startX
-						delete mixData.audio[i].effects[i2].endX
+
+					for (let i2=mixData.audio[i].effects.length-1; i2 > -1; i2--){
+						delete mixData.audio[i].effects[i2].startX;
+						delete mixData.audio[i].effects[i2].endX;
+
+						if (mixData.audio[i].effects[i2].start == 0 && mixData.audio[i].effects[i2].end == 0){
+							mixData.audio[i].effects.splice(i2, 1);
+						} else if (mixData.audio[i].effects[i2].type != "eq"){ //No need to handle EQ effect having start/target as 0 - backend already does this when parsing the three eq effects (high,mid,low)
+							if (mixData.audio[i].effects[i2].effectStart == this.effectDescriptor[mixData.audio[i].effects[i2].type]["starting"] && mixData.audio[i].effects[i2].effectTarget == this.effectDescriptor[mixData.audio[i].effects[i2].type]["starting"]){
+								mixData.audio[i].effects.splice(i2, 1);
+							}
+						}
 					}
 				}
 				console.log("Saving mix with data: ", mixData)

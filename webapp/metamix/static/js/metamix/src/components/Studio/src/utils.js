@@ -287,7 +287,6 @@ function computeHighLow(start, end, type){
 	let max = bounds["max"] + offset
 	let startOff = start + offset;
 	let endOffset = end + offset;
-
 	if (startOff == 0){
 		return [0, (endOffset / max)*100]
 

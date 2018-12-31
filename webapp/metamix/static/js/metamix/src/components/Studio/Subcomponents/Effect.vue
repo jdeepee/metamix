@@ -129,7 +129,7 @@
 					}
 				},
 				update(value, effectId, audioId, type, name){
-					//console.log("Update", value, effectId, audioId, type, name, this.effectData);
+					console.log("Update", value, effectId, audioId, type, name, this.effectData);
 					if (audioId != null){
 						value = this.knobRevert(value);
 						let update;

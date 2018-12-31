@@ -23,6 +23,7 @@ class Mix(db.Model):
     audio = db.relationship("MixAudio", backref="audio", lazy="dynamic")
 
     def update_mix_data(self, data):
+        print "Updating mix data with: {}".format(data)
         self.validate_mix_audio(data)
 
         if "length" in data:
@@ -96,31 +97,29 @@ class MixAudio(db.Model):
     @staticmethod
     def save_audio(mix_id, audio_obj):
         #Recomputation of waveform/beat positions and saving of new bpm/key should happen here on save_audio
-        print "Saving audio {} for mix {}".format(audio_obj, mix_id)
-        if type == "song":
-            audio = MixAudio(id=uuid.uuid4(), mix_id=mix_id, name=audio_obj["name"], s3_key=audio_obj["s3_key"], start=audio_obj["audio_start"], end=audio_obj["audio_end"], 
-                             mix_start=audio_obj["mix_start"], mix_end=audio_obj["mix_end"], song_id=audio_obj["id"], 
+        if audio_obj["type"] == "song":
+            audio = MixAudio(id=uuid.uuid4(), mix_id=mix_id, name=audio_obj["name"], s3_key=audio_obj["s3_key"], start=audio_obj["song_start"], end=audio_obj["song_end"], 
+                             mix_start=audio_obj["start"], mix_end=audio_obj["end"], song_id=audio_obj["audio_id"], 
                              waveform=audio_obj["waveform"], beat_positions=audio_obj["beat_positions"], bpm=audio_obj["bpm"], key=audio_obj["key"])
             db.session.add(audio)
-            db.sesson.commit()
+            db.session.commit()
 
-        elif type == "clip":
-            audio = MixAudio(id=uuid.uuid4(), mix_id=mix_id, name=audio_obj["name"], s3_key=audio_obj["s3_key"], start=audio_obj["audio_start"], end=audio_obj["audio_end"], 
-                             mix_start=audio_obj["mix_start"], mix_end=audio_obj["mix_end"], song_id=audio_obj["id"], 
+        elif audio_obj["type"] == "clip":
+            audio = MixAudio(id=uuid.uuid4(), mix_id=mix_id, name=audio_obj["name"], s3_key=audio_obj["s3_key"], start=audio_obj["song_start"], end=audio_obj["song_end"], 
+                             mix_start=audio_obj["start"], mix_end=audio_obj["end"], clip_id=audio_obj["audio_id"], 
                              waveform=audio_obj["waveform"], beat_positions=audio_obj["beat_positions"], bpm=audio_obj["bpm"], key=audio_obj["key"])
             db.session.add(audio)
-            db.sesson.commit()
+            db.session.commit()
 
         effect_data = {}
-        print "Saving effect data: {}".format(audio_obj["effects"])
         for effect in audio_obj["effects"]:
             effect_data["type"] = effect["type"]
             effect_data["start"] = effect["start"]
             effect_data["end"] = effect["end"]
             effect_data["effect_parameters"] = effect
-            effect_data["id"] = effect["id"]
-            print 'Saving effect: {}'.format(effect_data)
-            Effect.insert_audio_effect(**effect_data)
+            effect_data["id"] = effect["id"] #id is most likley not necassary/will break things as id may be computed by front end each time mix is loaded? Or just computed once at first load
+            effect_data["mix_audio_id"] = audio.id
+            Effect.insert_audio_effect(effect_data)
 
         return audio
 
@@ -130,21 +129,23 @@ class MixAudio(db.Model):
         Note this returns exact audio/effect matches for given mix - useful for retrieving previously computed data for this mix
         not useful for looking at all created audio clips for a given user as a result of their mixing
         """
-        #Most likely this wont work - as we are quering as if a MixSong audio clip will only have one applied effect - likely effects table
-        #will have multiple effects applied
         print "Getting mix song, song id: {}, start {} end {} mix id {}".format(song_id, song_start, song_end, mix_id)
         songs = MixAudio.query.filter(MixAudio.song_id == song_id, MixAudio.start == song_start, MixAudio.end == song_end, MixAudio.mix_id == mix_id).all()
         out = []
 
         for song in songs:
+            e = song.effects.all()
+            print "Match on song: {}".format(e)
             #Create list of dictionaries which is the same as input effect data shape
-            song_effects = [{"type": effect.type, "start": effect.start, "end": effect.end, 
-                            "effect_parameters": effect.effect_parameters} for effect in song.effects]
-            match = False
+            song_effects = [effect.effect_parameters for effect in song.effects.all()]
+            match = True
+            print "Effects for matched song: {} vs target effects: {}".format(song_effects, target_effects)
 
             for effect in target_effects:
-                if effect in song_effects:
-                    match = True
+                if effect not in song_effects:
+                    match = False
+                    break;
+
 
             if match == True:
                 out.append(song)

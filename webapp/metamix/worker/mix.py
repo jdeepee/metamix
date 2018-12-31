@@ -40,18 +40,21 @@ class MixWorker():
         audio_data_store = {}
 
         for audio in self.json_description["audio"]:
-            del audio["beat_positions"]
-            print '\nCurrently computing audio: {}'.format(audio)
+            paudio = copy.deepcopy(audio)
+            del paudio["beat_positions"]
+            print '\nCurrently computing audio: {}'.format(paudio)
 
             if len(audio["effects"]) > 0:
+                effects = MixWorker.normalize_eq_effect(copy.deepcopy(audio["effects"]))
+                print "Audio data post normalize: {}".format(effects)
                 #Here we are only searching for an exact match - in the future should also look for matches which we can shape/slice into the correct format as
                 #Defined by the effects i.e if continuous effects are applied on song between timestamps greater than timestamps specified here - then we can
                 #just grab previous data and then slice down to the right size
                 if audio["type"] == "song":
-                    prev_processed = MixAudio.get_mix_song(self.mix_id, audio["id"], audio["song_start"], audio["song_end"], audio["effects"]) 
+                    prev_processed = MixAudio.get_mix_song(self.mix_id, audio["audio_id"], audio["song_start"], audio["song_end"], audio["effects"]) 
 
                 else:
-                    prev_processed = MixAudio.get_mix_clip(self.mix_id, audio["id"], audio["song_start"], audio["song_end"], audio["effects"])
+                    prev_processed = MixAudio.get_mix_clip(self.mix_id, audio["audio_id"], audio["song_start"], audio["song_end"], audio["effects"])
 
                 print "Previously processed value: {}".format(prev_processed)
 
@@ -79,12 +82,14 @@ class MixWorker():
                     audio["data"] = data[int(round(audio["song_start"]*sample_rate)):int(round(audio["song_end"]*sample_rate))]
                     audio["sample_rate"] = sample_rate
 
-                    effect_creator = MetaModulate(audio, 3)
+                    effect_creator = MetaModulate(audio, 3, effects)
                     data = effect_creator.modulate()
                     out.append({"id": audio["id"], "start": audio["start"], "end": audio["end"], "data": data}) #Using local ID for ID of out as their could be duplicate audio items
 
                     #Save audio with effects applied into database for retrieval later on future computations
-                    self.upload_s3(data, sample_rate)
+                    data_key = self.upload_s3(data, sample_rate)
+                    del audio["data"]
+                    audio["s3_key"] = data_key
                     MixAudio.save_audio(self.mix_id, audio)
 
             else:
@@ -109,7 +114,9 @@ class MixWorker():
         mix_data = self.make_mix()
         length = float(mix_data.shape[0]) / float(sample_rate)
         self.json_description["length"] = length
-
+        self.json_description["processing_start"] = "Completed"
+        # del self.json_description["data"]
+        # del self.json_description["sample_rate"]
         self.mix_object.update_mix_data(self.json_description)
         self.upload_s3(mix_data, sample_rate)
         print "Mix computation completed and mix uploaded"
@@ -282,6 +289,31 @@ class MixWorker():
         return out
 
     #UTIL METHODS
+    @staticmethod
+    def normalize_eq_effect(effects):
+        """EQ data from front end comes as three effects in on effect object (high,med,low) this will split them into three individual effects
+        Currently all frequency values are being set manually using defaults - in the future these should be set from user data - will be inside effect object
+        """
+        for i, effect in enumerate(effects):
+            if effect["type"] == "eq" and "new" not in effect:
+                if effect["high"]["start"] != 0 or effect["high"]["target"] != 0:
+                    effects.append({"id": str(uuid.uuid4()), "effectStart": effect["high"]["start"], "effectTarget": effect["high"]["target"], 
+                                                "start": effect["start"], "end": effect["end"], "type": "eq", "strength_curve": effect["strength_curve"],
+                                                "frequency": 6500, "new": True})
+
+                if effect["mid"]["start"] != 0 or effect["mid"]["target"] != 0:
+                    effects.append({"id": str(uuid.uuid4()), "effectStart": effect["mid"]["start"], "effectTarget": effect["mid"]["target"], 
+                                                "start": effect["start"], "end": effect["end"], "type": "eq", "strength_curve": effect["strength_curve"],
+                                                "frequency": 1700, "new": True})
+
+                if effect["low"]["start"] != 0 or effect["low"]["target"] != 0:
+                    effects.append({"id": str(uuid.uuid4()), "effectStart": effect["low"]["start"], "effectTarget": effect["low"]["target"], 
+                                                "start": effect["start"], "end": effect["end"], "type": "eq", "strength_curve": effect["strength_curve"],
+                                                "frequency": 200, "new": True})
+                del effects[i]
+
+        return effects
+
     @staticmethod
     def mix_audio(track1, track2, sample_rate):
         out = []

@@ -44,7 +44,11 @@
 				dragging: 0,
 				rangeValue: undefined,
 				showAudio: false,
-				effectDescriptor: this.$store.getters.getUi["effects"]
+				effectDescriptor: this.$store.getters.getUi["effects"],
+				timeBegan: null,
+				timeStopped: null,
+				stoppedDuration: 0,
+				started: null
 			}
 		},
 		methods:{
@@ -83,8 +87,42 @@
 				});
 			},
 			playAudio(){
+				this.start();
 			},
 			pauseAudio(){
+				this.stop();
+			},
+			start(){
+			    if (this.timeBegan === null) {
+			        this.timeBegan = new Date();
+			    }
+
+			    if (this.timeStopped !== null) {
+			       this.stoppedDuration += (new Date() - this.timeStopped);
+			    }
+
+			    this.started = setInterval(this.clockRunning, 10);	
+			},
+			stop() {
+			    this.timeStopped = new Date();
+			    clearInterval(this.started);
+			    this.stoppedDuration = 0;
+			    this.timeBegan = null;
+			    this.timeStopped = null;
+			},
+			reset() {
+			    clearInterval(this.started);
+			    this.stoppedDuration = 0;
+			    this.timeBegan = null;
+			    this.timeStopped = null;
+			    this.$store.commit("updateUi", {"currentTime": 0});
+			},
+			clockRunning(){
+			    let currentTime = new Date();
+			    console.log(this.timeBegan, this.stoppedDuration)
+			    let timeElapsed = new Date(currentTime - this.timeBegan - this.stoppedDuration)
+			    timeElapsed = timeElapsed.getTime()
+				this.$store.commit("updateUi", {"currentTime": timeElapsed});
 			},
 			$ready(fn) {
 				if (process.env.NODE_ENV === 'production') {

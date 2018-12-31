@@ -85,4 +85,4 @@ class Effect(db.Model):
         # for c in Effect.__table__.columns:
         effect = Effect(**data)
         db.session.add(effect)
-        db.session.add()
+        db.session.commit()

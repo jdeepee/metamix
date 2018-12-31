@@ -65,6 +65,8 @@ AudioItem.prototype.set = function(x, y, x2, y2, color, audioItem, time_scale, f
 	this.currentWidth = currentWidth;
 	this.songStart = audioItem.song_start;
 	this.songEnd = audioItem.song_end;
+	this.start = audioItem.start;
+	this.end = audioItem.end;
 
 	this.rounded1X = utils.round(this.xNormalized, 0.25);
 	this.rounded1X2 = utils.round(this.x2Normalized, 0.25);

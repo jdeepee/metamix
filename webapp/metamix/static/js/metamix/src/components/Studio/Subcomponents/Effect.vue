@@ -23,10 +23,17 @@
 							<p id="barEndCounter">{{effectDescriptor[currentEffect]['barCountEnd']}}</p>
 							<button id="barUpEnd" @click="barValueUpdate(1, 'barCountEnd')">&uarr;</button>
 						</div>
+						<h4 id="start-end-header">Start/End Song Contextual</h4>
 						<div id="start-end-container" class="input-container">
-							<input id="start" :value="effectDescriptor[currentEffect]['start']" v-on:input="updateStartEnd($event.target.value, 'start')">
+							<input id="start" :value="effectDescriptor[currentEffect]['start']" v-on:input="updateStartEnd($event.target.value, 'start', false)">
 							<br>
-							<input id="end" :value="effectDescriptor[currentEffect]['end']" v-on:input="updateStartEnd($event.target.value, 'end')">
+							<input id="end" :value="effectDescriptor[currentEffect]['end']" v-on:input="updateStartEnd($event.target.value, 'end', false)">
+						</div>
+						<h4 id="start-end-header">Start/End Timeline Contextual</h4>
+						<div id="start-end-container" class="input-container">
+							<input id="start" :value="effectDescriptor[currentEffect]['startGlobal']" v-on:input="updateStartEnd($event.target.value, 'start', true)">
+							<br>
+							<input id="end" :value="effectDescriptor[currentEffect]['endGlobal']" v-on:input="updateStartEnd($event.target.value, 'end', true)">
 						</div>
 						<button id="entireAudio" @click="updateStartEnd('max', 'both')">Entire Audio</button>
 						<button @click="deleteEffect">Delete Effect</button>
@@ -120,16 +127,18 @@
 						if (type == "barCountStart"){
 							this.counterStart = barIndex;
 							this.effectDescriptor[this.currentEffect]["start"] = barValue;
+							this.effectDescriptor[this.currentEffect]['startGlobal'] = barValue + this.audioMixStart;
 							this.$store.commit("updateEffect", {"id": this.effectId, "audioId": this.audioId, "start": barValue});
 						} else {
 							this.counterEnd = barIndex;
 							this.effectDescriptor[this.currentEffect]["end"] = barValue;
+							this.effectDescriptor[this.currentEffect]['endGlobal'] = barValue + this.audioMixStart;
 							this.$store.commit("updateEffect", {"id": this.effectId, "audioId": this.audioId, "end": barValue});
 						}
 					}
 				},
 				update(value, effectId, audioId, type, name){
-					console.log("Update", value, effectId, audioId, type, name, this.effectData);
+					//console.log("Update", value, effectId, audioId, type, name, this.effectData);
 					if (audioId != null){
 						value = this.knobRevert(value);
 						let update;
@@ -149,9 +158,24 @@
 						}
 					}
 				},
-				updateStartEnd(value, type){
+				updateStartEnd(value, type, globalContext){
+					//console.log("Update start end", value, type, globalContext)
 					if (value != ""){
 						if (type != "both"){
+							if (globalContext == true){
+								if (type == "start"){
+									this.effectDescriptor[this.currentEffect]['startGlobal'] = value;
+								} else {
+									this.effectDescriptor[this.currentEffect]['endGlobal'] = value;
+								}
+								value = parseInt(value) - this.audioMixStart;
+							} else {
+								if (type == "start"){
+									this.effectDescriptor[this.currentEffect]['startGlobal'] = parseInt(value) + this.audioMixStart;
+								} else {
+									this.effectDescriptor[this.currentEffect]['endGlobal'] = parseInt(value) + this.audioMixStart;
+								}
+							}
 							this.effectDescriptor[this.currentEffect][type] = value;
 							let out = {"id": this.effectId, "audioId": this.audioId}
 							out[type] = value;
@@ -330,6 +354,8 @@
 					this.knobColour = Settings.theme.effectColours[this.currentEffect];
 					this.audioStart = audioItem.songStart;
 					this.audioEnd = audioItem.songEnd;
+					this.audioMixStart = audioItem.start;
+					this.audioMixEnd = audioItem.end;
 					let match = false;
 					let startIndex = 0;
 

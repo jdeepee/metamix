@@ -23,7 +23,6 @@ class Mix(db.Model):
     audio = db.relationship("MixAudio", backref="audio", lazy="dynamic")
 
     def update_mix_data(self, data):
-        print "Updating mix data with: {}".format(data)
         self.validate_mix_audio(data)
 
         if "length" in data:
@@ -56,7 +55,6 @@ class Mix(db.Model):
     @staticmethod
     def validate_mix_audio(json_description):
         for audio in json_description["audio"]:
-            print "Validating: {}".format(audio)
             if audio["type"] == "song":
                 if Song.exists(audio["audio_id"]) != True:
                     raise MetaMixException(message="Song with ID: " + str(audio["audio_id"]) + "does not exist")

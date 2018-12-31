@@ -1,5 +1,6 @@
 from metamix.key_variables import modulation_algorithm_parameters
 from pysndfx import AudioEffectsChain
+from flask import *
 import numpy as np
 import math
 import os
@@ -17,6 +18,7 @@ class MetaModulate():
     def __init__(self, song_object, debug_level, effect_data):
         self.effect_data = effect_data
         self.data = song_object["data"]
+        self.bpm = song_object["bpm"]
         self.sample_rate = float(song_object["sample_rate"])
         self.audio_start = float(song_object["song_start"])
         self.audio_end = float(song_object["song_end"])
@@ -34,8 +36,8 @@ class MetaModulate():
         """
         #Data has been sliced at starting and ending values - thus this should be accounted for when interacting with the data
         self.debug_print(1, 'Running modulate functon')
-        self.debug_print(3, "Modulating original data:\n {}".format(self.effect_data))
         self.order_effects()
+        self.debug_print(3, "Modulating original data:\n {}".format(self.effect_data))
 
         for i, effect in enumerate(self.effect_data):
             self.effect_data[i]["start"] = float(float(self.effect_data[i]["start"]) - self.audio_start)
@@ -154,9 +156,10 @@ class MetaModulate():
         out = np.array(list(itertools.chain.from_iterable(out)))
         out_shape = out.shape[0]
         data_shape = self.data.shape[0]
+        last_end = eval_data[-1][0]["end"]
 
         if len(out) != data_shape:
-            out = np.concatenate((out, self.data[out_shape: data_shape]))
+            out = np.concatenate((out, self.data[int(round(last_end*self.sample_rate)): data_shape]))
 
         out_shape = out.shape[0]
         self.debug_print(1, "Input data: {}".format(data_shape))
@@ -635,14 +638,13 @@ class MetaModulate():
         """
         self.debug_print(1, "Running pitch function")
 
-        if target < -12 or target > 12:
+        if start < -12 or start > 12:
             raise ValueError("Target should be between -12 and 12 semitones")
 
         if strength_curve == "continuous":
-            librosa.output.write_wav("./temp.wav", data, sample_rate)
-
-            subprocess.call(["./rubberband","--pitch", str(start), "./temp.wav", "./changed.wav"])
-            out, sr = librosa.load("./changed.wav", sr=None) 
+            librosa.output.write_wav(current_app.config["METAMIX_TEMP_SAVE"]+"temp.wav", data, sample_rate)
+            subprocess.call(["rubberband","--pitch", str(start), current_app.config["METAMIX_TEMP_SAVE"]+"temp.wav", current_app.config["METAMIX_TEMP_SAVE"]+"changed.wav"])
+            out, sr = librosa.load(current_app.config["METAMIX_TEMP_SAVE"]+"changed.wav", sr=None) 
 
         elif strength_curve == "linear":
             length, increments, chunk_size = MetaModulate.standard_incrementation(0, float(float(len(data)) / float(sample_rate)), 
@@ -650,7 +652,7 @@ class MetaModulate():
                                                                      "pitch")
 
             out = np.array([])
-            librosa.output.write_wav("./temp.wav", data, sample_rate)
+            librosa.output.write_wav(current_app.config["METAMIX_TEMP_SAVE"]+"temp.wav", data, sample_rate)
 
             if self.debug_level == 2:
                 print "Length of audio of given input: {}".format(length)
@@ -666,8 +668,8 @@ class MetaModulate():
                 if i != len(increments) -1:
                     current_change = (i * chunk_size) + start
 
-                    subprocess.call(["./rubberband","--pitch", str(current_change), "./temp.wav", "./changed.wav"])
-                    data_out, sr = librosa.load("./changed.wav", sr=None) 
+                    subprocess.call(["rubberband","--pitch", str(current_change), current_app.config["METAMIX_TEMP_SAVE"]+"temp.wav", current_app.config["METAMIX_TEMP_SAVE"]+"changed.wav"])
+                    data_out, sr = librosa.load(current_app.config["METAMIX_TEMP_SAVE"]+"changed.wav", sr=None) 
                     frame_out = data_out[n*sample_rate:increments[i+1]*sample_rate]
                     out = np.concatenate((out, frame_out))
 
@@ -679,21 +681,25 @@ class MetaModulate():
         self.debug_print(1, "Running tempo function")
         if strength_curve == "continuous":
             #Save data as WAV file to send to rubberband
-            librosa.output.write_wav("./temp.wav", data, sample_rate)
+            start = start / self.bpm
+            librosa.output.write_wav(current_app.config["METAMIX_TEMP_SAVE"]+"temp.wav", data, sample_rate)
 
-            subprocess.call(["./rubberband","--tempo", str(start), "./temp.wav", "./changed.wav"])
-            out, sr = librosa.load("./changed.wav", sr=None) 
+            subprocess.call(["rubberband","--tempo", str(start), current_app.config["METAMIX_TEMP_SAVE"]+"temp.wav", current_app.config["METAMIX_TEMP_SAVE"]+"changed.wav"])
+            out, sr = librosa.load(current_app.config["METAMIX_TEMP_SAVE"]+"changed.wav", sr=None) 
 
         elif strength_curve == "linear":
             #This part of the algorithms is not working as when we change the temp of a frame we overlap into the next frame - this must be accounted for
             #when slicing the data from the output result
             #Try using the sox once the tempo change offset for slicing the data is computed - sox might be faster and provide just as good results
+            assert target != 0
+            start = start / self.bpm
+            target = target / self.bpm
             length, increments, chunk_size = MetaModulate.standard_incrementation(0, float(float(len(data)) / float(sample_rate)), 
                                                                      start, target, 
                                                                      "tempo", True)
 
             out = np.array([])
-            librosa.output.write_wav("./temp.wav", data, sample_rate)
+            librosa.output.write_wav(current_app.config["METAMIX_TEMP_SAVE"]+"temp.wav", data, sample_rate)
             last = 0
 
             if self.debug_level == 2:
@@ -708,7 +714,7 @@ class MetaModulate():
                 if i != len(increments) -1:
                     current_change = float((i * chunk_size)) + start
 
-                    p = subprocess.Popen(["./rubberband","--tempo", str(current_change), "./temp.wav", "./changed.wav"], stderr=subprocess.PIPE)
+                    p = subprocess.Popen(["rubberband","--tempo", str(current_change), current_app.config["METAMIX_TEMP_SAVE"]+"temp.wav", current_app.config["METAMIX_TEMP_SAVE"]+"changed.wav"], stderr=subprocess.PIPE)
                     command_out = p.stderr.readlines()[1]
                     computed_time_change = float(re.search(r"[-+]?\d*\.\d+|\d+", command_out).group(0))
 
@@ -724,7 +730,7 @@ class MetaModulate():
                     end = last + ((increments[i+1]*sample_rate)-(n*sample_rate))*computed_time_change
                     last = end
 
-                    data_out, sr = librosa.load("./changed.wav", sr=None) 
+                    data_out, sr = librosa.load(current_app.config["METAMIX_TEMP_SAVE"]+"changed.wav", sr=None) 
                     frame_out = data_out[int(start_slice):int(end)]
                     out = np.concatenate((out, frame_out))
             

@@ -312,6 +312,10 @@ class MixWorker():
                                                 "frequency": 200, "new": True})
                 del effects[i]
 
+            else:
+                effect["start"] = float(effect["start"])
+                effect["end"] = float(effect["end"])
+
         return effects
 
     @staticmethod

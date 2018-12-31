@@ -83,6 +83,8 @@ class Effect(db.Model):
     def insert_audio_effect(data):
         """Inserts audio effect into Effect table - accepts data which should contain all fields required by table"""
         # for c in Effect.__table__.columns:
-        effect = Effect(**data)
-        db.session.add(effect)
-        db.session.commit()
+        check = Effect.query.filter_by(id=data["id"]).first()
+        if check == None:
+            effect = Effect(**data)
+            db.session.add(effect)
+            db.session.commit()

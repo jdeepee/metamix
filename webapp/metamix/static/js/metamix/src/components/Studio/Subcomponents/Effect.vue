@@ -184,6 +184,8 @@
 							if (value == "max"){
 								this.effectDescriptor[this.currentEffect]["start"] = this.audioStart;
 								this.effectDescriptor[this.currentEffect]["end"] = this.audioEnd;
+								this.effectDescriptor[this.currentEffect]['startGlobal'] = this.audioStart + this.audioMixStart;
+								this.effectDescriptor[this.currentEffect]['endGlobal'] = this.audioEnd + this.audioMixStart;
 								let out = {"id": this.effectId, "audioId": this.audioId}
 								out["start"] = this.audioStart;
 								out["end"] = this.audioEnd;

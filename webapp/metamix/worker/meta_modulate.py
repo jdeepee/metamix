@@ -35,6 +35,7 @@ class MetaModulate():
         #Data has been sliced at starting and ending values - thus this should be accounted for when interacting with the data
         self.debug_print(1, 'Running modulate functon')
         self.debug_print(3, "Modulating original data:\n {}".format(self.effect_data))
+        self.order_effects()
 
         for i, effect in enumerate(self.effect_data):
             self.effect_data[i]["start"] = float(float(self.effect_data[i]["start"]) - self.audio_start)
@@ -44,7 +45,6 @@ class MetaModulate():
         start = 0
 
         self.debug_print(3, "Adjusted start and end values {}, {}".format(start, end))
-        self.debug_print(3, "New effect values: {}\n".format(self.effect_data))
 
         out = []
         eval_data = [[x] for x in self.effect_data]
@@ -57,6 +57,7 @@ class MetaModulate():
         for i, effect in enumerate(self.effect_data):
             self.debug_print(2, "Iterating over effect: {}\n".format(effect))
             covered_children, partial_children = self.return_overlaping_times(effect, eval_copy) #Get children completely inside audio and partially inside audio 
+            print "Covered children: {} and partial: {}".format(covered_children, partial_children)
 
             for cc in covered_children:
                 eval_data[i].append(copy.deepcopy(cc)) #Add covered child to current eval data item
@@ -68,6 +69,7 @@ class MetaModulate():
             for pc in partial_children:
                 self.debug_print(2, "Working on PC: {}".format(pc))
                 cpc = copy.deepcopy(pc)
+                new_target = cpc["effectStart"]
                 if cpc["strength_curve"] != "continuous": #Check that strength curve is not continuous
                     cpc["original_start"] = cpc["effectStart"] #Save original start to data object
                     cpc["original_target"] = cpc["effectTarget"] #Save original target to data object
@@ -102,6 +104,8 @@ class MetaModulate():
 
         eval_data = eval_out
 
+        print "\n final data for evaluation: {}".format(eval_data)
+
         for effects in eval_data:
             self.debug_print(2, "Computing: {}\n".format(effects))
             parent_effect = effects[0]
@@ -110,7 +114,7 @@ class MetaModulate():
                 self.debug_print(2, 'Parent effect: {}'.format(parent_effect))
                 parent_start = parent_effect["start"] #Get start/end values of current effect(s) chunk
                 final_end = parent_effect["end"]
-                effect_params, type = self.build_effect_parameters(parent_effect, parent_start, final_end)
+                effect_params, type = self.build_effect_parameters(parent_effect, parent_start, final_end, None, False)
 
                 self.debug_print(3, "Length of parent data: {}".format(final_end-parent_start))
                 self.debug_print(2, 'Starting/end values of parent (these are relative to song): {}, {}'.format(parent_start, final_end))
@@ -129,7 +133,7 @@ class MetaModulate():
 
                     effect_end = (effect_end - parent_start) #Get effect end relative to length of parent effect
 
-                    effect_params, type = self.build_effect_parameters(effect, effect_start, effect_end)
+                    effect_params, type = self.build_effect_parameters(effect, effect_start, effect_end, effect_data, True)
 
                     self.debug_print(2, "effect will run between: {} and {} (these are relative to result from parent effect)".format(effect_start, effect_end))
 
@@ -141,7 +145,7 @@ class MetaModulate():
                     self.debug_print(2, "Effect concatenated data: {}".format(effect_data.shape))
 
             else:
-                effect_data = self.data[parent_effect["start"]*self.sample_rate: parent_effect["end"]*self.sample_rate]
+                effect_data = self.data[int(round(parent_effect["start"]*self.sample_rate)): int(round(parent_effect["end"]*self.sample_rate))]
 
             #Add effect data of given effect object(s) to output data
             out.append(effect_data)
@@ -161,6 +165,10 @@ class MetaModulate():
         return out
 
     #Util methods
+    def order_effects(self):
+        """Ensures that effects are ordered from starting value of effect"""
+        self.effect_data = sorted(self.effect_data, key=lambda x: x['start'], reverse=False) 
+
     def debug_print(self, debug_value, value):
         if self.debug_level != 0:
             if self.debug_level >= debug_value:
@@ -169,7 +177,7 @@ class MetaModulate():
             else:
                 pass
 
-    def build_effect_parameters(self, effect, start, end):
+    def build_effect_parameters(self, effect, start, end, effect_data, effected_data=False):
         """Build parameters for each effect - should also be able to handle (secondary/advance) parameters such as width_q and second strength curves
             currently if/elif statements handle each type seperately - this is so if in the future secondary/advance parameters are implemented for effects they can be added here for each effect
             will also be good to check the paramters of the effects within this function - only effect start/target values that will work with effect(s) should be allowed to be sent to the effect
@@ -179,29 +187,65 @@ class MetaModulate():
             #In the future these parameters should also build for start/target decbel & width_q
             effect["effectStart"] = effect["effectStart"] + 1
             effect["effectTarget"] = effect["effectTarget"] + 1
-            params = {"data": self.data[int(round(start*self.sample_rate)): int(round(end*self.sample_rate))], "sample_rate": self.sample_rate, "start": effect["effectStart"], "target": effect["effectTarget"], "strength_curve": effect["strength_curve"], "frequency": effect["frequency"]}
+            params = {"sample_rate": self.sample_rate, "start": effect["effectStart"], "target": effect["effectTarget"], "strength_curve": effect["strength_curve"], "frequency": effect["frequency"]}
+            if effected_data == False:
+                params["data"] = self.data[int(round(start*self.sample_rate)): int(round(end*self.sample_rate))]
+
+            else:
+                params["data"] = effect_data[int(round(start*self.sample_rate)): int(round(end*self.sample_rate))]
+
             type = "eq"
 
         elif effect["type"] == "volume":
-            params = {"data": self.data[int(round(start*self.sample_rate)): int(round(end*self.sample_rate))], "sample_rate": self.sample_rate, "start": effect["effectStart"], "target": effect["effectTarget"], "strength_curve": effect["strength_curve"]}
+            params = {"sample_rate": self.sample_rate, "start": effect["effectStart"], "target": effect["effectTarget"], "strength_curve": effect["strength_curve"]}
+            if effected_data == False:
+                params["data"] = self.data[int(round(start*self.sample_rate)): int(round(end*self.sample_rate))]
+
+            else:
+                params["data"] = effect_data[int(round(start*self.sample_rate)): int(round(end*self.sample_rate))]
+                
             type = "volume"
 
         elif effect["type"] == "highPass":
             #In the future this should be able to handle upper bound and lower bound parameters?
-            params = {"data": self.data[int(round(start*self.sample_rate)): int(round(end*self.sample_rate))], "sample_rate": self.sample_rate, "start": effect["effectStart"], "target": effect["effectTarget"], "strength_curve": effect["strength_curve"]}
+            params = {"sample_rate": self.sample_rate, "start": effect["effectStart"], "target": effect["effectTarget"], "strength_curve": effect["strength_curve"]}
+            if effected_data == False:
+                params["data"] = self.data[int(round(start*self.sample_rate)): int(round(end*self.sample_rate))]
+
+            else:
+                params["data"] = effect_data[int(round(start*self.sample_rate)): int(round(end*self.sample_rate))]
+                
             type = "high_pass_filter"
 
         elif effect["type"] == "lowPass":
             #In the future this should be able to handle upper bound and lower bound parameters?
-            params = {"data": self.data[int(round(start*self.sample_rate)): int(round(end*self.sample_rate))], "sample_rate": self.sample_rate, "start": effect["effectStart"], "target": effect["effectTarget"], "strength_curve": effect["strength_curve"]}
+            params = {"sample_rate": self.sample_rate, "start": effect["effectStart"], "target": effect["effectTarget"], "strength_curve": effect["strength_curve"]}
+            if effected_data == False:
+                params["data"] = self.data[int(round(start*self.sample_rate)): int(round(end*self.sample_rate))]
+
+            else:
+                params["data"] = effect_data[int(round(start*self.sample_rate)): int(round(end*self.sample_rate))]
+                
             type = "low_pass_filter"
 
         elif effect["type"] == "pitch":
-            params = {"data": self.data[int(round(start*self.sample_rate)): int(round(end*self.sample_rate))], "sample_rate": self.sample_rate, "start": effect["effectStart"], "target": effect["effectTarget"], "strength_curve": effect["strength_curve"]}
+            params = {"sample_rate": self.sample_rate, "start": effect["effectStart"], "target": effect["effectTarget"], "strength_curve": effect["strength_curve"]}
+            if effected_data == False:
+                params["data"] = self.data[int(round(start*self.sample_rate)): int(round(end*self.sample_rate))]
+
+            else:
+                params["data"] = effect_data[int(round(start*self.sample_rate)): int(round(end*self.sample_rate))]
+                
             type = "pitch"
 
         elif effect["type"] == "tempo":
-            params = {"data": self.data[int(round(start*self.sample_rate)): int(round(end*self.sample_rate))], "sample_rate": self.sample_rate, "start": effect["effectStart"], "target": effect["effectTarget"], "strength_curve": effect["strength_curve"]}
+            params = {"sample_rate": self.sample_rate, "start": effect["effectStart"], "target": effect["effectTarget"], "strength_curve": effect["strength_curve"]}
+            if effected_data == False:
+                params["data"] = self.data[int(round(start*self.sample_rate)): int(round(end*self.sample_rate))]
+
+            else:
+                params["data"] = effect_data[int(round(start*self.sample_rate)): int(round(end*self.sample_rate))]
+                
             type = "tempo"
 
         else:
@@ -475,7 +519,7 @@ class MetaModulate():
         """
         self.debug_print(1, "Running high pass filter")
 
-        if target < lower_bound or target > upper_bound:
+        if start < lower_bound or start > upper_bound:
             raise ValueError("Target must be between upper and lower bounds")
 
         if strength_curve == "continuous":
@@ -513,7 +557,7 @@ class MetaModulate():
                     out = np.concatenate((out, frame_out))
 
         #Ensure no frames of data were lost or added during EQ
-        self.debug_level(1, "\n")
+        self.debug_print(1, "\n")
         assert len(out) == len(data)
         return out
 
@@ -527,7 +571,7 @@ class MetaModulate():
         if start is specified strength curve will alter filter frequency between start -> target
         """
         self.debug_print(1, "Running low pass filter")
-        if target > lower_bound or target < upper_bound:
+        if start > lower_bound or start < upper_bound:
             raise ValueError("Target must be between upper and lower bounds")
 
         if strength_curve == "continuous":
@@ -698,14 +742,13 @@ class MetaModulate():
         target: target volume ratio to reach (between 0 and 1 where 0.5 is half volume, 0.1 10% volume etc)
         start: starting volume ratio from where strength curve should begin operation - only applicable if strength curve is not continuous
         """
-        self.debug_print(1, "Running volume function")
         if strength_curve == "continuous":
             if start != 0:
                 start = 10 * math.log(start, 2)
 
             else:
                 start = -128
-
+            self.debug_print(1, "Running volume function with parameters, strength_curve: {}, start: {}, target: {}".format(strength_curve, start, target))
             fx = (
                 AudioEffectsChain()
                 .vol(float(start), type="dB")

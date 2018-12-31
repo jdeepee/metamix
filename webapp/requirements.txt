@@ -28,7 +28,7 @@ numba==0.41.0
 numpy==1.15.4
 pycparser==2.19
 PyJWT==1.7.1
-pysndfx==0.3.6
+git+https://github.com/jdeepee/python-audio-effects.git
 python-dateutil==2.7.5
 PyYAML==3.13
 redis==2.10.6

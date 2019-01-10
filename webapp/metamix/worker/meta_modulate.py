@@ -19,6 +19,7 @@ class MetaModulate():
         self.effect_data = effect_data
         self.data = song_object["data"]
         self.bpm = song_object["bpm"]
+        self.audio_object = song_object
         self.sample_rate = float(song_object["sample_rate"])
         self.audio_start = float(song_object["song_start"])
         self.audio_end = float(song_object["song_end"])
@@ -38,6 +39,9 @@ class MetaModulate():
         self.debug_print(1, 'Running modulate functon')
         self.order_effects()
         self.debug_print(3, "Modulating original data:\n {}".format(self.effect_data))
+        recompute_barmarkers = False
+        recompute_waveform = False
+        update_key = False
 
         for i, effect in enumerate(self.effect_data):
             self.effect_data[i]["start"] = float(float(self.effect_data[i]["start"]) - self.audio_start)
@@ -57,6 +61,13 @@ class MetaModulate():
         #Most likely need some code here which will take EQ effect (or other if needed) and split the three EQ values (high, mid, low) into three individual effects
 
         for i, effect in enumerate(self.effect_data):
+            if effect["type"] == "tempo":
+                recompute_barmarkers = True
+                recompute_waveform = True
+
+            elif effect["type"] == "pitch":
+                update_key = True
+
             self.debug_print(2, "Iterating over effect: {}\n".format(effect))
             covered_children, partial_children = self.return_overlaping_times(effect, eval_copy) #Get children completely inside audio and partially inside audio 
             print "Covered children: {} and partial: {}".format(covered_children, partial_children)
@@ -153,21 +164,36 @@ class MetaModulate():
             out.append(effect_data)
             self.debug_print(1, "\n")
 
-        out = np.array(list(itertools.chain.from_iterable(out)))
-        out_shape = out.shape[0]
+        self.out = np.array(list(itertools.chain.from_iterable(out)))
+        out_shape = self.out.shape[0]
         data_shape = self.data.shape[0]
         last_end = eval_data[-1][0]["end"]
 
-        if len(out) != data_shape:
-            out = np.concatenate((out, self.data[int(round(last_end*self.sample_rate)): data_shape]))
+        if len(self.out) != data_shape:
+            self.out = np.concatenate((self.out, self.data[int(round(last_end*self.sample_rate)): data_shape]))
 
-        out_shape = out.shape[0]
+        out_shape = self.out.shape[0]
         self.debug_print(1, "Input data: {}".format(data_shape))
         self.debug_print(1, "Final computed data: {}".format(out_shape))
+        self.out = {"data": self.out}
 
         return out
 
     #Util methods
+    def recompute_waveform(self):
+        """Recomputes waveform on whole audio data"""
+        pass
+        
+    def recompute_barmarkers(self):
+        """Recomputes barmarkers of the song at given effect areas where the given effect would change position of bar markers. 
+            So if tempo modulation happens in the middle of a song - bar markers will be recreated just for the middle section
+            this way bar markers will remain consistent no matter where in the song effect modulation has happened"""
+        pass
+
+    def recompute_key(self):
+        """Looks at pitch modulation that has happened on the song - if the duration of the pitch modulation is the length of the song then it will add a key key/value pair to the output data of the new key """
+        pass
+        
     def order_effects(self):
         """Ensures that effects are ordered from starting value of effect"""
         self.effect_data = sorted(self.effect_data, key=lambda x: x['start'], reverse=False) 
@@ -311,7 +337,7 @@ class MetaModulate():
             #Going from 0.x to 0.0
             decimal_target = 10 * math.log(0.01, 2)
 
-            if start == 0:
+            if effect_start == 0:
                 raise Exception("Target and start should be different")
 
             decimal_start = 10 * math.log(effect_start, 2)
@@ -321,7 +347,7 @@ class MetaModulate():
             #Going from 0.0 to x
             decimal_start = 10 * math.log(0.01, 2)
 
-            if target == 0:
+            if effect_target == 0:
                 raise Exception("Target and start should be different")
 
             decimal_target = 10 * math.log(effect_target, 2)
@@ -731,7 +757,7 @@ class MetaModulate():
                     last = end
 
                     data_out, sr = librosa.load(current_app.config["METAMIX_TEMP_SAVE"]+"changed.wav", sr=None) 
-                    frame_out = data_out[int(start_slice):int(end)]
+                    frame_out = data_out[int(round(start_slice)):int(round(end))]
                     out = np.concatenate((out, frame_out))
             
         #assert len(out) == len(data)

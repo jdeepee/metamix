@@ -2,13 +2,17 @@
 from metamix.blueprints import mix
 from metamix.models.user import User
 from metamix.models.mix import Mix, MixAudio
+from metamix.models.clip import Clip
 from metamix.models.song import Song, Effect
 from metamix.utils.upload import enqueue_mix
 from metamix.errors import MetaMixException
 from metamix.serialization.mix import MixSchema
 from metamix.utils.general import jwt_required
+from metamix.worker.mix import MixWorker
+from metamix.worker.meta_modulate import MetaModulate
 from flask import *
 import json
+import copy
 
 @mix.route("/meta/mix", methods=["GET"])
 @jwt_required
@@ -76,15 +80,41 @@ def download_mix(id):
 	"""Download MP3/WAV of mix"""
 	pass
 
-@mix.route("/meta/mix/<mix_id>/song/<song_id>", methods=["POST"])
+@mix.route("/meta/mix/<mix_id>/audio/recompute", methods=["POST"])
 @jwt_required
-def recompute_song(user_id, mix_id, song_id):
+def recompute_song(user_id, mix_id, audio_id):
 	"""Recomputes the waveform and beat markers of a song after a BPM/pitch modulation change"""
-	pass
+	#get original song mp3 and run all effects which are present in this song - saves the worker having to run them later this can just be done now and then the result grabbed later
+	#Save to s3
+	#save mix song to database and return object
+	#Should then delete or edit current mix song object for this data? This probably isnt necassary if metamodule worker also updated mix song
+	audio = request.json["audio"] #All pitch/tempo modulating effects that require song recomputation to be made from
+	mix = Mix.get_mix(mix_id)
+	if mix is None:
+		raise MetaMixException(message="Mix with ID {} does not exist".format(mix_id), status_code=404)
 
-# @mix.route("/meta/mix/<mix_id>/song/<song_id>", methods=["POST"])
-# @jwt_required
-# def get_mix_song(user_id, mix_id, song_id):
-# 	#Get song data within mix context - this will be used after applying tempo/pitch modulating effects to get the new BPM/key/beat pos/waveform data
-#     pass
+	if audio["type"] == "song":
+		audio_obj = Song.get_song(audio["id"])
 
+		if audio_obj is None:
+			raise MetaMixException(message="Song with ID {} does not exist".format(audio["id"]), status_code=404)
+
+	elif audio["type"] == "clip":
+		audio_obj = Clip.get_clip(audio["id"])
+
+		if audio_obj is None:
+			raise MetaMixException(message="Clip with ID {} does not exist".format(audio["id"]), status_code=404)
+	effects = MixWorker.normalize_eq_effect(copy.deepcopy(audio["effects"]))
+
+	data, sample_rate = MixWorker.fetch_s3(audio_obj.s3_key)
+	audio["data"] = data[int(round(audio["song_start"]*sample_rate)):int(round(audio["song_end"]*sample_rate))]
+	audio["sample_rate"] = sample_rate
+
+	effect_creator = MetaModulate(audio, 3, effects)
+	data = effect_creator.modulate()
+
+	#Save audio with effects applied into database for retrieval later on future computations
+	data_key = MixWorker.upload_s3(data["data"], sample_rate)
+	del audio["data"]
+	audio["s3_key"] = data_key
+	MixAudio.save_audio(mix_id, audio)

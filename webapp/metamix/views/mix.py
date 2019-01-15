@@ -80,11 +80,20 @@ def download_mix(id):
 	"""Download MP3/WAV of mix"""
 	pass
 
-@mix.route("/meta/mix/<mix_id>/audio/<audio_id>/delete", methods=["POST", "DELETE"])
+@mix.route("/meta/mix/<mix_id>/audio/<audio_id>/delete", methods=["POST"])
 @jwt_required
 def delete_mix_song(user_id, mix_id, audio_id):
 	""""Deletes cached mix audio data for mix at given ID. Used to help free up backend data"""
-	pass
+	mix = Mix.get_mix(mix_id)
+	if mix is None:
+		raise MetaMixException(message="Mix with ID {} does not exist".format(mix_id), status_code=404)
+
+	audio = MixAudio.get_mix_audio_by_id(audio_id, mix_id)
+	if audio is None:
+		raise MetaMixException(message="Mix Audio with ID {} does not exist".format(audio_id), status_code=404)
+
+	audio.delete_mix_audio()
+	return jsonify({"message": "Cached mix audio object deleted from backend"}), 200
 
 @mix.route("/meta/mix/<mix_id>/audio/compute", methods=["POST"])
 @jwt_required

@@ -2,6 +2,7 @@ from metamix.extensions import db
 from metamix.models.song import Song, Effect
 from metamix.models.clip import Clip
 from metamix.errors import MetaMixException
+from metamix.utils.general import delete_s3, is_valid_uuid
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
 import json
@@ -93,11 +94,23 @@ class MixAudio(db.Model):
     song_id = db.Column("song_id", UUID(as_uuid=True), db.ForeignKey('song.id', ondelete='CASCADE'))
     effects = db.relationship("Effect", backref="effect", lazy="dynamic")
 
+    def delete_mix_audio(self):
+        delete_s3(self.s3_key)
+        self.delete()
+
     @staticmethod
     def save_audio(mix_id, audio_obj):
-        #Recomputation of waveform/beat positions and saving of new bpm/key should happen here on save_audio
+        if (is_valid_uuid(audio_obj["id"] != True)):
+            raise MetaMixException(message="Invalid ID for audio object", status_code=400)
+            
+        audio_check = MixAudio.get_mix_audio_by_id(audio_obj["id"], mix_id)
+        #Check that audio item has not been previously processed and there is a save of it 
+        #For each audio item in mix there should only be one record in the database and s3 bucket
+        if audio_check != None:
+            audio_check.delete_mix_audio()
+
         if audio_obj["type"] == "song":
-            audio = MixAudio(id=uuid.uuid4(), mix_id=mix_id, name=audio_obj["name"], s3_key=audio_obj["s3_key"], start=audio_obj["song_start"], end=audio_obj["song_end"], 
+            audio = MixAudio(id=audio_obj["id"], mix_id=mix_id, name=audio_obj["name"], s3_key=audio_obj["s3_key"], start=audio_obj["song_start"], end=audio_obj["song_end"], 
                              mix_start=audio_obj["start"], mix_end=audio_obj["end"], song_id=audio_obj["audio_id"], 
                              waveform=audio_obj["waveform"], beat_positions=audio_obj["beat_positions"], bpm=audio_obj["bpm"], key=audio_obj["key"],
                              length=audio_obj["length"])
@@ -105,7 +118,7 @@ class MixAudio(db.Model):
             db.session.commit()
 
         elif audio_obj["type"] == "clip":
-            audio = MixAudio(id=uuid.uuid4(), mix_id=mix_id, name=audio_obj["name"], s3_key=audio_obj["s3_key"], start=audio_obj["song_start"], end=audio_obj["song_end"], 
+            audio = MixAudio(id=audio_obj["id"], mix_id=mix_id, name=audio_obj["name"], s3_key=audio_obj["s3_key"], start=audio_obj["song_start"], end=audio_obj["song_end"], 
                              mix_start=audio_obj["start"], mix_end=audio_obj["end"], clip_id=audio_obj["audio_id"], 
                              waveform=audio_obj["waveform"], beat_positions=audio_obj["beat_positions"], bpm=audio_obj["bpm"], key=audio_obj["key"],
                              length=audio_obj["length"])
@@ -118,8 +131,8 @@ class MixAudio(db.Model):
             effect_data["type"] = effect["type"]
             effect_data["start"] = effect["start"]
             effect_data["end"] = effect["end"]
-            del effect_data["effect_parameters"]["startX"]
-            del effect_data["effect_parameters"]["endX"]
+            del effect["startX"]
+            del effect["endX"]
             effect_data["effect_parameters"] = effect
             effect_data["id"] = effect["id"] #id is most likley not necassary/will break things as id may be computed by front end each time mix is loaded? Or just computed once at first load
             effect_data["mix_audio_id"] = audio.id
@@ -189,3 +202,8 @@ class MixAudio(db.Model):
 
         else:
             return None
+
+    @staticmethod
+    def get_mix_audio_by_id(id, mix_id):
+        audio = MixAudio.query.filter(MixAudio.id == id, MixAudio.mix_id == mix_id).first()
+        return audio

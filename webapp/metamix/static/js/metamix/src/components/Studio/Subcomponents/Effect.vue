@@ -298,8 +298,14 @@
 					}
 				},
 				removeAudio(audioId){
+					let currentUi = this.$store.getters.getUi;
+					this.mixId = currentUi.currentMixId;
 					this.$store.commit("deleteAudio", audioId);
-					console.log(this.$store.getters.getMixData);
+					axios({ method: "POST", "url": this.baseUrl+"/meta/mix/"+this.mixId+"/audio/"+audioId+"/delete", "headers": { "content-type": "application/json", "JWT-Auth":  this.jwt}})
+					.then(result => {
+						console.log(result.data)
+					}).catch(error => {
+					});
 				},
 				copyAudio(audioId){
 					let copyId = utils.guid();

@@ -447,7 +447,7 @@
 					let y2 = (lineHeight)/this.dpr; //Ending y value for audio item
 
 					if (this.renderedItems == false){
-						console.log("Setting audio item", audioItem);
+						console.log("Setting audio item", audioItem, x, x2);
 						let AudioRect = new AudioItem();
 						AudioRect.set(x, y1, x2, y2, Settings.theme.audioElement, audioItem, this.timeScale, this.frameStart, this.dpr, this.width);
 						AudioRect.setWaveForm(audioItem.rawWaveForm, this.frameStart, this.timeScale, offset);
@@ -859,7 +859,10 @@
 			refreshAudio(){
 				//Currently this refresh the entire set of audio - in the future this should instead refresh the audio at a given audioId
 				//Will be used to update audioData after effect computation has taken place
+				console.log("audio data before refresh", this.audioData)
 				this.mixData = this.$store.getters["getMixData"];
+				console.log("Stores data", this.mixData)
+				this.renderItems = [];
 				this.audioData = this.mixData.audio; 
 				this.renderedItems = false;
 			},

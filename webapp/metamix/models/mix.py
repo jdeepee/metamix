@@ -96,13 +96,14 @@ class MixAudio(db.Model):
 
     def delete_mix_audio(self):
         delete_s3(self.s3_key)
-        self.delete()
+        db.session.delete(self)
+        db.session.commit()
 
     @staticmethod
     def save_audio(mix_id, audio_obj):
         if (is_valid_uuid(audio_obj["id"] != True)):
             raise MetaMixException(message="Invalid ID for audio object", status_code=400)
-            
+
         audio_check = MixAudio.get_mix_audio_by_id(audio_obj["id"], mix_id)
         #Check that audio item has not been previously processed and there is a save of it 
         #For each audio item in mix there should only be one record in the database and s3 bucket
@@ -159,6 +160,8 @@ class MixAudio(db.Model):
             print "Effects for matched song: {} vs target effects: {}".format(song_effects, target_effects)
 
             for effect in target_effects:
+                del effect["startX"]
+                del effect["endX"]
                 if effect not in song_effects:
                     match = False
                     break;

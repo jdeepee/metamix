@@ -699,10 +699,13 @@ class MetaModulate():
         if start < -12 or start > 12:
             raise ValueError("Target should be between -12 and 12 semitones")
 
+        temp_changed = current_app.config["METAMIX_TEMP_SAVE"]+"changed.wav"
+        temp_temp = current_app.config["METAMIX_TEMP_SAVE"]+"temp.wav"
+
         if strength_curve == "continuous":
-            librosa.output.write_wav(current_app.config["METAMIX_TEMP_SAVE"]+"temp.wav", data, sample_rate)
-            subprocess.call(["rubberband","--pitch", str(start), current_app.config["METAMIX_TEMP_SAVE"]+"temp.wav", current_app.config["METAMIX_TEMP_SAVE"]+"changed.wav"])
-            out, sr = librosa.load(current_app.config["METAMIX_TEMP_SAVE"]+"changed.wav", sr=None) 
+            librosa.output.write_wav(temp_temp, data, sample_rate)
+            subprocess.call(["rubberband","--pitch", str(start), temp_temp, temp_changed])
+            out, sr = librosa.load(temp_changed, sr=None) 
 
         elif strength_curve == "linear":
             length, increments, chunk_size = MetaModulate.standard_incrementation(0, float(float(len(data)) / float(sample_rate)), 
@@ -710,7 +713,7 @@ class MetaModulate():
                                                                      "pitch")
 
             out = np.array([])
-            librosa.output.write_wav(current_app.config["METAMIX_TEMP_SAVE"]+"temp.wav", data, sample_rate)
+            librosa.output.write_wav(temp_temp, data, sample_rate)
 
             if self.debug_level == 2:
                 print "Length of audio of given input: {}".format(length)
@@ -726,13 +729,15 @@ class MetaModulate():
                 if i != len(increments) -1:
                     current_change = (i * chunk_size) + start
 
-                    subprocess.call(["rubberband","--pitch", str(current_change), current_app.config["METAMIX_TEMP_SAVE"]+"temp.wav", current_app.config["METAMIX_TEMP_SAVE"]+"changed.wav"])
-                    data_out, sr = librosa.load(current_app.config["METAMIX_TEMP_SAVE"]+"changed.wav", sr=None) 
+                    subprocess.call(["rubberband","--pitch", str(current_change), temp_temp, temp_changed])
+                    data_out, sr = librosa.load(temp_changed, sr=None) 
                     frame_out = data_out[n*sample_rate:increments[i+1]*sample_rate]
                     out = np.concatenate((out, frame_out))
 
         self.debug_print(1, "\n")
         assert len(out) == len(data)
+        os.remove(temp_temp)
+        os.remove(temp_changed)
         return out
 
     def tempo(self, data, sample_rate, strength_curve, target, start):

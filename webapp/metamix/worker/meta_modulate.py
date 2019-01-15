@@ -1,4 +1,6 @@
 from metamix.key_variables import modulation_algorithm_parameters
+from metamix.utils.analysis import create_waveform, compute_bar_markers
+from metamix.utils.general import delete_s3
 from pysndfx import AudioEffectsChain
 from flask import *
 import numpy as np
@@ -24,6 +26,7 @@ class MetaModulate():
         self.audio_start = float(song_object["song_start"])
         self.audio_end = float(song_object["song_end"])
         self.debug_level = debug_level #Level of debug to output 0-3 where 0 is none, 1 is lowest amount of debugging (most important) and 3 is all 
+        self.sample_rate = 44100
 
     def modulate(self):
         """Applies effects described by effect_data to input data and returns output - input and output as timepoint floating series
@@ -39,9 +42,6 @@ class MetaModulate():
         self.debug_print(1, 'Running modulate functon')
         self.order_effects()
         self.debug_print(3, "Modulating original data:\n {}".format(self.effect_data))
-        recompute_barmarkers = False
-        recompute_waveform = False
-        update_key = False
 
         for i, effect in enumerate(self.effect_data):
             self.effect_data[i]["start"] = float(float(self.effect_data[i]["start"]) - self.audio_start)
@@ -176,20 +176,52 @@ class MetaModulate():
         self.debug_print(1, "Input data: {}".format(data_shape))
         self.debug_print(1, "Final computed data: {}".format(out_shape))
         self.out = {"data": self.out}
-
-        return out
+        self.handle_recompute()
+        
+        return self.out
 
     #Util methods
-    def recompute_waveform(self):
-        """Recomputes waveform on whole audio data"""
-        pass
-        
-    def recompute_barmarkers(self):
-        """Recomputes barmarkers of the song at given effect areas where the given effect would change position of bar markers. 
-            So if tempo modulation happens in the middle of a song - bar markers will be recreated just for the middle section
-            this way bar markers will remain consistent no matter where in the song effect modulation has happened"""
-        pass
+    def adjust_effect_bounds(self, length):
+        for effect in self.audio_object["effects"]:
+            if effect["end"] > length:
+                effect["end"] = length
 
+    def handle_recompute(self):
+        """Handles the recomputation of bar markers and waveforms for new audio data post effect modulation"""
+        for effect in self.effect_data:
+            if effect["type"] == "tempo":
+                full_temp_filename = current_app.config["METAMIX_TEMP_SAVE"] + str(uuid.uuid4()) + ".wav"
+                librosa.output.write_wav(full_temp_filename, self.out["data"], self.sample_rate)
+
+                if effect["start"] == self.audio_object["start"] and effect["end"] == self.audio_object["end"]:
+                    #Recompute bar markers for entire song
+                    bpm, beats, beats_confidence, _, beats_intervals = compute_bar_markers(full_temp_filename, loaded=False)
+                    self.out["bpm"] = effect["effectStart"]
+                    self.out["beat_positions"] = beats.tolist()
+
+                else:
+                    #Recompute bar markers for slice @ effect["start"] effect["end"]
+                    partial_temp_filename = current_app.config["METAMIX_TEMP_SAVE"] + str(uuid.uuid4()) + ".wav"
+                    librosa.output.write_wav(partial_temp_filename, self.out["data"][int(round(effect["start"]*self.sample_rate)): int(round(effect["end"]*self.sample_rate))], self.sample_rate)
+                    bpm, beats, beats_confidence, _, beats_intervals = compute_bar_markers(partial_temp_filename, loaded=False)
+                    np_bpos = np.array(self.audio_object["beat_positions"])
+                    start_idx = (np.abs(np_bpos-effect["start"])).argmin()
+                    end_idx = (np.abs(np_bpos-effect["end"])).argmin()
+                    self.out["beat_positions"] = np_bpos[0:start_idx] + (beats + np_bpos[start_idx]) + np_bpos[end_idx: -1]
+                    self.audio_object["beat_positions"] = self.out["beat_positions"].tolist()
+
+                    os.remove(partial_temp_filename)
+
+                self.out["length"] = self.out["data"].shape[0] / self.sample_rate
+                self.out["song_end"] = self.out["length"]
+                self.out["end"] = self.audio_object["start"] + self.out["length"]
+                self.out["waveform"] = create_waveform(full_temp_filename)
+                self.adjust_effect_bounds(self.out["length"])
+                os.remove(full_temp_filename)
+
+            elif effect["type"] == "pitch":
+                pass
+        
     def recompute_key(self):
         """Looks at pitch modulation that has happened on the song - if the duration of the pitch modulation is the length of the song then it will add a key key/value pair to the output data of the new key """
         pass

@@ -87,6 +87,7 @@ class MixAudio(db.Model):
     beat_positions = db.Column(db.JSON()) #Used to keep an updated version of the beat_positions if BPM is changed
     bpm = db.Column("bpm", db.Float()) #Used to keep an updated version of the BPM
     key = db.Column("key", db.String(50)) #Used to keep an updated version of the key
+    length = db.Column("length", db.Float())
 
     clip_id = db.Column("clip_id", UUID(as_uuid=True), db.ForeignKey('clip.id', ondelete='CASCADE'))
     song_id = db.Column("song_id", UUID(as_uuid=True), db.ForeignKey('song.id', ondelete='CASCADE'))
@@ -98,28 +99,33 @@ class MixAudio(db.Model):
         if audio_obj["type"] == "song":
             audio = MixAudio(id=uuid.uuid4(), mix_id=mix_id, name=audio_obj["name"], s3_key=audio_obj["s3_key"], start=audio_obj["song_start"], end=audio_obj["song_end"], 
                              mix_start=audio_obj["start"], mix_end=audio_obj["end"], song_id=audio_obj["audio_id"], 
-                             waveform=audio_obj["waveform"], beat_positions=audio_obj["beat_positions"], bpm=audio_obj["bpm"], key=audio_obj["key"])
+                             waveform=audio_obj["waveform"], beat_positions=audio_obj["beat_positions"], bpm=audio_obj["bpm"], key=audio_obj["key"],
+                             length=audio_obj["length"])
             db.session.add(audio)
             db.session.commit()
 
         elif audio_obj["type"] == "clip":
             audio = MixAudio(id=uuid.uuid4(), mix_id=mix_id, name=audio_obj["name"], s3_key=audio_obj["s3_key"], start=audio_obj["song_start"], end=audio_obj["song_end"], 
                              mix_start=audio_obj["start"], mix_end=audio_obj["end"], clip_id=audio_obj["audio_id"], 
-                             waveform=audio_obj["waveform"], beat_positions=audio_obj["beat_positions"], bpm=audio_obj["bpm"], key=audio_obj["key"])
+                             waveform=audio_obj["waveform"], beat_positions=audio_obj["beat_positions"], bpm=audio_obj["bpm"], key=audio_obj["key"],
+                             length=audio_obj["length"])
             db.session.add(audio)
             db.session.commit()
 
         effect_data = {}
         for effect in audio_obj["effects"]:
+            print "Inseting effect: {}".format(effect)
             effect_data["type"] = effect["type"]
             effect_data["start"] = effect["start"]
             effect_data["end"] = effect["end"]
+            del effect_data["effect_parameters"]["startX"]
+            del effect_data["effect_parameters"]["endX"]
             effect_data["effect_parameters"] = effect
             effect_data["id"] = effect["id"] #id is most likley not necassary/will break things as id may be computed by front end each time mix is loaded? Or just computed once at first load
             effect_data["mix_audio_id"] = audio.id
             Effect.insert_audio_effect(effect_data)
 
-        return audio
+        return audio_obj
 
     @staticmethod
     def get_mix_song(mix_id, song_id, song_start, song_end, target_effects):

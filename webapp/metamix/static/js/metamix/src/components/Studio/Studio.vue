@@ -447,6 +447,7 @@
 					let y2 = (lineHeight)/this.dpr; //Ending y value for audio item
 
 					if (this.renderedItems == false){
+						console.log("Setting audio item", audioItem);
 						let AudioRect = new AudioItem();
 						AudioRect.set(x, y1, x2, y2, Settings.theme.audioElement, audioItem, this.timeScale, this.frameStart, this.dpr, this.width);
 						AudioRect.setWaveForm(audioItem.rawWaveForm, this.frameStart, this.timeScale, offset);
@@ -855,6 +856,21 @@
 												}
 											}
 			},
+			refreshAudio(){
+				//Currently this refresh the entire set of audio - in the future this should instead refresh the audio at a given audioId
+				//Will be used to update audioData after effect computation has taken place
+				this.mixData = this.$store.getters["getMixData"];
+				this.audioData = this.mixData.audio; 
+				this.renderedItems = false;
+			},
+			fetchWaveFormObj(audioObj){
+				let componentObj = this;
+				let waveform = this.fetchWaveForm(audioObj.waveform);
+				return waveform.then(function(data){
+					let wfd = WaveformData.create(data.data);
+					return wfd;
+				})
+			},
 			fetchWaveForms(){
 				let componentObj = this;
 				for (let i=0; i<this.audioData.length; i++){
@@ -868,8 +884,8 @@
 			},
 			async fetchWaveForm(waveformKey){
 				try {
-					let res = axios.get(this.appData.s3Url+waveformKey, {"responseType": 'arraybuffer'});
-					return await res;
+					let res = await axios.get(this.appData.s3Url+waveformKey, {"responseType": 'arraybuffer'});
+					return res;
 				} catch (error) {
 					console.error(error);
 				}

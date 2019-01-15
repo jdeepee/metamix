@@ -80,30 +80,45 @@ def download_mix(id):
 	"""Download MP3/WAV of mix"""
 	pass
 
-@mix.route("/meta/mix/<mix_id>/audio/recompute", methods=["POST"])
+@mix.route("/meta/mix/<mix_id>/audio/<audio_id>/delete", methods=["POST", "DELETE"])
 @jwt_required
-def recompute_song(user_id, mix_id, audio_id):
-	"""Recomputes the waveform and beat markers of a song after a BPM/pitch modulation change"""
-	#get original song mp3 and run all effects which are present in this song - saves the worker having to run them later this can just be done now and then the result grabbed later
-	#Save to s3
-	#save mix song to database and return object
-	#Should then delete or edit current mix song object for this data? This probably isnt necassary if metamodule worker also updated mix song
+def delete_mix_song(user_id, mix_id, audio_id):
+	""""Deletes cached mix audio data for mix at given ID. Used to help free up backend data"""
+	pass
+
+@mix.route("/meta/mix/<mix_id>/audio/compute", methods=["POST"])
+@jwt_required
+def recompute_song(user_id, mix_id):
+	"""Computes all effect modulation that should happen on submitted audio. This should normally be called after tempo/pitch effect has been added to audio so that a new waveform can be computed
+		However it is also possible that it can be used to compute effect modulation on a song prior to mixing to speed up mix mp3 data creation.
+	 """
 	audio = request.json["audio"] #All pitch/tempo modulating effects that require song recomputation to be made from
 	mix = Mix.get_mix(mix_id)
 	if mix is None:
 		raise MetaMixException(message="Mix with ID {} does not exist".format(mix_id), status_code=404)
 
 	if audio["type"] == "song":
-		audio_obj = Song.get_song(audio["id"])
+		audio_obj = Song.get_song(audio["audio_id"])
 
 		if audio_obj is None:
-			raise MetaMixException(message="Song with ID {} does not exist".format(audio["id"]), status_code=404)
+			raise MetaMixException(message="Song with ID {} does not exist".format(audio["audio_id"]), status_code=404)
+
+		prev_processed = MixAudio.get_mix_song(mix_id, audio["audio_id"], audio["song_start"], audio["song_end"], audio["effects"]) 
+
+		if prev_processed != None:
+			return jsonify({"message": "Audio has been processed"}), 200
 
 	elif audio["type"] == "clip":
-		audio_obj = Clip.get_clip(audio["id"])
+		audio_obj = Clip.get_clip(audio["audio_id"])
 
 		if audio_obj is None:
-			raise MetaMixException(message="Clip with ID {} does not exist".format(audio["id"]), status_code=404)
+			raise MetaMixException(message="Clip with ID {} does not exist".format(audio["audio_id"]), status_code=404)
+
+		prev_processed = MixAudio.get_mix_clip(mix_id, audio["audio_id"], audio["song_start"], audio["song_end"], audio["effects"]) 
+
+		if prev_processed != None:
+			return jsonify({"message": "Audio has been processed"}), 200
+
 	effects = MixWorker.normalize_eq_effect(copy.deepcopy(audio["effects"]))
 
 	data, sample_rate = MixWorker.fetch_s3(audio_obj.s3_key)
@@ -117,4 +132,11 @@ def recompute_song(user_id, mix_id, audio_id):
 	data_key = MixWorker.upload_s3(data["data"], sample_rate)
 	del audio["data"]
 	audio["s3_key"] = data_key
-	MixAudio.save_audio(mix_id, audio)
+
+	for key, value in data.iteritems():
+		if key != "data":
+			audio[key] = value
+
+	new_audio = MixAudio.save_audio(mix_id, audio)
+
+	return jsonify({"data": new_audio, "message": "Audio has been processed"}), 200

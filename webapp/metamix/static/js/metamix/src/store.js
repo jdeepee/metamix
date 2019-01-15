@@ -19,6 +19,7 @@ export const store = new Vuex.Store({
 			lineHeight: undefined, //Size of track items - this should be compute when Studio component is ran and resized
 			xScrollTime: 0,
 			currentEffect: null,
+			currentMixId: null,
 			effects: {"eq": {"start": 0, "end": 0, "startGlobal": 0, "endGlobal": 0, "barCountStart": 0, "barCountEnd": 0, "strengthCurve": "continuous", "title": "EQ Effect",
 							 "knobs": [{"name": "high", "title": "Highs", "start": 0, "target": 0, "max": 2, "min": -2, "step": 0.01, "precision": 2, "default": 0}, 
 							 		   {"name": "mid", "title": "Mids", "start": 0, "target": 0, "max": 2, "min": -2, "step": 0.01, "precision": 2, "default": 0}, 
@@ -68,6 +69,7 @@ export const store = new Vuex.Store({
 		},
 		addMixData(state, data){
 			state.mixData = data;
+			state.uiData.currentMixId = data.id;
 		},
 		updateUi(state, data){
 			for (let key in data){

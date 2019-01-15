@@ -64,6 +64,7 @@
 		import {Settings} from "../../../settings.js"
 		import VueDraggableResizable from 'vue-draggable-resizable'
 		import KnobControl from './KnobControl.vue'
+		import axios from "axios"
 
 		export default{
 			"name": "Effect",
@@ -97,6 +98,27 @@
 				closeModal(){
 					this.modal.style.display = "none";
 					this.draggableModal.style.display = "none";
+					let modulatedAudio = this.$store.getters.getAudio(this.audioId);
+
+					//Test running this when only tempo/pitch effect modulation happens vs any kind of modulation 
+					//If this is used for any kind of modulation it may create bottlnecks in the speed of the application or speed up final mix processing time
+					console.log("Computing on modulated audio", modulatedAudio);
+					axios({ method: "POST", "url": this.baseUrl+"/meta/mix/"+this.mixId+"/audio/compute", "data": {"audio": modulatedAudio}, "headers": { "content-type": "application/json", "JWT-Auth":  this.jwt}})
+					.then(result => {
+						if ("data" in result.data){
+							this.$store.commit("deleteAudio", this.audioId);
+							let componentObj = this;
+							result.data.data.originalLength = result.data.data.length;
+							this.$parent.fetchWaveFormObj(result.data.data).then(function(data){
+								result.data.data.rawWaveForm = data;
+								componentObj.$store.commit("addAudio", result.data.data);
+								componentObj.$parent.refreshAudio();
+							});
+						}
+					}).catch(error => {
+						//Display error on front end
+						console.log(error.response)
+					});
 				},
 				strengthCurveUpdate(value){
 					this.$store.commit("updateEffect", {"id": this.effectId, "audioId": this.audioId, "strength_curve": value});
@@ -347,6 +369,7 @@
 				renderEffectModal(type, audioItem, effect){
 					//Updates values in vuex and here so that the modal is rendered correctly with the correct ID's
 					let currentUi = this.$store.getters.getUi;
+					this.mixId = currentUi.currentMixId;
 					this.$store.commit("updateUi", {"currentEffect": type});
 					this.currentEffect = type;
 					this.audioId = audioItem.id;
@@ -408,9 +431,13 @@
 				}
 			},
 			mounted(){
+				let currentAppData = this.$store.getters.getAppData;
+				let currentUserData = this.$store.getters.getUserData;
+				this.jwt = currentUserData["jwtToken"];
 				this.modal = document.getElementById("effectModal");
 				this.draggableModal = document.getElementById("draggable-master");
 				this.hiddenKnobContainer = document.getElementById("end-knob-container");
+				this.baseUrl = currentAppData["baseUrl"];
 				let browserHorizonHalf = window.innerWidth / 2;
 				let browserVerticalHalf = window.innerHeight / 2;
 

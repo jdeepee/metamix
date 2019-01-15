@@ -17,4 +17,4 @@ print "Running app with config: " + config
 app = create_app(config)
 
 if __name__ == "__main__":
-    app.run()
+    app.run(threaded=True)

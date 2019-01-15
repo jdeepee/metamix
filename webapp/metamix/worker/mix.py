@@ -2,6 +2,7 @@ from metamix.models.mix import Mix, MixAudio
 from metamix.models.song import Song
 from metamix.models.user import User
 from metamix.models.clip import Clip
+from metamix.utils.general import delete_s3
 from metamix.worker.meta_modulate import MetaModulate
 from flask import *
 import numpy as np
@@ -84,12 +85,17 @@ class MixWorker():
 
                     effect_creator = MetaModulate(audio, 3, effects)
                     data = effect_creator.modulate()
-                    out.append({"id": audio["id"], "start": audio["start"], "end": audio["end"], "data": data}) #Using local ID for ID of out as their could be duplicate audio items
+                    out.append({"id": audio["id"], "start": audio["start"], "end": audio["end"], "data": data["data"]}) #Using local ID for ID of out as their could be duplicate audio items
 
                     #Save audio with effects applied into database for retrieval later on future computations
-                    data_key = MixWorker.upload_s3(data, sample_rate)
+                    data_key = MixWorker.upload_s3(data["data"], sample_rate)
                     del audio["data"]
                     audio["s3_key"] = data_key
+
+                    for key, value in data.iteritems():
+                        if key != "data":
+                            audio[key] = value
+                            
                     MixAudio.save_audio(self.mix_id, audio)
 
             else:
@@ -118,6 +124,9 @@ class MixWorker():
         # del self.json_description["data"]
         # del self.json_description["sample_rate"]
         self.mix_object.update_mix_data(self.json_description)
+        if self.mix_object.s3_key != None:
+            delete_s3(self.mix_object.s3_key)
+
         MixWorker.upload_s3(mix_data, sample_rate)
         print "Mix computation completed and mix uploaded"
 

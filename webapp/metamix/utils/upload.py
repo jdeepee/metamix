@@ -4,7 +4,6 @@ from rq import Queue
 from flask import *
 import librosa
 import uuid
-import boto3
 import boto
 import os
 

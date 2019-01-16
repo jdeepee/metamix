@@ -1,9 +1,7 @@
 import utils from "./utils.js"
 import {Settings} from "../../../settings.js"
 
-function AudioItem() {
-	
-}
+function AudioItem() {}
 
 AudioItem.prototype.setWaveForm = function(rawWaveForm, time_scale, frame_start, offset){
 	//console.log("SEtting waveform from", rawWaveForm, this.audioName, this.songStart, this.songEnd, this.size)
@@ -13,7 +11,9 @@ AudioItem.prototype.setWaveForm = function(rawWaveForm, time_scale, frame_start,
 	this.originalSize = this.originalLength * this.time_scale;
 	console.log(this);
 	if (this.rawWaveForm != undefined){
-		const y = utils.interpolateHeight(this.y2-10);
+		const y = utils.interpolateHeight(this.y2-10); //Here the -10 and +8 values below are offseting the painting of the waveform by 8 pixels
+		//This offsetting ensures that the waveform does not obscure the audio text
+		//This value should not be hard coded but instead calculated based on size of audio text
 		this.rawWaveForm = this.rawWaveForm.resample({ width: this.originalSize })
 
 		const timeToPixels = (waveform, time) => 
@@ -26,11 +26,11 @@ AudioItem.prototype.setWaveForm = function(rawWaveForm, time_scale, frame_start,
 		this.rawWaveForm.offset(startIndex, endIndex);
 
 		this.rawWaveForm.min.forEach((val, x) => {
-		  this.rawWaveFormMin.push([x, y(val)])
+		  this.rawWaveFormMin.push([x, y(val)+8])
 		});
 
 		this.rawWaveForm.max.reverse().forEach((val, x) => {
-			this.rawWaveFormMax.push([(this.rawWaveForm.offset_length - x), y(val)]);
+			this.rawWaveFormMax.push([(this.rawWaveForm.offset_length - x), y(val)+8]);
 		});
 	}
 }

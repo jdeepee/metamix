@@ -211,37 +211,39 @@ AudioItem.prototype.paintEffects = function(ctx) {
 
 AudioItem.prototype.paintBarMarkers = function(ctx, block) {
 	if (block == false){
-		this.barMarkersX = [];
-		this.barMarkersXRounded = [];
-		ctx.strokeStyle = "grey";
+		if (this.barMarkers.length + (ctx.measureText(this.barMarkers.length.toString()).width * this.barMarkers.length) < this.x2Normalized){
+			this.barMarkersX = [];
+			this.barMarkersXRounded = [];
+			ctx.strokeStyle = "grey";
 
-		for (let i=0; i<this.barMarkers.length; i++){
-			if (i % 4 == 0){ ctx.lineWidth = 2; } else { ctx.lineWidth = 1;}
-				let time = utils.time_to_x(this.barMarkers[i], this.time_scale, this.frame_start) + this.xNormalized;
-				if (this.insideWindowRaw(time) == true){
-				this.barMarkersX.push(time);
-				this.barMarkersXRounded.push(utils.round(time, 0.5));
-				ctx.beginPath();
-				ctx.moveTo(time, this.y+1);
-				ctx.lineTo(time, this.y+this.y2);
-				ctx.fillText(i+1, time+5, this.y+this.y2-1);
-				ctx.stroke();
+			for (let i=0; i<this.barMarkers.length; i++){
+				if (i % 4 == 0){ ctx.lineWidth = 2; } else { ctx.lineWidth = 1;}
+					let time = utils.time_to_x(this.barMarkers[i], this.time_scale, this.frame_start) + this.xNormalized;
+					if (this.insideWindowRaw(time) == true){
+					this.barMarkersX.push(time);
+					this.barMarkersXRounded.push(utils.round(time, 0.5));
+					ctx.beginPath();
+					ctx.moveTo(time, this.y+1);
+					ctx.lineTo(time, this.y+this.y2);
+					ctx.fillText(i+1, time+5, this.y+this.y2-1);
+					ctx.stroke();
+				}
 			}
+			this.createBarDiff();
 		}
-		this.createBarDiff();
-
 	} else {
 		ctx.strokeStyle = "grey";
-
-		for (let i=0; i<this.barMarkers.length; i++){
-			if (i % 4 == 0){ ctx.lineWidth = 2; } else { ctx.lineWidth = 1;}
-			if (this.insideWindowRaw(this.barMarkersX[i]) == true){
-				let time = this.barMarkersX[i];
-				ctx.beginPath();
-				ctx.moveTo(time, this.y+1);
-				ctx.lineTo(time, this.y+this.y2);
-				ctx.fillText(i+1, time+5, this.y+this.y2-1);
-				ctx.stroke();
+		if (this.barMarkers.length + (ctx.measureText(this.barMarkers.length.toString()).width * this.barMarkers.length) < this.x2Normalized){
+			for (let i=0; i<this.barMarkers.length; i++){
+				if (i % 4 == 0){ ctx.lineWidth = 2; } else { ctx.lineWidth = 1;}
+				if (this.insideWindowRaw(this.barMarkersX[i]) == true){
+					let time = this.barMarkersX[i];
+					ctx.beginPath();
+					ctx.moveTo(time, this.y+1);
+					ctx.lineTo(time, this.y+this.y2);
+					ctx.fillText(i+1, time+5, this.y+this.y2-1);
+					ctx.stroke();
+				}
 			}
 		}
 	}

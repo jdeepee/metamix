@@ -856,12 +856,10 @@
 												}
 											}
 			},
-			refreshAudio(){
+			refreshAudio(refreshId){
 				//Currently this refresh the entire set of audio - in the future this should instead refresh the audio at a given audioId
 				//Will be used to update audioData after effect computation has taken place
-				console.log("audio data before refresh", this.audioData)
 				this.mixData = this.$store.getters["getMixData"];
-				console.log("Stores data", this.mixData)
 				this.renderItems = [];
 				this.audioData = this.mixData.audio; 
 				this.renderedItems = false;

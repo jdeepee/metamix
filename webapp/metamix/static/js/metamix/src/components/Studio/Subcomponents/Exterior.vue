@@ -11,6 +11,13 @@
 				<i class="material-icons" @click="playAudio">play_arrow</i><i class="material-icons" @click="pauseAudio">pause</i>
 			</div>
 		</div>
+		<div style="display: none; justify-content: center; top:20%" id="loader-wrapper">
+			<semipolar-spinner
+				:animation-duration="2000"
+				:size="loaderSize"
+				color="#4286f4"
+			/>
+		</div>
 		<div id="add-song" @click="updateAudioModal()">
 			<i class="material-icons" style="font-size: 5rem">expand_less</i>
 		</div>
@@ -33,11 +40,13 @@
 	import utils from "../src/utils.js";
 	import axios from "axios";
 	import VueDraggableResizable from './vue-draggable-resizable.vue';
+	import {SemipolarSpinner} from 'epic-spinners';
 
 	export default {
 		name: "Exterior",
 		components: {
-			VueDraggableResizable
+			VueDraggableResizable,
+			SemipolarSpinner
 		},
 		data(){
 			return {
@@ -48,10 +57,17 @@
 				timeBegan: null,
 				timeStopped: null,
 				stoppedDuration: 0,
-				started: null
+				started: null,
+				loaderSize: 40
 			}
 		},
 		methods:{
+			showLoader(){
+				this.loadingWrapper.style.display = "flex";
+			},
+			hideLoader(){
+				this.loadingWrapper.style.display = "none";
+			},
 			saveAudio(){
 				let mixData = JSON.parse(JSON.stringify(this.$store.getters.getMixData));
 				for (let i=0; i<mixData.audio.length; i++){ //Iterate over mixData to be sent to backend - delete all unnecassary key/value pairs along with redundant effects
@@ -81,9 +97,11 @@
 						text: 'Your mix has been saved - it is now processing.',
 						duration: 1000
 					});
+					this.hideLoader();
 				}).catch(error => {
                 	//Display error on front end
-   					console.log(error.response)
+					   console.log(error.response)
+					   this.hideLoader();
 				});
 			},
 			playAudio(){
@@ -315,6 +333,7 @@
 			this.baseUrl = currentAppData["baseUrl"];
 			this.jwt = currentUserData["jwtToken"];
 			this.getAudio();
+			this.loadingWrapper = document.querySelector("#loader-wrapper");
 		}	
 	}
 </script>

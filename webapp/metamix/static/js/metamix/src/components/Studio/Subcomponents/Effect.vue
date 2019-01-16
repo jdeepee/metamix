@@ -102,7 +102,14 @@
 
 					//Test running this when only tempo/pitch effect modulation happens vs any kind of modulation 
 					//If this is used for any kind of modulation it may create bottlnecks in the speed of the application or speed up final mix processing time
-					console.log("Computing on modulated audio", modulatedAudio);
+					this.$parent.exterior.showLoader();
+					this.$notify({
+						type: "warn",
+						group: "main",
+						title: 'Audio Updating',
+						text: 'Bar Markers and Waveform of audio are updating',
+						duration: 1000
+					});
 					axios({ method: "POST", "url": this.baseUrl+"/meta/mix/"+this.mixId+"/audio/compute", "data": {"audio": modulatedAudio}, "headers": { "content-type": "application/json", "JWT-Auth":  this.jwt}})
 					.then(result => {
 						if ("data" in result.data){
@@ -113,10 +120,28 @@
 								result.data.data.rawWaveForm = data;
 								componentObj.$store.commit("addAudio", result.data.data);
 								componentObj.$parent.refreshAudio();
+								componentObj.$parent.exterior.hideLoader();
+								componentObj.$notify({
+									type: "success",
+									group: "main",
+									title: 'Audio Updated',
+									text: 'Bar Markers and Waveform has been updated',
+									duration: 1000
+								});
+							});
+						} else {
+							this.$parent.exterior.hideLoader();
+							this.$notify({
+								type: "success",
+								group: "main",
+								title: 'Audio Up to date',
+								text: '',
+								duration: 1000
 							});
 						}
 					}).catch(error => {
 						//Display error on front end
+						this.$parent.exterior.hideLoader();
 						console.log(error.response)
 					});
 				},

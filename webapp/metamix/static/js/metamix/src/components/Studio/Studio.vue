@@ -221,6 +221,13 @@
 					}
 				}
 				this.canvas.addEventListener("click", audioSelectCallback, false);
+				this.$notify({
+					type: "success",
+					group: "main",
+					title: 'Click audio to begin ' + type + ' effect modulation',
+					text: '',
+					duration: 400
+				});
 			},
 			timeScaled(){
 				let div = 60;
@@ -723,11 +730,11 @@
 						}
 						componentObj.$store.commit("updateUi", {"timeScale": out});
 
-					} else if (e.keycode == 32){ //Space bar
-						if (this.exterior.playing == false){
-							this.exterior.playAudio();
+					} else if (e.keyCode == 32){ //Space bar
+						if (componentObj.exterior.playing == false){
+							componentObj.exterior.playAudio();
 						} else {
-							this.exterior.pauseAudio();
+							componentObj.exterior.pauseAudio();
 						}
 					}
 				}

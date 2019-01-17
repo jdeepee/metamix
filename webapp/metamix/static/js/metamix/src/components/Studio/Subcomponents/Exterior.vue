@@ -58,7 +58,8 @@
 				timeStopped: null,
 				stoppedDuration: 0,
 				started: null,
-				loaderSize: 40
+				loaderSize: 40,
+				prevOffset: 0
 			}
 		},
 		methods:{
@@ -111,36 +112,39 @@
 				this.stop();
 			},
 			start(){
-			    if (this.timeBegan === null) {
-			        this.timeBegan = new Date();
-			    }
+				let currentUi = this.$store.getters.getUi;
+				if (currentUi.currentTime != this.timeElapsed && this.timeElapsed != undefined){
+					this.offset = (currentUi.currentTime - this.timeElapsed);
+				} else {
+					this.offset = 0;
+				}
+				this.offset += this.prevOffset;
+				
+				if (this.timeBegan === null) {
+					this.timeBegan = new Date();
+				} else {
+					clearInterval(this.started);
+				}
 
-			    if (this.timeStopped !== null) {
-			       this.stoppedDuration += (new Date() - this.timeStopped);
-			    }
-
-			    this.started = setInterval(this.clockRunning, 10);	
+				if (this.timeStopped !== null) {
+					this.stoppedDuration += (new Date() - this.timeStopped);
+				}
+				this.started = setInterval(this.clockRunning, 10);	
 			},
 			stop() {
-			    this.timeStopped = new Date();
+				this.timeStopped = new Date();
+				this.prevOffset = this.offset;
 			    clearInterval(this.started);
-			    this.stoppedDuration = 0;
-			    this.timeBegan = null;
-			    this.timeStopped = null;
-			},
-			reset() {
-			    clearInterval(this.started);
-			    this.stoppedDuration = 0;
-			    this.timeBegan = null;
-			    this.timeStopped = null;
-			    this.$store.commit("updateUi", {"currentTime": 0});
+			    // this.stoppedDuration = 0;
+			    // this.timeBegan = null;
+			    // this.timeStopped = null;
 			},
 			clockRunning(){
 			    let currentTime = new Date();
-			    console.log(this.timeBegan, this.stoppedDuration)
 			    let timeElapsed = new Date(currentTime - this.timeBegan - this.stoppedDuration)
-			    timeElapsed = timeElapsed.getTime()
-				this.$store.commit("updateUi", {"currentTime": timeElapsed});
+				timeElapsed = timeElapsed.getTime() / 1000;
+				this.timeElapsed = timeElapsed + this.offset;
+				this.$store.commit("updateUi", {"currentTime": this.timeElapsed});
 			},
 			$ready(fn) {
 				if (process.env.NODE_ENV === 'production') {

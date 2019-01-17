@@ -141,6 +141,11 @@
 			}
 		},
 		methods:{
+			upToDate(){
+				//Checks if current mixData == last saved mix data
+				console.log("up to date called", this.$store.getters.getSavedMixData, this.$store.getters.getMixData);
+				return this.$store.getters.getSavedMixData == this.$store.getters.getMixData;
+			},
 			$ready(fn) {
 				if (process.env.NODE_ENV === 'production') {
 					return this.$nextTick(fn);
@@ -718,6 +723,12 @@
 						}
 						componentObj.$store.commit("updateUi", {"timeScale": out});
 
+					} else if (e.keycode == 32){ //Space bar
+						if (this.exterior.playing == false){
+							this.exterior.playAudio();
+						} else {
+							this.exterior.pauseAudio();
+						}
 					}
 				}
 

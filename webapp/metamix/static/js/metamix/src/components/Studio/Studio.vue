@@ -224,7 +224,7 @@
 				this.$notify({
 					type: "success",
 					group: "main",
-					title: 'Click audio to begin ' + type + ' effect modulation',
+					title: 'Select audio which you would like to add ' + type + ' effect to',
 					text: '',
 					duration: 400
 				});

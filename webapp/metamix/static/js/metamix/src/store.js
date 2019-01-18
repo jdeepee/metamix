@@ -9,6 +9,7 @@ Vue.use(Vuex)
 export const store = new Vuex.Store({
 	state: {
 		mixData: undefined,
+		savedMixData: undefined,
 		uiData: {
 			currentTime: 0,
 			totalTime: Settings.default_length,
@@ -70,6 +71,9 @@ export const store = new Vuex.Store({
 		addMixData(state, data){
 			state.mixData = data;
 			state.uiData.currentMixId = data.id;
+		},
+		addSavedMixData(state, data){
+			state.savedMixData = data;
 		},
 		updateUi(state, data){
 			for (let key in data){
@@ -192,7 +196,8 @@ export const store = new Vuex.Store({
 		getMixData: state => state.mixData,
 		getUi: state => state.uiData,
 		getAppData: state => state.appData,
-		getUserData: state => state.userData
+		getUserData: state => state.userData,
+		getSavedMixData: state => state.savedMixData
 	},
 	plugins: [
     	createPersistedState({

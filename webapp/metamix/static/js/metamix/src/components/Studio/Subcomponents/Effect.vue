@@ -126,7 +126,8 @@
 									group: "main",
 									title: 'Audio Updated',
 									text: 'Bar Markers and Waveform has been updated',
-									duration: 1000
+									duration: 900,
+									position: 'top right'
 								});
 							});
 						} else {
@@ -136,7 +137,8 @@
 								group: "main",
 								title: 'Audio Up to date',
 								text: '',
-								duration: 1000
+								duration: 900,
+								position: 'top right'
 							});
 						}
 					}).catch(error => {

@@ -80,6 +80,7 @@
 				mix.json_description.s3_key = mix.s3_key
 				mix.json_description.processing_status = mix.processing_status
 				this.$store.commit("addMixData", mix.json_description);
+				this.$store.commit("addSavedMixData", JSON.parse(JSON.stringify(mix.json_description)));
 				this.$router.push("/meta/mix/studio");	
 				this.$notify({
 					type: "success",

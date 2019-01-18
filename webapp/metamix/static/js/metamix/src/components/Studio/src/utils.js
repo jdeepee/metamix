@@ -96,7 +96,6 @@ function format_friendly_seconds(s, type) {
 	// TODO Refactor to 60fps???
 	// 20 mins * 60 sec = 1080 
 	// 1080s * 60fps = 1080 * 60 < Number.MAX_SAFE_INTEGER
-
 	let raw_secs = s | 0;
 	let secs_micro = s % 60;
 	let secs = raw_secs % 60;

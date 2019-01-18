@@ -59,7 +59,8 @@
 				stoppedDuration: 0,
 				started: null,
 				loaderSize: 40,
-				prevOffset: 0
+				prevOffset: 0,
+				playing: false
 			}
 		},
 		methods:{
@@ -70,6 +71,16 @@
 				this.loadingWrapper.style.display = "none";
 			},
 			saveAudio(){
+				if (this.$parent.upToDate() == true){
+					this.$notify({
+						type: "success",
+						group: "main",
+						title: 'Mix Up To Date',
+						text: 'Your mix is up to date',
+						duration: 500
+					});
+					return;
+				}
 				let mixData = JSON.parse(JSON.stringify(this.$store.getters.getMixData));
 				for (let i=0; i<mixData.audio.length; i++){ //Iterate over mixData to be sent to backend - delete all unnecassary key/value pairs along with redundant effects
 					delete mixData.audio[i].rawWaveForm;
@@ -96,9 +107,10 @@
 						group: "main",
 						title: 'Mix Saved',
 						text: 'Your mix has been saved - it is now processing.',
-						duration: 1000
+						duration: 800
 					});
 					this.hideLoader();
+					this.$store.commit("addSavedMixData", JSON.parse(JSON.stringify(this.$store.getters.getMixData)));
 				}).catch(error => {
                 	//Display error on front end
 					   console.log(error.response)
@@ -106,10 +118,22 @@
 				});
 			},
 			playAudio(){
+				if (this.$parent.upToDate() == false){
+					this.$notify({
+						type: "error",
+						group: "main",
+						title: 'Mix needs to be saved',
+						text: 'Mix must be saved to our server before you are able to play this version',
+						duration: 1000
+					});
+					return;
+				}
 				this.start();
+				this.playing = true;
 			},
 			pauseAudio(){
 				this.stop();
+				this.playing = false;
 			},
 			start(){
 				let currentUi = this.$store.getters.getUi;
@@ -119,7 +143,6 @@
 					this.offset = 0;
 				}
 				this.offset += this.prevOffset;
-				
 				if (this.timeBegan === null) {
 					this.timeBegan = new Date();
 				} else {

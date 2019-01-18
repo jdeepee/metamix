@@ -64,6 +64,7 @@ def create_mix(user_id):
 		return jsonify({"message": "New mix has been created", "data": {"id": str(mix.id)}})
 
 @mix.route("/meta/mix/<id>", methods=["GET"])
+@jwt_required
 def get_mix(id):
 	"""Get mix meta information"""
 	mix = Mix.get_mix(id)
@@ -76,8 +77,9 @@ def get_mix(id):
 		raise MetaMixException(message='That mix does not exist')
 
 @mix.route("/meta/mix/<id>/download", methods=["GET"])
+@jwt_required
 def download_mix(id):
-	"""Download MP3/WAV of mix"""
+	"""Download MP3/WAV of mix to be used to download audio file to users local files in full quality. Not used for playing audio within studio"""
 	pass
 
 @mix.route("/meta/mix/<mix_id>/audio/<audio_id>/delete", methods=["POST"])

@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "axios": "^0.18.0",
+    "epic-spinners": "^1.0.4",
     "js-cookie": "^2.2.0",
     "vue": "^2.5.2",
     "vue-draggable-resizable": "^1.7.5",

@@ -40,6 +40,13 @@ class Mix(db.Model):
 
         db.session.commit()
 
+    def dict_update(self, data):
+        for key, value in data.items():
+            if value != getattr(self, key):
+                setattr(self, key, value)
+
+        db.session.commit()
+
     @staticmethod
     def insert_mix(name, description, genre, user_id, json_description):
         """Method used upon mix creation - adds core mix structure to database"""
@@ -47,7 +54,7 @@ class Mix(db.Model):
         id = uuid.uuid4()
         json_description["id"] = str(id)
 
-        mix = Mix(id=id, name=name, description=description, genre=genre, json_description=json.dumps(json_description), processing_status="Processing", length=0, owner_id=user_id)
+        mix = Mix(id=id, name=name, description=description, genre=genre, json_description=json.dumps(json_description), processing_status="Completed", length=0, owner_id=user_id)
         db.session.add(mix)
         db.session.commit()
 
@@ -160,8 +167,10 @@ class MixAudio(db.Model):
             print "Effects for matched song: {} vs target effects: {}".format(song_effects, target_effects)
 
             for effect in target_effects:
-                del effect["startX"]
-                del effect["endX"]
+                if "startX" in effect:
+                    del effect["startX"]
+                if "endX" in effect:
+                    del effect["endX"]
                 if effect not in song_effects:
                     match = False
                     break;

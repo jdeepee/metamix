@@ -35,39 +35,74 @@ class MixWorker():
         - call apply_effects with relevant effect schema on parts of the mix that need to be computed 
         - call mix_songs with relevant mix schema and full mix data (in order and effects computed)
         - then call to_mp3 to get mp3 of mix data"""
-        self.mix_object = Mix.get_mix(self.mix_id)
-        self.json_description = self.mix_object.json_description
-        out = []
-        audio_data_store = {}
+        try:
+            self.mix_object = Mix.get_mix(self.mix_id)
+            self.json_description = self.mix_object.json_description
+            out = []
+            audio_data_store = {}
+            self.mix_object.dict_update({"processing_status": "Processing"})
 
-        for audio in self.json_description["audio"]:
-            paudio = copy.deepcopy(audio)
-            del paudio["beat_positions"]
-            print '\nCurrently computing audio: {}'.format(paudio)
+            for audio in self.json_description["audio"]:
+                paudio = copy.deepcopy(audio)
+                del paudio["beat_positions"]
+                print '\nCurrently computing audio: {}'.format(paudio)
 
-            if len(audio["effects"]) > 0:
-                effects = MixWorker.normalize_eq_effect(copy.deepcopy(audio["effects"]))
-                print "Audio data post normalize: {}".format(effects)
-                #Here we are only searching for an exact match - in the future should also look for matches which we can shape/slice into the correct format as
-                #Defined by the effects i.e if continuous effects are applied on song between timestamps greater than timestamps specified here - then we can
-                #just grab previous data and then slice down to the right size
-                if audio["type"] == "song":
-                    prev_processed = MixAudio.get_mix_song(self.mix_id, audio["audio_id"], audio["song_start"], audio["song_end"], audio["effects"]) 
+                if len(audio["effects"]) > 0:
+                    effects = MixWorker.normalize_eq_effect(copy.deepcopy(audio["effects"]))
+                    print "Audio data post normalize: {}".format(effects)
+                    #Here we are only searching for an exact match - in the future should also look for matches which we can shape/slice into the correct format as
+                    #Defined by the effects i.e if continuous effects are applied on song between timestamps greater than timestamps specified here - then we can
+                    #just grab previous data and then slice down to the right size
+                    if audio["type"] == "song":
+                        prev_processed = MixAudio.get_mix_song(self.mix_id, audio["audio_id"], audio["song_start"], audio["song_end"], audio["effects"]) 
+
+                    else:
+                        prev_processed = MixAudio.get_mix_clip(self.mix_id, audio["audio_id"], audio["song_start"], audio["song_end"], audio["effects"])
+
+                    print "Previously processed value: {}".format(prev_processed)
+
+                    if prev_processed != None:
+                        print "Previously processed clip found - appending to output data"
+                        #Get prev processed value and use this as output
+                        data, sample_rate = MixWorker.fetch_s3(prev_processed.s3_key)
+                        out.append({"id": audio["id"], "start": audio["start"], "end": audio["end"], "data": data}) #Using local ID for ID of out as their could be duplicate audio items
+
+                    else:
+                        #Make computation, save data - then add data to output
+                        print "No previous processed clip found - running clip effect computation"
+                        if audio["type"] == "song":
+                            audio_obj = Song.get_song(audio["audio_id"]) 
+                        else:
+                            audio_obj = Clip.get_clip(audio["audio_id"])
+
+                        if audio["audio_id"] in audio_data_store:
+                            data, sample_rate = audio_data_store[audio["audio_id"]], current_app.config["DEFAULT_SAMPLE_RATE"]
+
+                        else:
+                            data, sample_rate = MixWorker.fetch_s3(audio_obj.s3_key)
+                            audio_data_store[audio["audio_id"]] = data
+
+                        audio["data"] = data[int(round(audio["song_start"]*sample_rate)):int(round(audio["song_end"]*sample_rate))]
+                        audio["sample_rate"] = sample_rate
+
+                        effect_creator = MetaModulate(audio, 3, effects)
+                        data = effect_creator.modulate()
+                        out.append({"id": audio["id"], "start": audio["start"], "end": audio["end"], "data": data["data"]}) #Using local ID for ID of out as their could be duplicate audio items
+
+                        #Save audio with effects applied into database for retrieval later on future computations
+                        data_key = MixWorker.upload_s3(data["data"], sample_rate)
+                        del audio["data"]
+                        audio["s3_key"] = data_key
+
+                        for key, value in data.iteritems():
+                            if key != "data":
+                                audio[key] = value
+                                
+                        MixAudio.save_audio(self.mix_id, audio)
 
                 else:
-                    prev_processed = MixAudio.get_mix_clip(self.mix_id, audio["audio_id"], audio["song_start"], audio["song_end"], audio["effects"])
-
-                print "Previously processed value: {}".format(prev_processed)
-
-                if prev_processed != None:
-                    print "Previously processed clip found - appending to output data"
-                    #Get prev processed value and use this as output
-                    data, sample_rate = MixWorker.fetch_s3(prev_processed.s3_key)
-                    out.append({"id": audio["id"], "start": audio["start"], "end": audio["end"], "data": data}) #Using local ID for ID of out as their could be duplicate audio items
-
-                else:
-                    #Make computation, save data - then add data to output
-                    print "No previous processed clip found - running clip effect computation"
+                    #No effects applied on this audio - just grab audio and slice accordingly - then append data to out
+                    print "No effects applied on this song - fetching slicing and appending to output"
                     if audio["type"] == "song":
                         audio_obj = Song.get_song(audio["audio_id"]) 
                     else:
@@ -80,55 +115,27 @@ class MixWorker():
                         data, sample_rate = MixWorker.fetch_s3(audio_obj.s3_key)
                         audio_data_store[audio["audio_id"]] = data
 
-                    audio["data"] = data[int(round(audio["song_start"]*sample_rate)):int(round(audio["song_end"]*sample_rate))]
-                    audio["sample_rate"] = sample_rate
-
-                    effect_creator = MetaModulate(audio, 3, effects)
-                    data = effect_creator.modulate()
-                    out.append({"id": audio["id"], "start": audio["start"], "end": audio["end"], "data": data["data"]}) #Using local ID for ID of out as their could be duplicate audio items
-
-                    #Save audio with effects applied into database for retrieval later on future computations
-                    data_key = MixWorker.upload_s3(data["data"], sample_rate)
-                    del audio["data"]
-                    audio["s3_key"] = data_key
-
-                    for key, value in data.iteritems():
-                        if key != "data":
-                            audio[key] = value
-                            
-                    MixAudio.save_audio(self.mix_id, audio)
-
-            else:
-                #No effects applied on this audio - just grab audio and slice accordingly - then append data to out
-                print "No effects applied on this song - fetching slicing and appending to output"
-                if audio["type"] == "song":
-                    audio_obj = Song.get_song(audio["audio_id"]) 
-                else:
-                    audio_obj = Clip.get_clip(audio["audio_id"])
-
-                if audio["audio_id"] in audio_data_store:
-                    data, sample_rate = audio_data_store[audio["audio_id"]], current_app.config["DEFAULT_SAMPLE_RATE"]
-
-                else:
                     data, sample_rate = MixWorker.fetch_s3(audio_obj.s3_key)
-                    audio_data_store[audio["audio_id"]] = data
+                    out.append({"id": audio["id"], "start": audio["start"], "end": audio["end"], "data": data[int(round(audio["song_start"]*sample_rate)):int(round(audio["song_end"]*sample_rate))]}) #Using local ID for ID of out as their could be duplicate audio items
 
-                data, sample_rate = MixWorker.fetch_s3(audio_obj.s3_key)
-                out.append({"id": audio["id"], "start": audio["start"], "end": audio["end"], "data": data[int(round(audio["song_start"]*sample_rate)):int(round(audio["song_end"]*sample_rate))]}) #Using local ID for ID of out as their could be duplicate audio items
+            self.modulated_audio_objects = out
+            mix_data = self.make_mix()
+            length = float(mix_data.shape[0]) / float(sample_rate)
+            self.json_description["length"] = length
+            self.json_description["processing_status"] = "Completed"
+            # del self.json_description["data"]
+            # del self.json_description["sample_rate"]
+            self.mix_object.update_mix_data(self.json_description)
+            if self.mix_object.s3_key != None:
+                delete_s3(self.mix_object.s3_key)
 
-        self.modulated_audio_objects = out
-        mix_data = self.make_mix()
-        length = float(mix_data.shape[0]) / float(sample_rate)
-        self.json_description["length"] = length
-        self.json_description["processing_start"] = "Completed"
-        # del self.json_description["data"]
-        # del self.json_description["sample_rate"]
-        self.mix_object.update_mix_data(self.json_description)
-        if self.mix_object.s3_key != None:
-            delete_s3(self.mix_object.s3_key)
+            s3_key = MixWorker.upload_s3(mix_data, sample_rate)
+            self.mix_object.dict_update({"s3_key": s3_key, "processing_status": "Completed"})
+            print "Mix computation completed and mix uploaded"
 
-        MixWorker.upload_s3(mix_data, sample_rate)
-        print "Mix computation completed and mix uploaded"
+        except:
+            self.mix_object.dict_update({"processing_status": "Error"})
+            raise
 
     def make_mix(self):
         """Returns mixed version of input data - where songs are mixed according to time-stamps

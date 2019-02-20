@@ -65,9 +65,12 @@ def create_mix(user_id):
 
 @mix.route("/meta/mix/<id>", methods=["GET"])
 @jwt_required
-def get_mix(id):
+def get_mix(user_id, id):
 	"""Get mix meta information"""
 	mix = Mix.get_mix(id)
+	if str(mix.owner_id) != user_id:
+		raise MetaMixException(message="You do not own that mix")
+
 	if mix is not None:
 		schema = MixSchema(many=False)
 		

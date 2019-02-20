@@ -128,8 +128,34 @@
 					});
 					return;
 				}
-				this.start();
-				this.playing = true;
+				//Get mix from API - check that processing == Complete. If not complete then raise error notifications saying mix is still processing. Otherwise get mix from s3 key - then play. 
+				let mixData = this.$store.getters.getMixData;
+				axios({ method: "GET", "url": this.baseUrl+"/meta/mix/"+mixData.id, "headers": { "content-type": "application/json", "JWT-Auth":  this.jwt}})
+				.then(result => {
+					console.log(result.data)
+					if (result.data.processing_status == "Completed") {
+						this.start();
+						this.playing = true;
+					} else if (result.data.processing_status == "Processing"){
+						this.$notify({
+							type: "error",
+							group: "main",
+							title: 'Mix is still processing please wait',
+							text: 'MetaMix is processing your changes - you will be able to play your mix when the changes have completed',
+							duration: 1000
+						});
+					} else if (result.data.processing_Status == "Error"){
+						this.$notify({
+							type: "error",
+							group: "main",
+							title: 'There has been an error on MetaMix :(',
+							text: 'In order to get this error fixed please send an email to joshuadparkin@gmail.com with the following value referenced:' + this.mixData.id + ' thanks for dealing with errors - MetaMix is still very early software and is undergoing bug fixes all the time. Thanks <3',
+							duration: 7000
+						});
+					}
+				}).catch(error => {
+					console.log(error.resonse)
+				});
 			},
 			pauseAudio(){
 				this.stop();

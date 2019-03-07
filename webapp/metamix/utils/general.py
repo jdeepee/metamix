@@ -56,3 +56,12 @@ def is_valid_uuid(uuid_to_test, version=4):
         return False
 
     return str(uuid_obj) == uuid_to_test
+
+def get_presigned_s3_url(key):
+    session = boto3.session.Session(region_name='eu-west-1',
+        aws_access_key_id=current_app.config["AWS_ACCESS_KEY_ID"],
+        aws_secret_access_key=current_app.config["AWS_SECRET_ACCESS_KEY"])
+    s3 = session.client('s3', config=boto3.session.Config(signature_version='s3v4'))
+    url = s3.generate_presigned_url('get_object', Params = {'Bucket': current_app.config["S3_BUCKET"], 'Key': key}, ExpiresIn = 300)
+    
+    return url

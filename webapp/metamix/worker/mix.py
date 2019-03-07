@@ -388,7 +388,7 @@ class MixWorker():
         return data, sr
 
     @staticmethod
-    def upload_s3( data, sample_rate):
+    def upload_s3(data, sample_rate):
         key = str(uuid.uuid4()) + ".wav"
         temp_filename = current_app.config["METAMIX_TEMP_SAVE"] + str(uuid.uuid4()) + ".wav"
 

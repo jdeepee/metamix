@@ -41,6 +41,7 @@
 	import axios from "axios";
 	import VueDraggableResizable from './vue-draggable-resizable.vue';
 	import {SemipolarSpinner} from 'epic-spinners';
+	import {Howl, Howler} from 'howler';
 
 	export default {
 		name: "Exterior",
@@ -60,7 +61,8 @@
 				started: null,
 				loaderSize: 40,
 				prevOffset: 0,
-				playing: false
+				playing: false,
+				hasAudio: false
 			}
 		},
 		methods:{
@@ -69,6 +71,50 @@
 			},
 			hideLoader(){
 				this.loadingWrapper.style.display = "none";
+			},
+			fetchNewAudio(){
+				//This function is returning too fast - it needs to return only when the second .then callback has ran so that soundStream is present
+				let mixData = this.$store.getters.getMixData;
+				return axios({ method: "GET", "url": this.baseUrl+"/meta/mix/"+mixData.id, "headers": { "content-type": "application/json", "JWT-Auth":  this.jwt}})
+					.then(result => {
+						console.log(result.data)
+						if (result.data.processing_status == "Completed") {
+							//Download mix audio
+							let mixData = this.$store.getters.getMixData;
+							let downloadPromise = axios({ method: "GET", "url": this.baseUrl+"/meta/mix/"+mixData.id+"/download", "headers": { "content-type": "application/json", "JWT-Auth":  this.jwt}})
+								.then(result => {
+									let presigned_url = result.data.data;
+									this.soundStream = new Howl({
+										src: [presigned_url],
+										ext: ['mp3'],
+										autoplay: false,
+										html5: true,
+										onend: this.resetAudioTimestamp()
+									});
+									this.hasAudio = true;
+								}).catch(error => {
+									console.log(error)
+								})
+
+						} else if (result.data.processing_status == "Processing"){
+								setTimeout(this.fetchNewAudio(), 1000);
+						} else if (result.data.processing_Status == "Error"){
+							this.$notify({
+								type: "error",
+								group: "main",
+								title: 'There has been an error on MetaMix :(',
+								text: 'In order to get this error fixed please send an email to joshuadparkin@gmail.com with the following value referenced:' + this.mixData.id + ' thanks for dealing with errors - MetaMix is still very early software and is undergoing bug fixes all the time. Thanks <3',
+								duration: 7000
+							});
+						}
+					}).catch(error => {
+						console.log(error)
+					});
+			},
+			resetAudioTimestamp(){
+				this.pauseAudio();
+				let currentUi = this.$store.getters.getUi;
+				currentUi.currentTime = 0;
 			},
 			saveAudio(){
 				if (this.$parent.upToDate() == true){
@@ -101,21 +147,24 @@
 				console.log("Saving mix with data: ", mixData)
 				mixData = {"id": mixData.id, "mix_description": mixData, "description": mixData.description, "genre": mixData.genre, "name": mixData.name};
 				axios({ method: "POST", "url": this.baseUrl+"/meta/mix", "data": mixData, "headers": { "content-type": "application/json", "JWT-Auth":  this.jwt}})
-				.then(result => {
-					this.$notify({
-						type: "success",
-						group: "main",
-						title: 'Mix Saved',
-						text: 'Your mix has been saved - it is now processing.',
-						duration: 800
+					.then(result => {
+						this.$notify({
+							type: "success",
+							group: "main",
+							title: 'Mix Saved',
+							text: 'Your mix has been saved - it is now processing.',
+							duration: 800
+						});
+						this.hideLoader();
+						this.$store.commit("addSavedMixData", JSON.parse(JSON.stringify(this.$store.getters.getMixData)));
+						//run download loop
+						this.hasAudio = false;
+						this.fetchNewAudio();
+					}).catch(error => {
+						//Display error on front end
+						console.log(error.response)
+						this.hideLoader();
 					});
-					this.hideLoader();
-					this.$store.commit("addSavedMixData", JSON.parse(JSON.stringify(this.$store.getters.getMixData)));
-				}).catch(error => {
-                	//Display error on front end
-					   console.log(error.response)
-					   this.hideLoader();
-				});
 			},
 			playAudio(){
 				if (this.$parent.upToDate() == false){
@@ -132,10 +181,16 @@
 				let mixData = this.$store.getters.getMixData;
 				axios({ method: "GET", "url": this.baseUrl+"/meta/mix/"+mixData.id, "headers": { "content-type": "application/json", "JWT-Auth":  this.jwt}})
 				.then(result => {
-					console.log(result.data)
 					if (result.data.processing_status == "Completed") {
-						this.start();
-						this.playing = true;
+						if (this.hasAudio == false){
+							let fetchPromise = this.fetchNewAudio();
+							console.log(fetchPromise);
+						}
+						fetchPromise.then(function(){
+							this.soundStream.start();
+							this.start();
+							this.playing = true;
+						})
 					} else if (result.data.processing_status == "Processing"){
 						this.$notify({
 							type: "error",
@@ -154,11 +209,12 @@
 						});
 					}
 				}).catch(error => {
-					console.log(error.resonse)
+					console.log(error)
 				});
 			},
 			pauseAudio(){
 				this.stop();
+				this.soundStream.pause();
 				this.playing = false;
 			},
 			start(){

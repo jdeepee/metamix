@@ -7,7 +7,7 @@ from metamix.models.song import Song, Effect
 from metamix.utils.upload import enqueue_mix
 from metamix.errors import MetaMixException
 from metamix.serialization.mix import MixSchema
-from metamix.utils.general import jwt_required
+from metamix.utils.general import jwt_required, get_presigned_s3_url
 from metamix.worker.mix import MixWorker
 from metamix.worker.meta_modulate import MetaModulate
 from flask import *
@@ -47,6 +47,7 @@ def create_mix(user_id):
 			# else:
 			# 	#Mix description has changed - recomputation is needed
 			mix.update_mix_data(json_description)
+			mix.dict_update({"processing_status": "Processing"})
 			if len(mix.json_description["audio"]) > 0:
 				enqueue_mix(mix.id, True, 3)
 			return jsonify({"message": "Mix is being processed"})
@@ -81,9 +82,18 @@ def get_mix(user_id, id):
 
 @mix.route("/meta/mix/<id>/download", methods=["GET"])
 @jwt_required
-def download_mix(id):
-	"""Download MP3/WAV of mix to be used to download audio file to users local files in full quality. Not used for playing audio within studio"""
-	pass
+def download_mix(user_id, id):
+	"""Return's signed URL of mix's audio file in s3"""
+	mix = Mix.get_mix(id)
+	if str(mix.owner_id) != user_id:
+		raise MetaMixException(message="You do not own that mix")
+
+	if mix is not None:
+		presigned_url = get_presigned_s3_url(mix.s3_key)
+		return jsonify({"data": presigned_url})
+
+	else:
+		raise MetaMixException(message='That mix does not exist')
 
 @mix.route("/meta/mix/<mix_id>/audio/<audio_id>/delete", methods=["POST"])
 @jwt_required

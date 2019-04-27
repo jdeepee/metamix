@@ -153,7 +153,7 @@ def recompute_song(user_id, mix_id):
 	data = effect_creator.modulate()
 
 	#Save audio with effects applied into database for retrieval later on future computations
-	data_key = MixWorker.upload_s3(data["data"], sample_rate)
+	data_key = MixWorker.static_upload_s3(data["data"], sample_rate)
 	del audio["data"]
 	audio["s3_key"] = data_key
 

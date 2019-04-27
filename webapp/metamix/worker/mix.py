@@ -396,3 +396,19 @@ class MixWorker():
         os.remove(temp_filename)
 
         return key
+
+    #same as above method but is a static method and thus doesnt have the session from self - so this function will create its own session
+    @staticmethod
+    def static_upload_s3(data, sample_rate):
+        key = str(uuid.uuid4()) + ".wav"
+        temp_filename = current_app.config["METAMIX_TEMP_SAVE"] + str(uuid.uuid4()) + ".wav"
+
+        librosa.output.write_wav(temp_filename, data, sample_rate)
+        session = boto3.session.Session(region_name='eu-west-1',
+                aws_access_key_id=current_app.config["AWS_ACCESS_KEY_ID"],
+                aws_secret_access_key=current_app.config["AWS_SECRET_ACCESS_KEY"])
+        s3 = session.client('s3', config=boto3.session.Config(signature_version='s3v4'))
+        s3.upload_file(temp_filename, current_app.config["S3_BUCKET"], key)
+        os.remove(temp_filename)
+
+        return key

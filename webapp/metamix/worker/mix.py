@@ -23,6 +23,9 @@ class MixWorker():
         self.testing = testing
         self.debug_level = debug_level
         self.create_mix_data()
+        self.session = boto3.session.Session(region_name='eu-west-1',
+                                             aws_access_key_id=current_app.config["AWS_ACCESS_KEY_ID"],
+                                             aws_secret_access_key=current_app.config["AWS_SECRET_ACCESS_KEY"])
 
     @classmethod
     def mix(cls, id, testing, debug_level):
@@ -64,7 +67,7 @@ class MixWorker():
                     if prev_processed != None:
                         print "Previously processed clip found - appending to output data"
                         #Get prev processed value and use this as output
-                        data, sample_rate = MixWorker.fetch_s3(prev_processed.s3_key)
+                        data, sample_rate = self.fetch_s3(prev_processed.s3_key)
                         out.append({"id": audio["id"], "start": audio["start"], "end": audio["end"], "data": data}) #Using local ID for ID of out as their could be duplicate audio items
 
                     else:
@@ -79,7 +82,7 @@ class MixWorker():
                             data, sample_rate = audio_data_store[audio["audio_id"]], current_app.config["DEFAULT_SAMPLE_RATE"]
 
                         else:
-                            data, sample_rate = MixWorker.fetch_s3(audio_obj.s3_key)
+                            data, sample_rate = self.fetch_s3(audio_obj.s3_key)
                             audio_data_store[audio["audio_id"]] = data
 
                         audio["data"] = data[int(round(audio["song_start"]*sample_rate)):int(round(audio["song_end"]*sample_rate))]
@@ -90,7 +93,7 @@ class MixWorker():
                         out.append({"id": audio["id"], "start": audio["start"], "end": audio["end"], "data": data["data"]}) #Using local ID for ID of out as their could be duplicate audio items
 
                         #Save audio with effects applied into database for retrieval later on future computations
-                        data_key = MixWorker.upload_s3(data["data"], sample_rate)
+                        data_key = self.upload_s3(data["data"], sample_rate)
                         del audio["data"]
                         audio["s3_key"] = data_key
 
@@ -112,10 +115,10 @@ class MixWorker():
                         data, sample_rate = audio_data_store[audio["audio_id"]], current_app.config["DEFAULT_SAMPLE_RATE"]
 
                     else:
-                        data, sample_rate = MixWorker.fetch_s3(audio_obj.s3_key)
+                        data, sample_rate = self.fetch_s3(audio_obj.s3_key)
                         audio_data_store[audio["audio_id"]] = data
 
-                    data, sample_rate = MixWorker.fetch_s3(audio_obj.s3_key)
+                    data, sample_rate = self.fetch_s3(audio_obj.s3_key)
                     out.append({"id": audio["id"], "start": audio["start"], "end": audio["end"], "data": data[int(round(audio["song_start"]*sample_rate)):int(round(audio["song_end"]*sample_rate))]}) #Using local ID for ID of out as their could be duplicate audio items
 
             self.modulated_audio_objects = out
@@ -129,7 +132,7 @@ class MixWorker():
             if self.mix_object.s3_key != None:
                 delete_s3(self.mix_object.s3_key)
 
-            s3_key = MixWorker.upload_s3(mix_data, sample_rate)
+            s3_key = self.upload_s3(mix_data, sample_rate)
             self.mix_object.dict_update({"s3_key": s3_key, "processing_status": "Completed"})
             print "Mix computation completed and mix uploaded"
 
@@ -374,29 +377,21 @@ class MixWorker():
 
         return complete_coverage, partial_coverage 
 
-    @staticmethod
-    def fetch_s3(s3_key):
+    def fetch_s3(self, s3_key):
         temp_filename = current_app.config["METAMIX_TEMP_SAVE"] + str(uuid.uuid4()) + ".wav"
 
-        session = boto3.session.Session(region_name='eu-west-1',
-                aws_access_key_id=current_app.config["AWS_ACCESS_KEY_ID"],
-                aws_secret_access_key=current_app.config["AWS_SECRET_ACCESS_KEY"])
-        s3 = session.client('s3', config=boto3.session.Config(signature_version='s3v4'))
+        s3 = self.session.client('s3', config=boto3.session.Config(signature_version='s3v4'))
         s3.download_file(current_app.config["S3_BUCKET"], s3_key, temp_filename)
         data, sr = librosa.load(temp_filename, sr=None) 
 
         return data, sr
 
-    @staticmethod
-    def upload_s3(data, sample_rate):
+    def upload_s3(self, data, sample_rate):
         key = str(uuid.uuid4()) + ".wav"
         temp_filename = current_app.config["METAMIX_TEMP_SAVE"] + str(uuid.uuid4()) + ".wav"
 
         librosa.output.write_wav(temp_filename, data, sample_rate)
-        session = boto3.session.Session(region_name='eu-west-1',
-                aws_access_key_id=current_app.config["AWS_ACCESS_KEY_ID"],
-                aws_secret_access_key=current_app.config["AWS_SECRET_ACCESS_KEY"])
-        s3 = session.client('s3', config=boto3.session.Config(signature_version='s3v4'))
+        s3 = self.session.client('s3', config=boto3.session.Config(signature_version='s3v4'))
         s3.upload_file(temp_filename, current_app.config["S3_BUCKET"], key)
         os.remove(temp_filename)
 

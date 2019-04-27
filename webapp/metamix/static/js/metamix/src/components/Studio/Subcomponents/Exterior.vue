@@ -62,7 +62,8 @@
 				loaderSize: 40,
 				prevOffset: 0,
 				playing: false,
-				hasAudio: false
+				hasAudio: false,
+				soundStream: null
 			}
 		},
 		methods:{
@@ -81,8 +82,9 @@
 						if (result.data.processing_status == "Completed") {
 							//Download mix audio
 							let mixData = this.$store.getters.getMixData;
-							let downloadPromise = axios({ method: "GET", "url": this.baseUrl+"/meta/mix/"+mixData.id+"/download", "headers": { "content-type": "application/json", "JWT-Auth":  this.jwt}})
+							return axios({ method: "GET", "url": this.baseUrl+"/meta/mix/"+mixData.id+"/download", "headers": { "content-type": "application/json", "JWT-Auth":  this.jwt}})
 								.then(result => {
+									console.log(result, this, "dp");
 									let presigned_url = result.data.data;
 									this.soundStream = new Howl({
 										src: [presigned_url],
@@ -91,11 +93,13 @@
 										html5: true,
 										onend: this.resetAudioTimestamp()
 									});
+									let vueObj = this;
+									this.soundStream.on("play", function(id){vueObj.start()});
+									this.soundStream.on("pause", function(id){vueObj.stop()});
 									this.hasAudio = true;
 								}).catch(error => {
 									console.log(error)
 								})
-
 						} else if (result.data.processing_status == "Processing"){
 								setTimeout(this.fetchNewAudio(), 1000);
 						} else if (result.data.processing_Status == "Error"){
@@ -107,6 +111,7 @@
 								duration: 7000
 							});
 						}
+						return result;
 					}).catch(error => {
 						console.log(error)
 					});
@@ -182,15 +187,20 @@
 				axios({ method: "GET", "url": this.baseUrl+"/meta/mix/"+mixData.id, "headers": { "content-type": "application/json", "JWT-Auth":  this.jwt}})
 				.then(result => {
 					if (result.data.processing_status == "Completed") {
+						let vueObj = this;
 						if (this.hasAudio == false){
-							let fetchPromise = this.fetchNewAudio();
-							console.log(fetchPromise);
+							this.fetchNewAudio().then(function(){
+								console.log("Playing from", vueObj.$store.getters.getUi.currentTime, vueObj.soundStream);
+								vueObj.soundStream.seek(vueObj.$store.getters.getUi.currentTime);
+								vueObj.soundStream.play();
+								vueObj.$store.commit("updateUi", {playing: true});
+							});
+						} else {
+							console.log("Playing from", vueObj.$store.getters.getUi.currentTime);
+							vueObj.soundStream.seek(vueObj.$store.getters.getUi.currentTime);
+							vueObj.soundStream.play();
+							vueObj.$store.commit("updateUi", {playing: true});
 						}
-						fetchPromise.then(function(){
-							this.soundStream.start();
-							this.start();
-							this.playing = true;
-						})
 					} else if (result.data.processing_status == "Processing"){
 						this.$notify({
 							type: "error",
@@ -213,11 +223,13 @@
 				});
 			},
 			pauseAudio(){
-				this.stop();
-				this.soundStream.pause();
-				this.playing = false;
+				if (this.$store.getters.getUi.playing == true){
+					this.soundStream.pause();
+					this.$store.commit("updateUi", {playing: false});
+				}
 			},
 			start(){
+				console.log("Play start called");
 				let currentUi = this.$store.getters.getUi;
 				if (currentUi.currentTime != this.timeElapsed && this.timeElapsed != undefined){
 					this.offset = (currentUi.currentTime - this.timeElapsed);
@@ -237,6 +249,7 @@
 				this.started = setInterval(this.clockRunning, 10);	
 			},
 			stop() {
+				console.log("Play stop called");
 				this.timeStopped = new Date();
 				this.prevOffset = this.offset;
 			    clearInterval(this.started);
@@ -357,13 +370,6 @@
                 	//Display error on front end
    					console.log(error.response)
 				});
-				// axios({ method: "GET", "url": this.baseUrl+"/meta/clip", "headers": { "content-type": "application/json", "JWT-Auth":  this.jwt}})
-				// .then(result => {
-				// 	let clipResult = result.data;
-    //             }).catch(error => {
-    //             	//Display error on front end
-   	// 				console.log(error.response)
-				// });
 			},
 			// updateTimelineSize(value){
 			// 	console.log("update")

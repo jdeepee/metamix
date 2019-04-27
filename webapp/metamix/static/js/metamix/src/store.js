@@ -12,6 +12,7 @@ export const store = new Vuex.Store({
 		savedMixData: undefined,
 		uiData: {
 			currentTime: 0,
+			playing: false,
 			totalTime: Settings.default_length,
 			scrollTime: 0,
 			timeScale: Settings.time_scale,

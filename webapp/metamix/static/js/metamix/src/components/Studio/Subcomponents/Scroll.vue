@@ -128,9 +128,14 @@
 						let t = (e.offsetx) / componentObj.width * totalTime;
 
 						componentObj.$store.commit("updateUi", {"currentTime": t});
-							
+						// console.log(currentUi);
+						// if (currentUi.playing == true){
+						// 	console.log(this.$parent.exterior.soundStream);
+						// 	this.$parent.exterior.soundStream.pause();
+						// }
 					},
 					function move (e) {
+						console.log("move down")
 						let currentUi = componentObj.$store.getters.getUi;
 						let totalTime = currentUi["totalTime"];
 						if (componentObj.draggingx != null) {
@@ -151,6 +156,10 @@
 							if (t >= 0){
 								componentObj.$store.commit("updateUi", {"currentTime": t});
 							}
+							// if (currentUi.playing == false){
+							// 	console.log(this.$parent.exterior.soundStream);
+							// 	this.$parent.exterior.soundStream.play();
+							// }
 						}
 					},
 					function up(e){

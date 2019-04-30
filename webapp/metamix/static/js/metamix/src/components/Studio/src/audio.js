@@ -125,7 +125,7 @@ AudioItem.prototype.effectGlow = function(){
 	this.drawSelectGlow = true;
 }
 
-AudioItem.prototype.drawEffectCurve = function(ctx, start, target, type, startX, endX, strengthCurve, id){
+AudioItem.prototype.drawEffectCurve = function(ctx, start, target, type, startX, endX, strengthCurve, id, effect_type_2){
 	//currently start/target only works for phase 1 of effect - this should be able to handle effects which have multiple start/targets - 
 	//maybe this means drawing multiple curves?
 	//console.log("Draw effect curve for", start, target)
@@ -171,7 +171,7 @@ AudioItem.prototype.drawEffectCurve = function(ctx, start, target, type, startX,
 			ctx.lineTo(endX, effectStartY)
 			ctx.stroke();
 			if (type == "eq"){
-				ctx.fillText("EQ", startX+(ctx.measureText(type).width/this.dpr), effectStartY-2);
+				ctx.fillText("EQ" + effect_type_2, startX+(ctx.measureText(type).width/this.dpr), effectStartY-2);
 			} else {
 				ctx.fillText(utils.capitalizeFirstLetter(type), startX+(ctx.measureText(type).width/this.dpr), effectStartY-2);
 			}
@@ -187,21 +187,21 @@ AudioItem.prototype.paintEffects = function(ctx) {
 			if (effect["type"] != "eq"){
 				if (effect["effectStart"] != Settings.effectBounds[effect["type"]]["default"] || effect["effectTarget"] != Settings.effectBounds[effect["type"]]["default"]){ //here it should be checking that the values are != default values not 0
 					this.drawEffectCurve(ctx, effect["effectStart"], effect["effectTarget"], effect["type"], 
-										 effect["startX"], effect["endX"], effect["strength_curve"], effect["id"]);
+										 effect["startX"], effect["endX"], effect["strength_curve"], effect["id"], null);
 
 				}
 			} else {
-				if (effect["high"]["start"] != 0 || effect["high"]["target"] != 0){
+				if (effect["high"]["start"] != 1 || effect["high"]["target"] != 1){
 					this.drawEffectCurve(ctx, effect["high"]["start"], effect["high"]["target"], effect["type"], 
-										 effect["startX"], effect["endX"], effect["strength_curve"], effect["id"]);
+										 effect["startX"], effect["endX"], effect["strength_curve"], effect["id"], "High");
 				}
-				if (effect["mid"]["start"] != 0 || effect["mid"]["target"] != 0){
+				if (effect["mid"]["start"] != 1 || effect["mid"]["target"] != 1){
 					this.drawEffectCurve(ctx, effect["mid"]["start"], effect["mid"]["target"], effect["type"], 
-										 effect["startX"], effect["endX"], effect["strength_curve"], effect["id"]);
+										 effect["startX"], effect["endX"], effect["strength_curve"], effect["id"], "Mid");
 				}
-				if (effect["low"]["start"] != 0 || effect["low"]["target"] != 0){
+				if (effect["low"]["start"] != 1 || effect["low"]["target"] != 1){
 					this.drawEffectCurve(ctx, effect["low"]["start"], effect["low"]["target"], effect["type"], 
-										 effect["startX"], effect["endX"], effect["strength_curve"], effect["id"]);
+										 effect["startX"], effect["endX"], effect["strength_curve"], effect["id"], "Low");
 			}
 			}
 		}

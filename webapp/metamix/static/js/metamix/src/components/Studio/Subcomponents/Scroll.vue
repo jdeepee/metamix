@@ -143,6 +143,7 @@
 								let t = (componentObj.draggingx + e.dx)  / componentObj.width * totalTime
 								if (t >= 0){
 									componentObj.$store.commit("updateUi", {"scrollTime": (componentObj.draggingx + e.dx)  / componentObj.width * totalTime});
+									console.log("New scroll time", currentUi.scrollTime)
 								}
 							}
 

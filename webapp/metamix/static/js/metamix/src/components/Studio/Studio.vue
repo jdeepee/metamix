@@ -137,7 +137,8 @@
 				trackBounds: {},
 				resetWaveForm: false,
 				hit: false,
-				cuttingAudio: false
+				cuttingAudio: false,
+				needsRepaint: true
 			}
 		},
 		methods:{
@@ -579,6 +580,10 @@
 				let lineHeight = currentUi["lineHeight"];
 				this.ctx.strokeStyle = 'red'; // Theme.c
 				let x = ((this.currentTime - (this.frameStart)) * this.timeScale)*this.dpr;
+
+				if (x >= this.width && currentUi.playing == true) { //check that time marker is past width of screen if so change scroll time to be at the same point as marker so the timeline can move with the marker
+					this.$store.commit("updateUi", {"scrollTime": this.frameStart + ((x / this.timeScale) / this.dpr)});
+				}
 				//Get currentTime to input into marker
 				let txt = utils.format_friendly_seconds(this.currentTime);
 				let textWidth = this.ctx.measureText(txt).width;

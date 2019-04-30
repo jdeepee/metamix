@@ -145,7 +145,7 @@ def recompute_song(user_id, mix_id):
 
 	effects = MixWorker.normalize_eq_effect(copy.deepcopy(audio["effects"]))
 
-	data, sample_rate = MixWorker.fetch_s3(audio_obj.s3_key)
+	data, sample_rate = MixWorker.static_upload_s3(audio_obj.s3_key)
 	audio["data"] = data[int(round(audio["song_start"]*sample_rate)):int(round(audio["song_end"]*sample_rate))]
 	audio["sample_rate"] = sample_rate
 

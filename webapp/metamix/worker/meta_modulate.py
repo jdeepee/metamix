@@ -246,8 +246,9 @@ class MetaModulate():
 
         if effect["type"] == "eq":
             #In the future these parameters should also build for start/target decbel & width_q
-            effect["effectStart"] = effect["effectStart"] + 1
-            effect["effectTarget"] = effect["effectTarget"] + 1
+            print "Effect start for eq: {} and end {}".format(effect["effectStart"], effect["effectTarget"])
+            # effect["effectStart"] = effect["effectStart"] + 1
+            # effect["effectTarget"] = effect["effectTarget"] + 1
             params = {"sample_rate": self.sample_rate, "start": effect["effectStart"], "target": effect["effectTarget"], "strength_curve": effect["strength_curve"], "frequency": effect["frequency"]}
             if effected_data == False:
                 params["data"] = self.data[int(round(start*self.sample_rate)): int(round(end*self.sample_rate))]

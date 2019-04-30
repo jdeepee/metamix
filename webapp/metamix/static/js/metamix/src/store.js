@@ -1,8 +1,6 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
 import Settings from "./settings.js"
-import createPersistedState from 'vuex-persistedstate'
-import * as Cookies from 'js-cookie'
 
 Vue.use(Vuex)
 
@@ -23,9 +21,9 @@ export const store = new Vuex.Store({
 			currentEffect: null,
 			currentMixId: null,
 			effects: {"eq": {"start": 0, "end": 0, "startGlobal": 0, "endGlobal": 0, "barCountStart": 0, "barCountEnd": 0, "strengthCurve": "continuous", "title": "EQ Effect",
-							 "knobs": [{"name": "high", "title": "Highs", "start": 0, "target": 0, "max": 2, "min": -2, "step": 0.01, "precision": 2, "default": 0}, 
-							 		   {"name": "mid", "title": "Mids", "start": 0, "target": 0, "max": 2, "min": -2, "step": 0.01, "precision": 2, "default": 0}, 
-							 		   {"name": "low", "title": "Lows", "start": 0, "target": 0, "max": 2, "min": -2, "step": 0.01, "precision": 2, "default": 0}],
+							 "knobs": [{"name": "high", "title": "Highs", "start": 0, "target": 0, "max": 2, "min": 0, "step": 0.01, "precision": 2, "default": 1}, 
+							 		   {"name": "mid", "title": "Mids", "start": 0, "target": 0, "max": 2, "min": 0, "step": 0.01, "precision": 2, "default": 1}, 
+							 		   {"name": "low", "title": "Lows", "start": 0, "target": 0, "max": 2, "min": 0, "step": 0.01, "precision": 2, "default": 1}],
 							 "default_values": {"high": {"start": null, "target": null}, "mid": {"start": null, "target": null}, "low": {"start": null, "target": null}, "strength_curve": "continuous"}},
 
 					  "remove": {"start": null, "end": null, "startGlobal": null, "endGlobal": null, "barCountStart": null, "barCountEnd": null, "strengthCurve": null, "title": "Remove", "knobs": [], "default_values": null, "strength_curve": null},
@@ -47,7 +45,7 @@ export const store = new Vuex.Store({
 					} //This might not have to be here in Vuex - it might be possible to handle everything in the effect Vue
 		},
 		userData: {
-			"jwtToken": null,
+			"jwtToken": localStorage.getItem('token') || null,
 			"songs": [],
 			"clips": []
 		},
@@ -199,11 +197,5 @@ export const store = new Vuex.Store({
 		getAppData: state => state.appData,
 		getUserData: state => state.userData,
 		getSavedMixData: state => state.savedMixData
-	},
-	plugins: [
-    	createPersistedState({
-      		getState: (key) => Cookies.getJSON(key),
-      		setState: (key, state) => Cookies.set(key, state, { expires: 3, secure: true })
-    })
-  ]
+	}
 })

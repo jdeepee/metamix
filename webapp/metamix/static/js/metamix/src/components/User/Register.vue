@@ -34,8 +34,9 @@
 			register(){
 				axios({ method: "POST", "url": this.baseUrl+"/signup", "data": this.input, "headers": { "content-type": "application/json" } })
 				.then(result => {
-					console.log("Register success", result.data)
-                    this.currentUserData["jwtToken"] = result.data["token"]
+					console.log("Register success", result.data);
+					this.currentUserData["jwtToken"] = result.data["token"];
+					localStorage.setItem('token', result.data["token"]);
                     this.$router.push("/");	
                 }).catch(error => {
                 	//Display error on front end

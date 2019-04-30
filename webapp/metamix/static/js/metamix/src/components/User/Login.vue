@@ -29,7 +29,8 @@
 				axios({ method: "POST", "url": this.baseUrl+"/login", "data": this.input, "headers": { "content-type": "application/json" } })
 				.then(result => {
 					console.log("Login success", result.data)
-                    this.currentUserData["jwtToken"] = result.data["token"]
+					this.currentUserData["jwtToken"] = result.data["token"];
+					localStorage.setItem('token', result.data["token"]);
                     this.$router.push("/");	
                     this.$notify({
 						type: "success",

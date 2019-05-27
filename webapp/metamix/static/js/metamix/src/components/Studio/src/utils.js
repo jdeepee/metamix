@@ -1,5 +1,33 @@
 import {Settings} from "../../../settings.js"
 
+function mixComp (mix1, mix2) { //function to compare two mix objects
+	if (mix1.audio.length != mix2.audio.length) {return false}
+	for (var i = 0; i < mix1.audio.length; i++) {
+		for (var p in mix1.audio[i]) {
+			if (p != "rawWaveForm"){
+				// console.log("Property", p);
+				// console.log("Value", mix1.audio[i][p], mix2.audio[i][p]);
+				if (p == "beat_positions"){
+					if (mix1.audio[i].beat_positions.length === mix2.audio[i].beat_positions.length && mix1.audio[i].beat_positions.sort().every(function(value, index) { return value === mix2.audio[i].beat_positions.sort()[index]}) == false){ return false };
+				} else if (p == "effects") { 
+					if (JSON.stringify(mix1.audio[i].effects) === JSON.stringify(mix1.audio[i].effects) == false) { return false };
+				} else {
+					if (mix2.audio[i].hasOwnProperty(p) == false){
+						return false
+					};
+					if (mix1.audio[i][p] != mix2.audio[i][p]){
+						return false
+					};
+				}
+			}
+		};
+	};
+	if (mix1.description != mix2.description) {return false}
+	if (mix1.genre != mix2.genre) {return false}
+	if (mix1.name != mix2.name) {return false}
+	return true
+}
+
 function guid() {
   function s4() {
     return Math.floor((1 + Math.random()) * 0x10000)
@@ -322,7 +350,8 @@ let utils = {
 		guid: guid,
 		capitalizeFirstLetter: capitalizeFirstLetter,
 		computeHighLow: computeHighLow,
-		computeEffectsX: computeEffectsX
+		computeEffectsX: computeEffectsX,
+		mixComp: mixComp
 	}
 	
 export default utils;

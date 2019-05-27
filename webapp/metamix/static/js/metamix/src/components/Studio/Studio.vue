@@ -144,7 +144,9 @@
 		methods:{
 			upToDate(){
 				//Checks if current mixData == last saved mix data
-				return JSON.stringify(this.$store.getters.getSavedMixData) == JSON.stringify(this.$store.getters.getMixData);
+				// console.log(this.$store.getters.getSavedMixData, "vs\n\n", this.$store.getters.getMixData);
+				// console.log(utils.mixComp(this.$store.getters.getSavedMixData, this.$store.getters.getMixData));
+				return utils.mixComp(this.$store.getters.getSavedMixData, this.$store.getters.getMixData);
 			},
 			$ready(fn) {
 				if (process.env.NODE_ENV === 'production') {

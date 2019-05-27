@@ -16,16 +16,16 @@ import itertools
 
 class MixWorker():
     """
-    Class to be used by Flask-RQ worker for creating a MP3 of a mix given its ID - fetches JSON representation of mix
+    Class to be used by Flask-RQ worker for creating a MP3 of a mix given its ID - fetches JSON representation of mix, then uses this representation to apply effects + mix audio together.
     """
     def __init__(self, id, testing, debug_level):
         self.mix_id = id
         self.testing = testing
         self.debug_level = debug_level
         self.create_mix_data()
-        self.session = boto3.session.Session(region_name='eu-west-1',
-                                             aws_access_key_id=current_app.config["AWS_ACCESS_KEY_ID"],
-                                             aws_secret_access_key=current_app.config["AWS_SECRET_ACCESS_KEY"])
+        # self.session = boto3.session.Session(region_name='eu-west-1',
+        #                                      aws_access_key_id=current_app.config["AWS_ACCESS_KEY_ID"],
+        #                                      aws_secret_access_key=current_app.config["AWS_SECRET_ACCESS_KEY"])
 
     @classmethod
     def mix(cls, id, testing, debug_level):
@@ -377,29 +377,29 @@ class MixWorker():
 
         return complete_coverage, partial_coverage 
 
-    def fetch_s3(self, s3_key):
-        temp_filename = current_app.config["METAMIX_TEMP_SAVE"] + str(uuid.uuid4()) + ".wav"
+    # def fetch_s3(self, s3_key):
+    #     temp_filename = current_app.config["METAMIX_TEMP_SAVE"] + str(uuid.uuid4()) + ".wav"
 
-        s3 = self.session.client('s3', config=boto3.session.Config(signature_version='s3v4'))
-        s3.download_file(current_app.config["S3_BUCKET"], s3_key, temp_filename)
-        data, sr = librosa.load(temp_filename, sr=None) 
+    #     s3 = self.session.client('s3', config=boto3.session.Config(signature_version='s3v4'))
+    #     s3.download_file(current_app.config["S3_BUCKET"], s3_key, temp_filename)
+    #     data, sr = librosa.load(temp_filename, sr=None) 
 
-        return data, sr
+    #     return data, sr
 
-    def upload_s3(self, data, sample_rate):
-        key = str(uuid.uuid4()) + ".wav"
-        temp_filename = current_app.config["METAMIX_TEMP_SAVE"] + str(uuid.uuid4()) + ".wav"
+    # def upload_s3(self, data, sample_rate):
+    #     key = str(uuid.uuid4()) + ".wav"
+    #     temp_filename = current_app.config["METAMIX_TEMP_SAVE"] + str(uuid.uuid4()) + ".wav"
 
-        librosa.output.write_wav(temp_filename, data, sample_rate)
-        s3 = self.session.client('s3', config=boto3.session.Config(signature_version='s3v4'))
-        s3.upload_file(temp_filename, current_app.config["S3_BUCKET"], key)
-        os.remove(temp_filename)
+    #     librosa.output.write_wav(temp_filename, data, sample_rate)
+    #     s3 = self.session.client('s3', config=boto3.session.Config(signature_version='s3v4'))
+    #     s3.upload_file(temp_filename, current_app.config["S3_BUCKET"], key)
+    #     os.remove(temp_filename)
 
-        return key
+    #     return key
 
     #same as above method but is a static method and thus doesnt have the session from self - so this function will create its own session
     @staticmethod
-    def static_upload_s3(data, sample_rate):
+    def upload_s3(data, sample_rate):
         key = str(uuid.uuid4()) + ".wav"
         temp_filename = current_app.config["METAMIX_TEMP_SAVE"] + str(uuid.uuid4()) + ".wav"
 
@@ -412,3 +412,15 @@ class MixWorker():
         os.remove(temp_filename)
 
         return key
+
+    @staticmethod
+    def fetch_s3(s3_key):
+        temp_filename = current_app.config["METAMIX_TEMP_SAVE"] + str(uuid.uuid4()) + ".wav"
+        session = boto3.session.Session(region_name='eu-west-1',
+                aws_access_key_id=current_app.config["AWS_ACCESS_KEY_ID"],
+                aws_secret_access_key=current_app.config["AWS_SECRET_ACCESS_KEY"])
+        s3 = session.client('s3', config=boto3.session.Config(signature_version='s3v4'))
+        s3.download_file(current_app.config["S3_BUCKET"], s3_key, temp_filename)
+        data, sr = librosa.load(temp_filename, sr=None) 
+
+        return data, sr

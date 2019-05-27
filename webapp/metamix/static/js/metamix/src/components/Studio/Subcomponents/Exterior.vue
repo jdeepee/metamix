@@ -75,6 +75,7 @@
 			},
 			fetchNewAudio(){
 				//This function is returning too fast - it needs to return only when the second .then callback has ran so that soundStream is present
+				console.log("Fetchin newAudio");
 				let mixData = this.$store.getters.getMixData;
 				return axios({ method: "GET", "url": this.baseUrl+"/meta/mix/"+mixData.id, "headers": { "content-type": "application/json", "JWT-Auth":  this.jwt}})
 					.then(result => {
@@ -101,7 +102,10 @@
 									console.log(error)
 								})
 						} else if (result.data.processing_status == "Processing"){
-								setTimeout(this.fetchNewAudio(), 1000);
+							let vueObj = this;
+							setTimeout(function() {
+								vueObj.fetchNewAudio()
+							}, 3000);
 						} else if (result.data.processing_Status == "Error"){
 							this.$notify({
 								type: "error",
@@ -186,6 +190,7 @@
 				let mixData = this.$store.getters.getMixData;
 				axios({ method: "GET", "url": this.baseUrl+"/meta/mix/"+mixData.id, "headers": { "content-type": "application/json", "JWT-Auth":  this.jwt}})
 				.then(result => {
+					console.log("Latest mix object from API: ", result.data);
 					if (result.data.processing_status == "Completed") {
 						let vueObj = this;
 						if (this.hasAudio == false){

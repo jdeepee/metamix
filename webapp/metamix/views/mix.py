@@ -50,6 +50,10 @@ def create_mix(user_id):
 			mix.dict_update({"processing_status": "Processing"})
 			if len(mix.json_description["audio"]) > 0:
 				enqueue_mix(mix.id, True, 3)
+
+			else:
+				mix.dict_update({"processing_status": "Completed"})
+
 			return jsonify({"message": "Mix is being processed"})
 
 		else:
@@ -145,7 +149,7 @@ def recompute_song(user_id, mix_id):
 
 	effects = MixWorker.normalize_eq_effect(copy.deepcopy(audio["effects"]))
 
-	data, sample_rate = MixWorker.static_upload_s3(audio_obj.s3_key)
+	data, sample_rate = MixWorker.fetch_s3(audio_obj.s3_key)
 	audio["data"] = data[int(round(audio["song_start"]*sample_rate)):int(round(audio["song_end"]*sample_rate))]
 	audio["sample_rate"] = sample_rate
 
@@ -153,7 +157,7 @@ def recompute_song(user_id, mix_id):
 	data = effect_creator.modulate()
 
 	#Save audio with effects applied into database for retrieval later on future computations
-	data_key = MixWorker.static_upload_s3(data["data"], sample_rate)
+	data_key = MixWorker.upload_s3(data["data"], sample_rate)
 	del audio["data"]
 	audio["s3_key"] = data_key
 

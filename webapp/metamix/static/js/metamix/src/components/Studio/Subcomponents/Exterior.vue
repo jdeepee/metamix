@@ -5,11 +5,11 @@
 		</div>
 		<div id="zoom-column">
 			<input id="range-slider" v-model="rangeValue" type="range" min="1" max="150" step="0.5" v-on:mousemove="rangeUpdate" v-on:mousedown="rangeDown" v-on:mouseup="rangeUp">
-<!-- 			<input id="timeline-size-input" v-on:input="updateTimelineSize"> -->
 			<button type="button" @click="saveAudio">Save</button>
 			<div id="play-pause">
 				<i class="material-icons" @click="playAudio">play_arrow</i><i class="material-icons" @click="pauseAudio">pause</i>
 			</div>
+			<input id="timeline-length" v-model.number="timelineLength" type="number" @change="timelineSizeUpdate">
 		</div>
 		<div style="display: none; justify-content: center; top:20%" id="loader-wrapper">
 			<semipolar-spinner
@@ -63,10 +63,14 @@
 				prevOffset: 0,
 				playing: false,
 				hasAudio: false,
-				soundStream: null
+				soundStream: null,
+				timelineLength: this.$store.getters.getUi.totalTime
 			}
 		},
 		methods:{
+			timelineSizeUpdate(){
+				this.$store.commit("updateUi", {"totalTime": this.timelineLength});
+			},
 			showLoader(){
 				this.loadingWrapper.style.display = "flex";
 			},

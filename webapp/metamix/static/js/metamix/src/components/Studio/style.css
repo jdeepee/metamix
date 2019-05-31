@@ -56,11 +56,15 @@ body{
 	position: fixed;
 	top: 10%;
 	width: 10%;
-	height: 5%;
+	height: 7%;
 	background-color: #343434;
     display: flex;
     align-items: center;
     flex-direction: column;
+}
+
+#timeline-length{
+    width: 80%
 }
 
 #play-pause{

@@ -4,12 +4,10 @@
 			<canvas id="left-column-canvas"></canvas>
 		</div>
 		<div id="zoom-column">
-			<input id="range-slider" v-model="rangeValue" type="range" min="1" max="150" step="0.5" v-on:mousemove="rangeUpdate" v-on:mousedown="rangeDown" v-on:mouseup="rangeUp">
 			<button type="button" @click="saveAudio">Save</button>
 			<div id="play-pause">
 				<i class="material-icons" @click="playAudio">play_arrow</i><i class="material-icons" @click="pauseAudio">pause</i>
 			</div>
-			<input id="timeline-length" v-model.number="timelineLength" type="number" @change="timelineSizeUpdate">
 		</div>
 		<div style="display: none; justify-content: center; top:20%" id="loader-wrapper">
 			<semipolar-spinner
@@ -63,14 +61,10 @@
 				prevOffset: 0,
 				playing: false,
 				hasAudio: false,
-				soundStream: null,
-				timelineLength: this.$store.getters.getUi.totalTime
+				soundStream: null
 			}
 		},
 		methods:{
-			timelineSizeUpdate(){
-				this.$store.commit("updateUi", {"totalTime": this.timelineLength});
-			},
 			showLoader(){
 				this.loadingWrapper.style.display = "flex";
 			},
@@ -394,16 +388,6 @@
 					modalIcon.style.bottom = 0;
 				}
 			},
-			rangeUpdate(){
-				if (!this.dragging) return;
-				this.$store.commit("updateUi", {"timeScale": this.rangeValue});
-			},
-			rangeDown(){
-				this.dragging = 1;
-			},
-			rangeUp(){
-				this.dragging = 0;
-			},
 			resize(){
 				let parentDiv = document.getElementById("left-column");
 				this.dpr = window.devicePixelRatio;
@@ -439,9 +423,6 @@
 				this.ctx.restore();
 			},
 			init(){
-				let currentUi = this.$store.getters.getUi;
-				this.rangeValue = currentUi["timeScale"];
-
 				let parentDiv = document.getElementById("left-column");
 				this.canvas = document.getElementById("left-column-canvas");
 				this.ctx = this.canvas.getContext('2d');

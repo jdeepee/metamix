@@ -8,10 +8,32 @@ body{
     cursor: url("../../assets/simple-cut.svg"), auto;
 }
 
-#top-toolbar{
-	position: fixed;
-	width: 100%;
-	height: 10%;
+#effect-toolbar{
+    width: 100%;
+    height: 8%;
+    order: 1;
+    position: relative;
+}
+
+#timeline-tools{
+    width: 100%;
+    height: 2%;
+    order: 2;
+    position: fixed;
+    top: 8%;
+}
+.toolbar-wrapper {
+	height: 100%;
+	padding: 0;
+	margin: 0;
+	display: -webkit-box;
+	display: -moz-box;
+	display: -ms-flexbox;
+	display: -webkit-flex;
+	display: flex;
+	align-items: center;
+    flex-direction: column;
+	background-color: rgb(52, 52, 52);
 }
 
 #top-timeline{
@@ -61,10 +83,11 @@ body{
     display: flex;
     align-items: center;
     flex-direction: column;
+    justify-content: center;
 }
 
 #timeline-length{
-    width: 80%
+    width: 10%
 }
 
 #play-pause{
@@ -73,7 +96,7 @@ body{
 }
 
 #range-slider{
-	width: 90%;
+	width: 10%;
 }
 
 .modal-content{

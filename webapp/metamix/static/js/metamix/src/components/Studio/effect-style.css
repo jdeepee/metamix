@@ -19,7 +19,7 @@
 }
 
 #low-pass{
-	font-size: 5rem;
+	font-size: 4rem;
 	moz-transform: scaleX(-1);
 	-o-transform: scaleX(-1);
 	-webkit-transform: scaleX(-1);

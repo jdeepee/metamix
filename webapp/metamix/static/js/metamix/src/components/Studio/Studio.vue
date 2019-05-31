@@ -6,38 +6,54 @@
 
 <template>
 	<div>
-		<div id="top-toolbar" class="flex-container">
-			<div id="cut" class="flex-item" @click="effectClick('cut')">
-				<i class="material-icons" style="font-size: 5rem">content_cut</i>
-				<p>Cut</p>
+		<div id="top-toolbar" class="toolbar-wrapper">
+			<div id="effect-toolbar" class="flex-container">
+				<div id="cut" class="flex-item" @click="effectClick('cut')">
+					<i class="material-icons" style="font-size: 4rem">content_cut</i>
+					<p>Cut</p>
+				</div>
+				<div id="eq" class="flex-item" @click="effectClick('eq')">
+					<i class="material-icons" style="font-size: 4rem">tune</i>
+					<p>EQ</p>
+				</div>
+				<div id="volume" class="flex-item" @click="effectClick('volume')">
+					<i class="material-icons" style="font-size: 4rem">volume_up</i>
+					<p>Volume Modulation</p>
+				</div>
+				<div id="highPass" class="flex-item" @click="effectClick('highPass')">
+					<i class="material-icons" style="font-size: 4rem">blur_linear</i>
+					<p>High Pass Filter</p>
+				</div>
+				<div id="lowPass" class="flex-item" @click="effectClick('lowPass')">
+					<i class="material-icons" id="low-pass">blur_linear</i>
+					<p>Low Pass Filter</p>
+				</div>
+				<div id="pitch" class="flex-item" @click="effectClick('pitch')">
+					<i class="material-icons" style="font-size: 4rem">trending_up</i>
+					<p>Pitch Shift</p>
+				</div>
+				<div id="tempo" class="flex-item" @click="effectClick('tempo')">
+					<i class="material-icons" style="font-size: 4rem">fast_rewind</i><i class="material-icons" style="font-size: 4rem">fast_forward</i>
+					<p>Tempo Modulation</p>
+				</div>
+				<div id="remove" class="flex-item" @click="effectClick('remove')">
+					<i class="material-icons" style="font-size: 4rem" id="removeI">cancel</i>
+					<p>Remove Audio</p>
+				</div>
 			</div>
-			<div id="eq" class="flex-item" @click="effectClick('eq')">
-				<i class="material-icons" style="font-size: 5rem">tune</i>
-				<p>EQ</p>
-			</div>
-			<div id="volume" class="flex-item" @click="effectClick('volume')">
-				<i class="material-icons" style="font-size: 5rem">volume_up</i>
-				<p>Volume Modulation</p>
-			</div>
-			<div id="highPass" class="flex-item" @click="effectClick('highPass')">
-				<i class="material-icons" style="font-size: 5rem">blur_linear</i>
-				<p>High Pass Filter</p>
-			</div>
-			<div id="lowPass" class="flex-item" @click="effectClick('lowPass')">
-				<i class="material-icons" id="low-pass">blur_linear</i>
-				<p>Low Pass Filter</p>
-			</div>
-			<div id="pitch" class="flex-item" @click="effectClick('pitch')">
-				<i class="material-icons" style="font-size: 5rem">trending_up</i>
-				<p>Pitch Shift</p>
-			</div>
-			<div id="tempo" class="flex-item" @click="effectClick('tempo')">
-				<i class="material-icons" style="font-size: 5rem">fast_rewind</i><i class="material-icons" style="font-size: 5rem">fast_forward</i>
-				<p>Tempo Modulation</p>
-			</div>
-			<div id="remove" class="flex-item" @click="effectClick('remove')">
-				<i class="material-icons" style="font-size: 5rem" id="removeI">cancel</i>
-				<p>Remove Audio</p>
+			<div id="timeline-tools" class="flex-container">
+				<input id="range-slider" v-model="rangeValue" type="range" min="1" max="150" step="0.5" v-on:mousemove="rangeUpdate" v-on:mousedown="rangeDown" v-on:mouseup="rangeUp" >
+				<select name="Effect Filter" v-model="effectFilterValue">
+					<option value="all" disabled selected>Effect Filter</option>
+					<option value="all">All</option>
+					<option value="eq">EQ</option>
+					<option value="volume">Volume Modulation</option>
+					<option value="highPass">High Pass Filter</option>
+					<option value="lowPass">Low Pass Filter</option>
+					<option value="pitch">Pitch Shift</option>
+					<option value="tempo">Tempo Modulation</option>
+				</select>
+				<input id="timeline-length" v-model.number="timelineLength" type="number" @change="timelineSizeUpdate">
 			</div>
 		</div>
 		<Scroll></Scroll>
@@ -138,17 +154,16 @@
 				resetWaveForm: false,
 				hit: false,
 				cuttingAudio: false,
-				needsRepaint: true
-			}
-		},
-		watch:{
-    		'$route' (to, from) {
-				console.log("called", this.exterior);
-				this.exterior.soundStream.pause();
-				this.$store.commit("updateUi", {playing: false});
+				needsRepaint: true,
+				timelineLength: undefined,
+				rangeValue: undefined,
+				effectFilterValue: "all"
 			}
 		},
 		methods:{
+			timelineSizeUpdate(){
+				this.$store.commit("updateUi", {"totalTime": this.timelineLength});
+			},
 			upToDate(){
 				//Checks if current mixData == last saved mix data
 				// console.log(this.$store.getters.getSavedMixData, "vs\n\n", this.$store.getters.getMixData);
@@ -470,7 +485,7 @@
 					if (this.renderedItems == false){
 						console.log("Setting audio item", audioItem, x, x2);
 						let AudioRect = new AudioItem();
-						AudioRect.set(x, y1, x2, y2, Settings.theme.audioElement, audioItem, this.timeScale, this.frameStart, this.dpr, this.width);
+						AudioRect.set(x, y1, x2, y2, Settings.theme.audioElement, audioItem, this.timeScale, this.frameStart, this.dpr, this.width, this.effectFilterValue);
 						AudioRect.setWaveForm(audioItem.rawWaveForm, this.frameStart, this.timeScale, offset);
 						AudioRect.paint(this.ctx, Settings.theme.audioElement, this.block);
 						this.renderItems.push(AudioRect);
@@ -478,7 +493,7 @@
 					} else {
 						let currentItem = this.renderItems[i];
 						if (currentItem != undefined){
-							currentItem.set(x, y1, x2, y2, Settings.theme.audioElement, audioItem, this.timeScale, this.frameStart, this.dpr, this.width);
+							currentItem.set(x, y1, x2, y2, Settings.theme.audioElement, audioItem, this.timeScale, this.frameStart, this.dpr, this.width, this.effectFilterValue);
 							if (audioItem.rawWaveForm != null && currentItem.rawWaveForm == undefined || this.lastTimeScale != this.timeScale || this.resetWaveForm == true){
 								currentItem.setWaveForm(audioItem.rawWaveForm, this.frameStart, this.timeScale, offset);
 							}
@@ -918,6 +933,16 @@
 				} catch (error) {
 					console.error(error);
 				}
+			},
+			rangeUpdate(){
+				if (!this.dragging) return;
+				this.$store.commit("updateUi", {"timeScale": this.rangeValue});
+			},
+			rangeDown(){
+				this.dragging = 1;
+			},
+			rangeUp(){
+				this.dragging = 0;
 			}
 		},
 		mounted() {
@@ -944,13 +969,18 @@
 				this.bounds = this.canvas.getBoundingClientRect();
 				if (this.mixData.length != undefined){
 					this.$store.commit("updateUi", {"tracks": this.trackLayers, "lineHeight": this.lineHeight, "timeScale": this.timeScale, "trackTimelineOffset": this.offset, "currentTime": 0, "totalTime": this.mixData.length + 100});
+					this.timelineLength = this.mixData.length + 100;
 				} else {
 					this.$store.commit("updateUi", {"tracks": this.trackLayers, "lineHeight": this.lineHeight, "timeScale": this.timeScale, "trackTimelineOffset": this.offset, "currentTime": 0, "totalTime": 100});
+					this.timelineLength = 100;
 				};
 
 				this.scrollCanvas = this.$children[0];
 				this.exterior = this.$children[1];
 				this.effectHandler = this.$children[2];
+
+				let currentUi = this.$store.getters.getUi;
+				this.rangeValue = currentUi["timeScale"];
 
 				//Create array of objects which defines the pixel bounds for each track element
 				for (let i=0; i<this.trackLayers; i++){

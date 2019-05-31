@@ -17,10 +17,10 @@
 					<div id="input-container" class="column-input-container">
 						<div id="bar-input-container-start" class="input-container">
 							<button id="barDownStart" @click="barValueUpdate(-1, 'barCountStart')">&darr;</button>
-							<p id="barStartCounter">{{effectDescriptor[currentEffect]['barCountStart']}}</p>
+							<input id="barStartCounter" class="bar-effect-input" :value="effectDescriptor[currentEffect]['barCountStart']" @change="barValueUpdate($event.target.value, 'inputStart')">
 							<button id="barUpStart" @click="barValueUpdate(1, 'barCountStart')">&uarr;</button>
 							<button id="barDownEnd" @click="barValueUpdate(-1, 'barCountEnd')">&darr;</button>
-							<p id="barEndCounter">{{effectDescriptor[currentEffect]['barCountEnd']}}</p>
+							<input id="barEndCounter" class="bar-effect-input" :value="effectDescriptor[currentEffect]['barCountEnd']" @change="barValueUpdate($event.target.value, 'inputEnd')">
 							<button id="barUpEnd" @click="barValueUpdate(1, 'barCountEnd')">&uarr;</button>
 						</div>
 						<h4 id="start-end-header">Start/End Song Contextual</h4>
@@ -157,32 +157,53 @@
 					}
 				},
 				barValueUpdate(value, type){
-					let barValue;
-					let barIndex;
-					if (type == "barCountStart"){
-						barIndex = this.counterStart + value;
-					} else {
-						barIndex = this.counterEnd + value;
-					}
-					if (value == -1){
-						barValue = this.barMarkers[barIndex-1];
-
-					} else {
-						barValue = this.barMarkers[barIndex-1];
-					}
-
-					if (barValue != undefined){
-						this.effectDescriptor[this.currentEffect][type] = barIndex;
+					console.log("Updated", value, type)
+					if (type != "inputStart" && type != "inputEnd") {
+						let barValue;
+						let barIndex;
 						if (type == "barCountStart"){
-							this.counterStart = barIndex;
-							this.effectDescriptor[this.currentEffect]["start"] = barValue;
-							this.effectDescriptor[this.currentEffect]['startGlobal'] = barValue + this.audioMixStart;
-							this.$store.commit("updateEffect", {"id": this.effectId, "audioId": this.audioId, "start": barValue});
+							barIndex = this.counterStart + value;
 						} else {
-							this.counterEnd = barIndex;
-							this.effectDescriptor[this.currentEffect]["end"] = barValue;
-							this.effectDescriptor[this.currentEffect]['endGlobal'] = barValue + this.audioMixStart;
-							this.$store.commit("updateEffect", {"id": this.effectId, "audioId": this.audioId, "end": barValue});
+							barIndex = this.counterEnd + value;
+						}
+						if (value == -1){
+							barValue = this.barMarkers[barIndex-1];
+
+						} else {
+							barValue = this.barMarkers[barIndex-1];
+						}
+
+						if (barValue != undefined){
+							this.effectDescriptor[this.currentEffect][type] = barIndex;
+							if (type == "barCountStart"){
+								this.counterStart = barIndex;
+								this.effectDescriptor[this.currentEffect]["start"] = barValue;
+								this.effectDescriptor[this.currentEffect]['startGlobal'] = barValue + this.audioMixStart;
+								this.$store.commit("updateEffect", {"id": this.effectId, "audioId": this.audioId, "start": barValue});
+							} else {
+								this.counterEnd = barIndex;
+								this.effectDescriptor[this.currentEffect]["end"] = barValue;
+								this.effectDescriptor[this.currentEffect]['endGlobal'] = barValue + this.audioMixStart;
+								this.$store.commit("updateEffect", {"id": this.effectId, "audioId": this.audioId, "end": barValue});
+							}
+						}
+					} else {
+						let barIndex = value;
+						if (type == "inputStart"){this.effectDescriptor[this.currentEffect]["barCountStart"] = value } else {this.effectDescriptor[this.currentEffect]["barCountEnd"] = value};
+						let barValue = this.barMarkers[parseInt(barIndex) - 1];
+						if (barValue != undefined){
+							if (type == "inputStart"){
+								this.counterStart = parseInt(barIndex) - 1;
+								this.effectDescriptor[this.currentEffect]["start"] = barValue;
+								this.effectDescriptor[this.currentEffect]['startGlobal'] = barValue + this.audioMixStart;
+								console.log(this.effectDescriptor[this.currentEffect]["start"], this.effectDescriptor[this.currentEffect]["startGlobal"])
+								this.$store.commit("updateEffect", {"id": this.effectId, "audioId": this.audioId, "start": barValue});
+							} else {
+								this.counterEnd = parseInt(barIndex) - 1;
+								this.effectDescriptor[this.currentEffect]["end"] = barValue;
+								this.effectDescriptor[this.currentEffect]['endGlobal'] = barValue + this.audioMixStart;
+								this.$store.commit("updateEffect", {"id": this.effectId, "audioId": this.audioId, "end": barValue});
+							}
 						}
 					}
 				},

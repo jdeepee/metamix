@@ -942,7 +942,11 @@
 				this.timeScale = Settings.time_scale;
 				this.lastTimeScale = this.timeScale;
 				this.bounds = this.canvas.getBoundingClientRect();
-				this.$store.commit("updateUi", {"tracks": this.trackLayers, "lineHeight": this.lineHeight, "timeScale": this.timeScale, "trackTimelineOffset": this.offset, "currentTime": 0, "totalTime": this.mixData.length + 100});
+				if (this.mixData.length != undefined){
+					this.$store.commit("updateUi", {"tracks": this.trackLayers, "lineHeight": this.lineHeight, "timeScale": this.timeScale, "trackTimelineOffset": this.offset, "currentTime": 0, "totalTime": this.mixData.length + 100});
+				} else {
+					this.$store.commit("updateUi", {"tracks": this.trackLayers, "lineHeight": this.lineHeight, "timeScale": this.timeScale, "trackTimelineOffset": this.offset, "currentTime": 0, "totalTime": 100});
+				};
 
 				this.scrollCanvas = this.$children[0];
 				this.exterior = this.$children[1];

@@ -199,16 +199,22 @@ class MetaModulate():
                     self.out["bpm"] = effect["effectStart"]
                     self.out["beat_positions"] = beats.tolist()
 
-                else:
-                    #Recompute bar markers for slice @ effect["start"] effect["end"]
-                    partial_temp_filename = current_app.config["METAMIX_TEMP_SAVE"] + str(uuid.uuid4()) + ".wav"
-                    librosa.output.write_wav(partial_temp_filename, self.out["data"][int(round(effect["start"]*self.sample_rate)): int(round(effect["end"]*self.sample_rate))], self.sample_rate)
-                    bpm, beats, beats_confidence, _, beats_intervals = compute_bar_markers(partial_temp_filename, loaded=False)
-                    np_bpos = np.array(self.audio_object["beat_positions"])
-                    start_idx = (np.abs(np_bpos-effect["start"])).argmin()
-                    end_idx = (np.abs(np_bpos-effect["end"])).argmin()
-                    self.out["beat_positions"] = np_bpos[0:start_idx] + (beats + np_bpos[start_idx]) + np_bpos[end_idx: -1]
-                    self.audio_object["beat_positions"] = self.out["beat_positions"].tolist()
+                # else:
+                #     #Recompute bar markers for slice @ effect["start"] effect["end"]
+                #     partial_temp_filename = current_app.config["METAMIX_TEMP_SAVE"] + str(uuid.uuid4()) + ".wav"
+                #     librosa.output.write_wav(partial_temp_filename, self.out["data"][int(round(effect["start"]*self.sample_rate)): int(round(effect["end"]*self.sample_rate))], self.sample_rate)
+                #     bpm, beats, beats_confidence, _, beats_intervals = compute_bar_markers(partial_temp_filename, loaded=False)
+                #     np_bpos = np.array(self.audio_object["beat_positions"])
+                #     start_idx = (np.abs(np_bpos-effect["start"])).argmin()
+                #     end_idx = (np.abs(np_bpos-effect["end"])).argmin()
+                #     self.out["beat_positions"] = np.concatenate([
+                #                                     np.concatenate([
+                #                                         np_bpos[0:start_idx], 
+                #                                         beats
+                #                                     ]), 
+                #                                     np_bpos[end_idx: -1]
+                #                                 ]).tolist()
+                #     self.audio_object["beat_positions"] = self.out["beat_positions"]
 
                     os.remove(partial_temp_filename)
 

@@ -326,13 +326,20 @@
 				},
 				removeAudio(audioId){
 					let currentUi = this.$store.getters.getUi;
-					this.mixId = currentUi.currentMixId;
-					this.$store.commit("deleteAudio", audioId);
-					axios({ method: "POST", "url": this.baseUrl+"/meta/mix/"+this.mixId+"/audio/"+audioId+"/delete", "headers": { "content-type": "application/json", "JWT-Auth":  this.jwt}})
-					.then(result => {
-						console.log(result.data)
-					}).catch(error => {
-					});
+					let mixData = this.$store.getters.getMixData;
+					for (var i = 0; i < mixData.audio.length; i++) {
+						console.log(mixData.audio[i].id, audioId);
+						if (mixData.audio[i].id == audioId) {
+							let audioTrueId = mixData.audio[i].audio_id;
+							this.mixId = currentUi.currentMixId;
+							this.$store.commit("deleteAudio", audioId);
+							axios({ method: "POST", "url": this.baseUrl+"/meta/mix/"+this.mixId+"/audio/"+audioTrueId+"/delete", "headers": { "content-type": "application/json", "JWT-Auth":  this.jwt}})
+								.then(result => {
+									console.log(result.data)
+								}).catch(error => {
+							});
+						}
+					};
 				},
 				copyAudio(audioId){
 					let copyId = utils.guid();

@@ -110,13 +110,13 @@
 							setTimeout(function() {
 								vueObj.fetchNewAudio()
 							}, 3000);
-						} else if (result.data.processing_Status == "Error"){
+						} else if (result.data.processing_status == "Error"){
 							this.$notify({
 								type: "error",
 								group: "main",
 								title: 'There has been an error on MetaMix :(',
-								text: 'In order to get this error fixed please send an email to joshuadparkin@gmail.com with the following value referenced:' + this.mixData.id + ' thanks for dealing with errors - MetaMix is still very early software and is undergoing bug fixes all the time. Thanks <3',
-								duration: 7000
+								text: 'In order to get this error fixed please send an email to joshuadparkin@gmail.com with the following value referenced: <' + mixData.id + '> thanks for dealing with errors - MetaMix is still very early software and is undergoing bug fixes all the time. Thanks <3',
+								duration: 20000
 							});
 						}
 						return result;
@@ -140,6 +140,7 @@
 					});
 					return;
 				}
+				this.showLoader();
 				let mixData = JSON.parse(JSON.stringify(this.$store.getters.getMixData));
 				for (let i=0; i<mixData.audio.length; i++){ //Iterate over mixData to be sent to backend - delete all unnecassary key/value pairs along with redundant effects
 					delete mixData.audio[i].rawWaveForm;
@@ -211,6 +212,7 @@
 							vueObj.$store.commit("updateUi", {playing: true});
 						}
 					} else if (result.data.processing_status == "Processing"){
+						console.log("Processing processing status", this);
 						this.$notify({
 							type: "error",
 							group: "main",
@@ -219,6 +221,7 @@
 							duration: 1000
 						});
 					} else if (result.data.processing_Status == "Error"){
+						console.log("Error processing status", this);
 						this.$notify({
 							type: "error",
 							group: "main",
@@ -227,6 +230,7 @@
 							duration: 7000
 						});
 					}
+					return;
 				}).catch(error => {
 					console.log(error)
 				});

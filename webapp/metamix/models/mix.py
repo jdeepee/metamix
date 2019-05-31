@@ -139,8 +139,9 @@ class MixAudio(db.Model):
             effect_data["type"] = effect["type"]
             effect_data["start"] = effect["start"]
             effect_data["end"] = effect["end"]
-            del effect["startX"]
-            del effect["endX"]
+            if "startX" in effect:
+                del effect["startX"]
+                del effect["endX"]
             effect_data["effect_parameters"] = effect
             effect_data["id"] = effect["id"] #id is most likley not necassary/will break things as id may be computed by front end each time mix is loaded? Or just computed once at first load
             effect_data["mix_audio_id"] = audio.id

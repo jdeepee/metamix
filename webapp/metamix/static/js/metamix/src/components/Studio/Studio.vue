@@ -141,6 +141,13 @@
 				needsRepaint: true
 			}
 		},
+		watch:{
+    		'$route' (to, from) {
+				console.log("called", this.exterior);
+				this.exterior.soundStream.pause();
+				this.$store.commit("updateUi", {playing: false});
+			}
+		},
 		methods:{
 			upToDate(){
 				//Checks if current mixData == last saved mix data
@@ -622,215 +629,213 @@
 				//There should be check here that the user is still on the canvas page - currently it is running this loop even when the user is not on the canvas page
 				requestAnimationFrame(this.paint)
 			},
+			contextMenuListener(e){
+				let currentUi = this.$store.getters.getUi;
+				let timeScale = currentUi["timeScale"];
+				let frameStart = currentUi["scrollTime"];
+				let currentX = ((e.clientX - this.bounds.left)/this.dpr + (frameStart * timeScale));
+				let currentY = (e.clientY - this.bounds.top)/this.dpr;
+
+				for (let i = 0; i < this.renderItems.length; i++){
+					if (this.renderItems[i].contains(currentX, currentY, timeScale, frameStart)) {
+						this.currentAudio = this.renderItems[i];
+						this.currentAudioIndex = i;
+						this.menuItem.display(e, undefined);
+					}
+				}
+			},
+			mouseMoveListner(e){
+				if (this.block == false){
+					let currentUi = this.$store.getters.getUi;
+					let timeScale = currentUi["timeScale"];
+					let frameStart = currentUi["scrollTime"];
+					let currentX = ((e.clientX - this.bounds.left)/this.dpr + (frameStart * timeScale));
+					let currentY = (e.clientY - this.bounds.top)/this.dpr;
+					for (let i = 0; i < this.renderItems.length; i++){
+						if (this.renderItems[i].contains(currentX, currentY, timeScale, frameStart)) {
+							if (this.cuttingAudio == true){
+								let barMatch = this.renderItems[i].onBarMarker(currentX, frameStart, timeScale);
+								if (barMatch != false){
+									console.log("Cursor over bar", barMatch)
+									this.drawSnapMarker = barMatch.x0;
+									this.block = true;
+									this.blockNumber = 4;
+								}
+							}
+							if (this.overwriteCursor == false){
+								this.canvas.style.cursor = 'pointer';
+							}
+							return;
+						}
+					}
+					if (this.overwriteCursor == false){
+						this.canvas.style.cursor = 'default';
+					}
+				} else {
+					e.preventDefault(); //This doesnt work it should prevent the mouse from moving
+					if (this.holdTick == this.blockNumber){
+						this.block = false;
+						this.holdTick = 0;
+						this.drawSnapMarker = false;
+
+					} else {
+						this.holdTick += 1;
+					}
+				}
+			},
+			wheelListener(e){
+				let xMove = e.deltaX/4;
+				let currentUi = this.$store.getters.getUi;
+				let frameStart = currentUi["scrollTime"];
+				if (frameStart != 0){
+					e.preventDefault();
+				}
+				let out = frameStart + xMove;
+				if (out >= 0){
+					this.$store.commit("updateUi", {"scrollTime": frameStart + xMove});
+				}
+			},
+			keydownHandler(e){
+				let currentUi = this.$store.getters.getUi;
+				if (e.keyCode == 37){ //left arrow key
+					let timeScale = 60/currentUi["timeScale"];
+					let out = currentUi["scrollTime"] -1*timeScale;
+					if (out < 0){
+						out = 0;
+					}
+					this.$store.commit("updateUi", {"scrollTime": out});
+
+				} else if (e.keyCode == 39){ //right arrow key
+					let timeScale = 60/currentUi["timeScale"]; //Ensure that this changing of timeScale offset for moving on timeline is working correctl
+					this.$store.commit("updateUi", {"scrollTime": currentUi["scrollTime"] +1*timeScale});
+
+				} else if (e.keyCode == 38){ //up arrow key
+					let timeScale = currentUi["timeScale"];
+					let out;
+					if (timeScale < 5){
+						out = timeScale +1;
+					} else {
+						out = timeScale +5;
+					}
+					this.$store.commit("updateUi", {"timeScale": out});
+
+				} else if (e.keyCode == 40){ //down arrow key
+					let timeScale = currentUi["timeScale"];
+					let out;
+					if (timeScale <= 5){
+						out = timeScale -1;
+					} else {
+						out = timeScale -5;
+					}
+					if (out < 1){
+						out = 1;
+					}
+					this.$store.commit("updateUi", {"timeScale": out});
+
+				} else if (e.keyCode == 32){ //Space bar
+					if (this.exterior.playing == false){
+						this.exterior.playAudio();
+					} else {
+						this.exterior.pauseAudio();
+					}
+				}
+			},
+			mouseDragDownListener(e){
+				let currentUi = this.$store.getters.getUi;
+				let timeScale = currentUi["timeScale"];
+				let frameStart = currentUi["scrollTime"];
+				let currentX = ((e.offsetx)/this.dpr + (frameStart * timeScale));
+				let currentY = (e.offsety)/this.dpr;
+
+				for (let i = 0; i < this.renderItems.length; i++){
+					let item = this.renderItems[i];
+					if (item.contains(currentX, currentY, timeScale, frameStart)) {
+						let effect = item.containsEffect(currentX, currentY);
+						//console.log("Contains effect val", effect);
+						if (effect == false){
+							this.draggingx = item.x + frameStart * timeScale;
+							this.currentDragging = item;
+							if (this.overwriteCursor == false){
+								this.canvas.style.cursor = 'grabbing';
+							}
+							return;
+
+						} else {
+							//Open effect modal
+							this.effectHandler.renderEffectModal(effect.type, item, effect);
+							return;
+						}
+					}
+				}
+				this.$store.commit("updateUi", {"currentTime": utils.x_to_time((e.offsetx)/this.dpr, timeScale, frameStart)});
+			},
+			mouseDragMoveListener(e){
+				let currentUi = this.$store.getters.getUi;
+				let timeScale = currentUi["timeScale"];
+				let frameStart = currentUi["scrollTime"];
+
+				if (this.draggingx != null) {
+					if (this.block == false){
+						this.canvas.style.cursor = 'grabbing';
+						let track = this.moveY(e.offsety/this.dpr);
+						this.currentDragging.track = track;
+						let startX, endX;
+						[startX, endX] = this.moveX(e);
+
+						//Update x/x2 value of current dragging item so we can use for future compuations
+						this.currentDragging.x = startX;
+						this.currentDragging.x2 = endX;
+						this.currentDragging.xNormalized = startX;
+						this.currentDragging.x2Normalized = endX;
+						this.currentDragging.updateBars(1);
+						this.lastX = startX;
+						let start = (startX / timeScale);
+						let end = (endX / timeScale);
+						this.$store.commit("updateAudio", {"id": this.currentDragging.id, "start": start, "end": end, "track": track})
+
+					} else {
+						if (this.holdTick == this.blockNumber){
+							this.block = false;
+							this.holdTick = 0;
+							this.drawSnapMarker = false;
+
+						} else {
+							this.holdTick += 1;
+						}
+					}
+
+				} else {
+					this.$store.commit("updateUi", {"currentTime": utils.x_to_time((e.offsetx)/this.dpr, timeScale, frameStart)});
+				}	
+			},
+			mouseDragUpListener(e){
+				//Reset drag related variables
+				this.draggingx = null;
+				this.currentDragging = null;
+				if (this.overwriteCursor == false){
+					this.canvas.style.cursor = 'pointer';
+				}
+				this.holdTick = 0;
+				this.block = false;
+				this.drawSnapMarker = false;
+				this.blockNumber = 0;
+			},
 			registerListeners(){
 				//mousemove eventListener to handle cursor changing to pointer upon hovering over a draggable item
 				let componentObj = this;
 				window.addEventListener('resize', this.resize);
-
 				// Contextmenu-eventlistener
-				this.canvas.addEventListener("contextmenu", function(e){
-					let currentUi = componentObj.$store.getters.getUi;
-					let timeScale = currentUi["timeScale"];
-					let frameStart = currentUi["scrollTime"];
-					let currentX = ((e.clientX - componentObj.bounds.left)/componentObj.dpr + (frameStart * timeScale));
-					let currentY = (e.clientY - componentObj.bounds.top)/componentObj.dpr;
-
-					for (let i = 0; i < componentObj.renderItems.length; i++){
-						if (componentObj.renderItems[i].contains(currentX, currentY, timeScale, frameStart)) {
-							componentObj.currentAudio = componentObj.renderItems[i];
-							componentObj.currentAudioIndex = i;
-							componentObj.menuItem.display(e, undefined);
-						}
-					}
-				}, false);
-
-				this.canvas.addEventListener("mousemove", function(e){
-					if (componentObj.block == false){
-						let currentUi = componentObj.$store.getters.getUi;
-						let timeScale = currentUi["timeScale"];
-						let frameStart = currentUi["scrollTime"];
-						let currentX = ((e.clientX - componentObj.bounds.left)/componentObj.dpr + (frameStart * timeScale));
-						let currentY = (e.clientY - componentObj.bounds.top)/componentObj.dpr;
-						for (let i = 0; i < componentObj.renderItems.length; i++){
-							if (componentObj.renderItems[i].contains(currentX, currentY, timeScale, frameStart)) {
-								if (componentObj.cuttingAudio == true){
-									let barMatch = componentObj.renderItems[i].onBarMarker(currentX, frameStart, timeScale);
-									if (barMatch != false){
-										console.log("Cursor over bar", barMatch)
-										componentObj.drawSnapMarker = barMatch.x0;
-										componentObj.block = true;
-										componentObj.blockNumber = 4;
-									}
-								}
-								if (componentObj.overwriteCursor == false){
-									componentObj.canvas.style.cursor = 'pointer';
-								}
-								return;
-							}
-						}
-						if (componentObj.overwriteCursor == false){
-							componentObj.canvas.style.cursor = 'default';
-						}
-					} else {
-						e.preventDefault(); //This doesnt work it should prevent the mouse from moving
-						if (componentObj.holdTick == componentObj.blockNumber){
-							componentObj.block = false;
-							componentObj.holdTick = 0;
-							componentObj.drawSnapMarker = false;
-
-						} else {
-							componentObj.holdTick += 1;
-						}
-					}
-				});
-
+				this.canvas.addEventListener("contextmenu", this.contextMenuListener, false);
+				this.canvas.addEventListener("mousemove", this.mouseMoveListner);
 				//Handles "wheel" zoom events - trackpad zoom or scroll wheel zoom - also includes scroll left and right
 				//Handle scroll left and right - moves timeline left and right - scroll up and down zooms into/out of timeline - then two finger 
-				this.canvas.addEventListener("wheel", function(e){
-					let xMove = e.deltaX/4;
-					let currentUi = componentObj.$store.getters.getUi;
-					let frameStart = currentUi["scrollTime"];
-					if (frameStart != 0){
-						e.preventDefault();
-					}
-					let out = frameStart + xMove;
-					if (out >= 0){
-						componentObj.$store.commit("updateUi", {"scrollTime": frameStart + xMove});
-					}
-				});
-
-				let keydownHandler = function(e){
-					let currentUi = componentObj.$store.getters.getUi;
-					if (e.keyCode == 37){ //left arrow key
-						let timeScale = 60/currentUi["timeScale"];
-						let out = currentUi["scrollTime"] -1*timeScale;
-						if (out < 0){
-							out = 0;
-						}
-						componentObj.$store.commit("updateUi", {"scrollTime": out});
-
-					} else if (e.keyCode == 39){ //right arrow key
-						let timeScale = 60/currentUi["timeScale"]; //Ensure that this changing of timeScale offset for moving on timeline is working correctl
-						componentObj.$store.commit("updateUi", {"scrollTime": currentUi["scrollTime"] +1*timeScale});
-
-					} else if (e.keyCode == 38){ //up arrow key
-						let timeScale = currentUi["timeScale"];
-						let out;
-						if (timeScale < 5){
-							out = timeScale +1;
-						} else {
-							out = timeScale +5;
-						}
-						componentObj.$store.commit("updateUi", {"timeScale": out});
-
-					} else if (e.keyCode == 40){ //down arrow key
-						let timeScale = currentUi["timeScale"];
-						let out;
-						if (timeScale <= 5){
-							out = timeScale -1;
-						} else {
-							out = timeScale -5;
-						}
-						if (out < 1){
-							out = 1;
-						}
-						componentObj.$store.commit("updateUi", {"timeScale": out});
-
-					} else if (e.keyCode == 32){ //Space bar
-						if (componentObj.exterior.playing == false){
-							componentObj.exterior.playAudio();
-						} else {
-							componentObj.exterior.pauseAudio();
-						}
-					}
-				}
-
+				this.canvas.addEventListener("wheel", this.wheelListener);
 				//this seems to be adding listner multiple times - makes sure that all listeners are only added once
-				document.addEventListener("keydown", keydownHandler);
-
+				document.addEventListener("keydown", this.keydownHandler);
 				//Handles dragging of movable items
-				utils.handleDrag(this.canvas,
-					function down(e){
-						let currentUi = componentObj.$store.getters.getUi;
-						let timeScale = currentUi["timeScale"];
-						let frameStart = currentUi["scrollTime"];
-						let currentX = ((e.offsetx)/componentObj.dpr + (frameStart * timeScale));
-						let currentY = (e.offsety)/componentObj.dpr;
+				utils.handleDrag(this.canvas, this.mouseDragDownListener, this.mouseDragMoveListener, this.mouseDragUpListener);
 
-						for (let i = 0; i < componentObj.renderItems.length; i++){
-							let item = componentObj.renderItems[i];
-							if (item.contains(currentX, currentY, timeScale, frameStart)) {
-								let effect = item.containsEffect(currentX, currentY);
-								//console.log("Contains effect val", effect);
-								if (effect == false){
-									componentObj.draggingx = item.x + frameStart * timeScale;
-									componentObj.currentDragging = item;
-									if (componentObj.overwriteCursor == false){
-										componentObj.canvas.style.cursor = 'grabbing';
-									}
-									return;
-
-								} else {
-									//Open effect modal
-									componentObj.effectHandler.renderEffectModal(effect.type, item, effect);
-									return;
-								}
-							}
-						}
-						componentObj.$store.commit("updateUi", {"currentTime": utils.x_to_time((e.offsetx)/componentObj.dpr, timeScale, frameStart)});
-					},
-					function move(e){
-						let currentUi = componentObj.$store.getters.getUi;
-						let timeScale = currentUi["timeScale"];
-						let frameStart = currentUi["scrollTime"];
-
-						if (componentObj.draggingx != null) {
-							if (componentObj.block == false){
-								componentObj.canvas.style.cursor = 'grabbing';
-								let track = componentObj.moveY(e.offsety/componentObj.dpr);
-								componentObj.currentDragging.track = track;
-								let startX, endX;
-								[startX, endX] = componentObj.moveX(e);
-
-								//Update x/x2 value of current dragging item so we can use for future compuations
-								componentObj.currentDragging.x = startX;
-								componentObj.currentDragging.x2 = endX;
-								componentObj.currentDragging.xNormalized = startX;
-								componentObj.currentDragging.x2Normalized = endX;
-								componentObj.currentDragging.updateBars(1);
-								componentObj.lastX = startX;
-								let start = (startX / timeScale);
-								let end = (endX / timeScale);
-								componentObj.$store.commit("updateAudio", {"id": componentObj.currentDragging.id, "start": start, "end": end, "track": track})
-
-							} else {
-								if (componentObj.holdTick == componentObj.blockNumber){
-									componentObj.block = false;
-									componentObj.holdTick = 0;
-									componentObj.drawSnapMarker = false;
-
-								} else {
-									componentObj.holdTick += 1;
-								}
-							}
-
-						} else {
-							componentObj.$store.commit("updateUi", {"currentTime": utils.x_to_time((e.offsetx)/componentObj.dpr, timeScale, frameStart)});
-						}
-					},
-					function up(e){
-						//Reset drag related variables
-						componentObj.draggingx = null;
-						componentObj.currentDragging = null;
-						if (componentObj.overwriteCursor == false){
-							componentObj.canvas.style.cursor = 'pointer';
-						}
-						componentObj.holdTick = 0;
-						componentObj.block = false;
-						componentObj.drawSnapMarker = false;
-						componentObj.blockNumber = 0;
-					});
-
+				//add click callback functions on context menu (right click menu)
 				this.menuItems[2]["sub"][0]["events"] = { //Set eq click event
 															"click": function(e){
 																componentObj.effectHandler.renderEffectModal("eq", componentObj.currentAudio, null);
@@ -889,7 +894,6 @@
 				this.renderedItems = false;
 			},
 			fetchWaveFormObj(audioObj){
-				let componentObj = this;
 				let waveform = this.fetchWaveForm(audioObj.waveform);
 				return waveform.then(function(data){
 					let wfd = WaveformData.create(data.data);
@@ -914,7 +918,7 @@
 				} catch (error) {
 					console.error(error);
 				}
-			}
+			},
 		},
 		mounted() {
 			this.$ready(() => {
@@ -955,6 +959,15 @@
 				this.menuItem = new ContextMenu(this.menuItems);
 				this.paint();
 			})
+		},
+		beforeDestroy() {
+			console.log("Before destory hook");
+			document.removeEventListener("backbutton", this.checkAudio);
+			window.removeEventListener('resize', this.resize);
+			this.canvas.removeEventListener("contextmenu", this.contextMenuListener);
+			this.canvas.removeEventListener("mousemove", this.mouseMoveListner);
+			this.canvas.removeEventListener("wheel", this.wheelListener);
+			document.removeEventListener("keydown", this.keydownHandler);
 		}
 	}
 </script>

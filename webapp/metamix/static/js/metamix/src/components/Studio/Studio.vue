@@ -918,7 +918,7 @@
 				} catch (error) {
 					console.error(error);
 				}
-			},
+			}
 		},
 		mounted() {
 			this.$ready(() => {
@@ -961,8 +961,6 @@
 			})
 		},
 		beforeDestroy() {
-			console.log("Before destory hook");
-			document.removeEventListener("backbutton", this.checkAudio);
 			window.removeEventListener('resize', this.resize);
 			this.canvas.removeEventListener("contextmenu", this.contextMenuListener);
 			this.canvas.removeEventListener("mousemove", this.mouseMoveListner);

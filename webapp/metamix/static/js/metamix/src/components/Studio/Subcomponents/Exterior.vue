@@ -262,9 +262,6 @@
 				this.timeStopped = new Date();
 				this.prevOffset = this.offset;
 			    clearInterval(this.started);
-			    // this.stoppedDuration = 0;
-			    // this.timeBegan = null;
-			    // this.timeStopped = null;
 			},
 			clockRunning(){
 			    let currentTime = new Date();
@@ -449,6 +446,13 @@
 				this.width = parentDiv.offsetWidth;
 				this.height = parentDiv.offsetHeight;
 				this.dpr = window.devicePixelRatio;
+			},
+			stopPlayback(){
+				if (this.$store.getters.getUi.playing == true){
+					this.soundStream.stop();
+					this.stop();
+					this.$store.commit("updateUi", {playing: false});
+				}
 			}
 		},
 		mounted(){
@@ -458,6 +462,9 @@
 			this.jwt = currentUserData["jwtToken"];
 			this.getAudio();
 			this.loadingWrapper = document.querySelector("#loader-wrapper");
-		}	
+		},
+		beforeDestroy() {
+			this.stopPlayback();
+		}
 	}
 </script>

@@ -214,11 +214,11 @@
 						let update;
 						let out;
 						if (this.currentEffect == "eq"){
-								update = this.effectData[name];
-								update[type] = value;
-								out = {"id": this.effectId, "audioId": this.audioId};
-								out[name] = update;
-								this.$store.commit("updateEffect", out);
+							update = this.effectData[name];
+							update[type] = value;
+							out = {"id": this.effectId, "audioId": this.audioId};
+							out[name] = update;
+							this.$store.commit("updateEffect", out);
 						} else {
 							if (type == "start"){
 								this.$store.commit("updateEffect", {"id": this.effectId, "audioId": this.audioId, "effectStart": Number(value)});

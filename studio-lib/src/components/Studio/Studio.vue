@@ -549,20 +549,19 @@
 				this.ctx.scale(this.dpr, this.dpr);
 
 				this.ctx.lineWidth = 1;
+				this.ctx.strokeStyle = Settings.theme.b;
+				this.ctx.fillStyle = Settings.theme.d;
+				this.ctx.textAlign = 'center';
 
 				//Iterate over count and draw main tick markers along with second(s) timestamp related to this
 				for (let i = 0; i < count; i++) {
 					let x = (i * units) - offsetUnits;
 
-					// vertical lines
-					this.ctx.strokeStyle = Settings.theme.b;
+					// vertical linez
 					this.ctx.beginPath();
 					this.ctx.moveTo(x, 5);
 					this.ctx.lineTo(x, this.height);
 					this.ctx.stroke();
-
-					this.ctx.fillStyle = Settings.theme.d;
-					this.ctx.textAlign = 'center';
 
 					//Get time at current tick with accordance to timescale and scroll wheel position
 					let t = (i * units - offsetUnits) / this.timeScale + this.frameStart;
@@ -573,9 +572,9 @@
 				}
 				units = this.timeScale / this.tickMark2;
 				count = (this.width + offsetUnits) / units;
+				this.ctx.strokeStyle = Settings.theme.d;
 				// marker lines - main
 				for (let i = 0; i < count; i++) {
-					this.ctx.strokeStyle = Settings.theme.d;;
 					this.ctx.beginPath();
 					let x = i * units - offsetUnits;
 					this.ctx.moveTo(x, 0);
@@ -587,10 +586,10 @@
 				units = this.timeScale / this.tickMark3;
 				count = (this.width + offsetUnits) / units;
 
+				this.ctx.strokeStyle = Settings.theme.c;
 				// small ticks
 				for (let i = 0; i < count; i++) {
 					if (i % mul === 0) continue;
-					this.ctx.strokeStyle = Settings.theme.c;
 					this.ctx.beginPath();
 					let x = i * units - offsetUnits;
 					this.ctx.moveTo(x, 0);

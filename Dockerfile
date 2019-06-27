@@ -1,21 +1,26 @@
-FROM ubuntu
+FROM ubuntu:16.04
 MAINTAINER Joshua Parkin <joshuadparkin@gmail.com>
 
+RUN useradd -ms /bin/bash metamix-user
+USER metamix-user
+
 RUN apt-get update
-RUN apt-get install -y python python-pip
+RUN apt-get install -y python python-pip git build-essential libssl-dev libffi-dev python-dev nginx gunicorn supervisor
 
 # Setup flask application
 RUN mkdir -p /app
-COPY metamix /app
-COPY run_app.py /app
-COPY __init__.py /app
-COPY manage.py /app
-COPY run_app.py /app
-COPY requirements.txt /app
+COPY webapp /app
 
 ENV METAMIX_ENV development
 
-RUN pip install -r /app/requirements.txt
-EXPOSE 5000
+RUN pip install -r /app/webapp/requirements.txt
 
+RUN rm /etc/nginx/sites-enabled/default
+COPY metamix-nginx-conf /etc/nginx/sites-available/metamix-nginx-conf
+RUN ln -s /etc/nginx/sites-available/metamix-nginx-conf /etc/nginx/sites-enabled/metamix-nginx-conf
+RUN /etc/init.d/nginx start
+RUN supervisorctl reread
+RUN supervisorctl update
+RUN supervisorctl start metamix
 
+EXPOSE 80

@@ -486,7 +486,7 @@
 						console.log("Setting audio item", audioItem, x, x2);
 						let AudioRect = new AudioItem();
 						AudioRect.set(x, y1, x2, y2, Settings.theme.audioElement, audioItem, this.timeScale, this.frameStart, this.dpr, this.width, this.effectFilterValue);
-						AudioRect.setWaveForm(audioItem.rawWaveForm, this.frameStart, this.timeScale, offset);
+						AudioRect.setWaveForm(audioItem.rawWaveForm);
 						AudioRect.paint(this.ctx, Settings.theme.audioElement, this.block);
 						this.renderItems.push(AudioRect);
 
@@ -495,7 +495,7 @@
 						if (currentItem != undefined){
 							currentItem.set(x, y1, x2, y2, Settings.theme.audioElement, audioItem, this.timeScale, this.frameStart, this.dpr, this.width, this.effectFilterValue);
 							if (audioItem.rawWaveForm != null && currentItem.rawWaveForm == undefined || this.lastTimeScale != this.timeScale || this.resetWaveForm == true){
-								currentItem.setWaveForm(audioItem.rawWaveForm, this.frameStart, this.timeScale, offset);
+								currentItem.setWaveForm(audioItem.rawWaveForm);
 							}
 							currentItem.paint(this.ctx, Settings.theme.audioElement, this.block);
 						} else {
@@ -511,7 +511,7 @@
 							}
 							let AudioRect = new AudioItem();
 							AudioRect.set(x, y1, x2, y2, Settings.theme.audioElement, audioItem, this.timeScale, this.frameStart, this.dpr, this.width);
-							AudioRect.setWaveForm(audioItem.rawWaveForm, this.frameStart, this.timeScale, offset);
+							AudioRect.setWaveForm(audioItem.rawWaveForm);
 							AudioRect.paint(this.ctx, Settings.theme.audioElement, this.block);
 							this.renderItems.push(AudioRect);
 						}

@@ -1,3 +1,4 @@
+#![feature(proc_macro_hygiene)]
 use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;

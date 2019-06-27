@@ -3,7 +3,7 @@ import {Settings} from "../../../settings.js"
 
 function AudioItem() {}
 
-AudioItem.prototype.setWaveForm = function(rawWaveForm, time_scale, frame_start, offset){
+AudioItem.prototype.setWaveForm = function(rawWaveForm){
 	//console.log("SEtting waveform from", rawWaveForm, this.audioName, this.songStart, this.songEnd, this.size)
 	this.rawWaveForm = rawWaveForm;
 	this.rawWaveFormMin = [];

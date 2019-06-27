@@ -1,5 +1,6 @@
-use audio;
-use effect;
-use studio;
-use scroll_canvas;
-use exterior;
+pub mod audio;
+pub mod effect;
+pub mod studio;
+pub mod scroll_canvas;
+pub mod exterior;
+pub mod defaults;

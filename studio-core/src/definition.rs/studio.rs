@@ -1,37 +1,17 @@
 use stdweb::web::html_element::CanvasElement;
 use stdweb::web::{document, CanvasRenderingContext2d};
 use stdweb::web::Window;
-use scroll_canvas;
-use exterior;
-use audio;
+use super::scroll_canvas;
+use super::exterior;
+use super::audio;
+use super::defaults;
 
-const DEFAULT_TIME_SCALE: f32 = 60;
-
-//Timeline component sizes (% of screen size)
-const TIMELINETOOLBARHEIGHT: f32 = 0.05;
-const TIMELINETOOLBARWIDTH: f32 = 1;
-
-const TRACKCOLUMNWIDTH: f32 = 0.2;
-const TRACKCOLUMNHEIGHT: f32 = 0.85;
-
-const TIMELINEWIDTH: f32 = 0.8;
-const TIMELINEHEIGHT: f32 = 0.85;
-
-const TOPTIMELINEWIDTH: f32 = 0.8;
-const TOPTIMELINEHEIGHT: f32 = 0.6;
-
-const LINEHEIGHTPROPORTION: f32 = 0.22; //This value should be worked out on size of studio vs number of tracks so that we can fill the entire space
-const TRACKTIMELINEOFFSET: f32 = 40;
-
-const MARKER_TRACK_HEIGHT: f32 = 60;
-const TIMELINE_SCROLL_HEIGHT: f32 = 0;
-const DEFAULT_LENGTH: f32 = 600;
-const DEFAULT_TRACKS: u32 = 4;
-
-const THEME_B: String = "#535353";
-// pub struct MixData {
-
-// }
+pub struct MixData {
+    pub id: String,
+    pub description: String,
+    pub genre: String,
+    pub audio: Vec<audio::Audio>
+}
 
 pub struct Studio {
     pub current_time: f32,
@@ -64,15 +44,15 @@ impl Studio{
 
         let ctx: CanvasRenderingContext2d = canvas.get_context().unwrap();
 
-        Studio{current_time: 0, playing: false, total_time: DEFAULT_LENGTH, scroll_time: 0, time_scale: DEFAULT_TIME_SCALE, tracks: DEFAULT_TRACKS,
-                track_timeline_offset: TRACKTIMELINEOFFSET, line_height: 0, x_scroll_time: 0, canvas: canvas, ctx: ctx, width: width, height: height,
+        Studio{current_time: 0, playing: false, total_time: defaults::DEFAULT_LENGTH, scroll_time: 0, time_scale: defaults::DEFAULT_TIME_SCALE, tracks: defaults::DEFAULT_TRACKS,
+                track_timeline_offset: defaults::TRACKTIMELINEOFFSET, line_height: 0, x_scroll_time: 0, canvas: canvas, ctx: ctx, width: width, height: height,
                 scroll_canvas: scroll_canvas::ScrollCanvas{}, exterior: exterior::Exterior{}, audio: vec![]}
     }
 
     fn resize(&mut self, width: f32, height: f32) {
         self.width = width;
         self.height = height;
-        self.line_height = self.height*LINEHEIGHTPROPORTION;
+        self.line_height = self.height*defaults::LINEHEIGHTPROPORTION;
         self.scroll_canvas.resize(width, height);
         self.exterior.resize(width, height);
     }
@@ -83,7 +63,7 @@ impl Studio{
             //Render track lines
             for i in 0..self.tracks{
                 y = (self.track_timeline_offset + i*self.line_height) // /self.dpr
-                self.ctx.set_stroke_style_color(THEME_B);
+                self.ctx.set_stroke_style_color(defaults::THEME_B);
                 self.ctx.begin_path();
                 self.ctx.move_to(0, y);
                 self.line_to(self.width, y);

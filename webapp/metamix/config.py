@@ -41,7 +41,7 @@ class Development(Config):
 
 class Test(Config):
     """Test config expands on base config"""
-    SQLALCHEMY_DATABASE_URI = "postgres://test:" + os.environ.get("DB_PWD") + "@localhost/big_legal_test"
+    SQLALCHEMY_DATABASE_URI = "postgres://test:" + os.environ.get("DB_PWD") + "@localhost/metamix_test"
     DEBUG = True
     BASE_URL = "http://127.0.0.1:5000"
     PRESERVE_CONTEXT_ON_EXCEPTION = True

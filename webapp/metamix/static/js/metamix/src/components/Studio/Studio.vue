@@ -166,8 +166,8 @@
 			},
 			upToDate(){
 				//Checks if current mixData == last saved mix data
-				// console.log(this.$store.getters.getSavedMixData, "vs\n\n", this.$store.getters.getMixData);
-				// console.log(utils.mixComp(this.$store.getters.getSavedMixData, this.$store.getters.getMixData));
+				console.log(this.$store.getters.getSavedMixData, "vs\n\n", this.$store.getters.getMixData);
+				console.log(utils.mixComp(this.$store.getters.getSavedMixData, this.$store.getters.getMixData));
 				return utils.mixComp(this.$store.getters.getSavedMixData, this.$store.getters.getMixData);
 			},
 			$ready(fn) {

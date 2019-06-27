@@ -85,11 +85,17 @@
 								.then(result => {
 									console.log(result, this, "dp");
 									let presigned_url = result.data.data;
+									console.log("Audio processed now putting into Howler", presigned_url);
+									if (this.soundStream != undefined){
+										this.soundStream.stop();
+									};
+									Howler.unload();
 									this.soundStream = new Howl({
 										src: [presigned_url],
-										ext: ['mp3'],
+										format: ['wav'],
 										autoplay: false,
 										html5: true,
+										preload: true,
 										onend: this.resetAudioTimestamp()
 									});
 									let vueObj = this;

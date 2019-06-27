@@ -29,7 +29,6 @@ def create_app(config):
     CORS(app)
     # Creating flask application from Config object in ./config.py
     app.config.from_object(config)
-    # Settings stripe API key
     app.secret_key = os.environ.get("APPLICATION_SECRET")
     # Init SQLAlchemy
     db.init_app(app)

@@ -341,7 +341,7 @@ class MixWorker():
     def mix_audio(track1, track2, sample_rate):
         out = []
 
-        assert track2.shape == track1.shape
+        #assert track2.shape == track1.shape
         for i, v in enumerate(track1):
             samplef1 = v / 32768.0
             samplef2 = track2[i] / 32768.0
@@ -409,7 +409,7 @@ class MixWorker():
                 aws_secret_access_key=current_app.config["AWS_SECRET_ACCESS_KEY"])
         s3 = session.client('s3', config=boto3.session.Config(signature_version='s3v4'))
         s3.upload_file(temp_filename, current_app.config["S3_BUCKET"], key)
-        os.remove(temp_filename)
+        #os.remove(temp_filename)
 
         return key
 

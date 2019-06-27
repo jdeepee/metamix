@@ -216,7 +216,7 @@ class MetaModulate():
                 #                                 ]).tolist()
                 #     self.audio_object["beat_positions"] = self.out["beat_positions"]
 
-                    os.remove(partial_temp_filename)
+                    #os.remove(partial_temp_filename)
 
                 self.out["length"] = self.out["data"].shape[0] / self.sample_rate
                 self.out["song_end"] = self.out["length"]
@@ -344,7 +344,7 @@ class MetaModulate():
 
     @staticmethod
     def standard_incrementation(start_timestamp, end_timestamp, effect_start, effect_target, effect_type, non_zero=False):
-        incrementation_factor = next((item for item in modulation_algorithm_parameters if item['type'] == effect_type), None)["increment_time_change"]
+        incrementation_factor = next((item for item in modulation_algorithm_parameters if item['name'] == effect_name), None)["increment_time_change"]
         if non_zero == True:
             if effect_target == 0:
                 effect_target = 0.01
@@ -371,7 +371,7 @@ class MetaModulate():
 
     @staticmethod
     def decibel_incrementation(start_timestamp, end_timestamp, effect_start, effect_target, effect_type, return_decimal_start_end=False):
-        incrementation_factor = next((item for item in modulation_algorithm_parameters if item['type'] == effect_type), None)["increment_time_change"]
+        incrementation_factor = next((item for item in modulation_algorithm_parameters if item['name'] == effect_type), None)["increment_time_change"]
         if effect_target == 0:
             #Going from 0.x to 0.0
             decimal_target = 10 * math.log(0.01, 2)
@@ -846,12 +846,12 @@ class MetaModulate():
                 print "Chunk size of db increase/decrease: {}".format(chunk_size)  
                 print "Going from: {} to: {}".format(decimal_start, decimal_target)
                 print "Calculated db change: {}".format(decimal_target - decimal_start)
-
+            print increments
             for i, n in np.ndenumerate(increments):
                 i = i[0]
                 if i != len(increments) -1:
                     current_freq = float(((i * chunk_size) + decimal_start))
-                    data_frame = data[n*sample_rate:increments[i+1]*sample_rate]
+                    data_frame = data[int(round(n*sample_rate)):int(round(increments[i+1]*sample_rate))]
 
                     fx = (
                         AudioEffectsChain()

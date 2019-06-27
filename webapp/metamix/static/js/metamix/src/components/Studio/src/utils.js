@@ -8,7 +8,8 @@ function mixComp (mix1, mix2) { //function to compare two mix objects
 				// console.log("Property", p);
 				// console.log("Value", mix1.audio[i][p], mix2.audio[i][p]);
 				if (p == "beat_positions"){
-					if (mix1.audio[i].beat_positions.length === mix2.audio[i].beat_positions.length && mix1.audio[i].beat_positions.sort().every(function(value, index) { return value === mix2.audio[i].beat_positions.sort()[index]}) == false){ return false };
+					//if (mix1.audio[i].beat_positions.length === mix2.audio[i].beat_positions.length && mix1.audio[i].beat_positions.sort().every(function(value, index) { return value === mix2.audio[i].beat_positions.sort()[index]}) == false){ return false };
+					if (mix1.audio[i].beat_positions.length != mix2.audio[i].beat_positions.length) {return false};
 				} else if (p == "effects") { 
 					if (JSON.stringify(mix1.audio[i].effects) === JSON.stringify(mix1.audio[i].effects) == false) { return false };
 				} else {
